@@ -1,0 +1,94 @@
+{
+  "width": 48,
+  "height": 64,
+  "pixelated": true,
+  "palette": [
+    "#30213d",
+    "#583a69",
+    "#815488",
+    "#ad5887",
+    "#e88bb3",
+    "#ffd1df",
+    "#fff2db",
+    "#e8b2a0",
+    "#c47b86",
+    "#ffffff",
+    "#c8c4e4",
+    "#897bba",
+    "#4a398a",
+    "#302765",
+    "#69a6eb",
+    "#f6d37e"
+  ],
+  "frames": [
+    {
+      "rect": [0, 0, 384, 512],
+      "duration": 140,
+      "offset": [-3, 0]
+    },
+    {
+      "rect": [384, 0, 384, 512],
+      "duration": 140,
+      "offset": [-2, 0]
+    },
+    {
+      "rect": [768, 0, 384, 512],
+      "duration": 140,
+      "offset": [0, 0]
+    },
+    {
+      "rect": [1152, 0, 384, 512],
+      "duration": 140,
+      "offset": [1, 0]
+    },
+    {
+      "rect": [0, 512, 384, 512],
+      "duration": 140,
+      "offset": [-3, 4]
+    },
+    {
+      "rect": [384, 512, 384, 512],
+      "duration": 140,
+      "offset": [-2, 4]
+    },
+    {
+      "rect": [768, 512, 384, 512],
+      "duration": 140,
+      "offset": [0, 4]
+    },
+    {
+      "rect": [1152, 512, 384, 512],
+      "duration": 140,
+      "offset": [1, 4]
+    }
+  ],
+  "clips": {
+    "idle": {
+      "frames": [0],
+      "loop": true
+    },
+    "blink": {
+      "frames": [1],
+      "durations": [110]
+    },
+    "talk": {
+      "frames": [0, 2, 0, 2],
+      "durations": [120, 150, 110, 180],
+      "loop": true
+    },
+    "happy": {
+      "frames": [3]
+    },
+    "sleepy": {
+      "frames": [1]
+    },
+    "sleep": {
+      "frames": [1],
+      "loop": true
+    },
+    "wave": {
+      "frames": [0, 4, 5, 6, 5, 6, 5, 7, 0],
+      "durations": [180, 160, 230, 150, 150, 150, 210, 200, 180]
+    }
+  }
+}

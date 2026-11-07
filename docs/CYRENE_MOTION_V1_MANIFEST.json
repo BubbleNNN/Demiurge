@@ -1,0 +1,2517 @@
+{
+  "version": 1,
+  "date": "2026-10-04",
+  "mode": "built-in imagegen; edits referenced accepted masters; no configured image API",
+  "generationCalls": 7,
+  "approvedStyles": [
+    "original",
+    "anime",
+    "chibi",
+    "powerpuff",
+    "pixel",
+    "8bit",
+    "3d"
+  ],
+  "removedStyles": [
+    "realistic",
+    "plush",
+    "watercolor",
+    "figurine"
+  ],
+  "commonPromptFile": "docs/art/cyrene-motion-v1-prompt.txt",
+  "prompts": [
+    {
+      "style": "original",
+      "prompt": "Edit the attached approved character master into ONE production animation SPRITE SHEET: exactly 4 columns by 4 rows, 16 equally sized cells, read left-to-right then top-to-bottom. Every cell contains the SAME complete full-body character with identical outfit, ornaments, hair, proportions, line thickness and rendering style. Do NOT redesign her. Fixed front camera, identical character scale and foot location within every cell. Keep generous transparent gutters inside EVERY cell; all hair, hands, feet and clothing stay inside their own cell.\nRow 1: (0) exact neutral master pose; (1) half-closed eyelids; (2) fully closed eyelids for blink; (3) tiny chest/shoulder breathing change, feet and torso position fixed.\nRow 2: (4) small talking mouth; (5) wider talking mouth; (6) joyful smiling expression; (7) thoughtful expression. Only face changes, body and hair identical.\nRow 3: four consecutive greeting poses, (8) waving arm relaxed down; (9) same forearm raised with hand near cheek; (10) wrist waves outward; (11) wrist waves inward. Only that arm moves; no duplicate arms.\nRow 4: (12) shallow head nod; (13) slightly deeper head nod; (14) relaxed closed-eye sleep pose; (15) same sleep pose with minimal breathing change. Legs and outfit stay fixed.\nGenuine transparent alpha everywhere outside figures, no colored background, painted checkerboard, grid lines, cell labels, text, shadows, extra objects or effects. Clean consistent keyframes, not whole-image shaking. Preserve the approved visual style exactly.\nPreserve this master’s original-game anime linework, adult body proportions, pink long hair and detailed costume.\nEach figure occupies at most 78 percent of its cell HEIGHT. Leave EMPTY TRANSPARENT PADDING above ornaments and below feet in EVERY cell. Exactly 16 figures arranged in a strict 4x4 grid.",
+      "generatedFile": "$HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc/exec-2f052088-0837-4b40-b7e9-6543c80a3b9c.png"
+    },
+    {
+      "style": "anime",
+      "prompt": "Edit the attached approved character master into ONE production animation SPRITE SHEET: exactly 4 columns by 4 rows, 16 equally sized cells, read left-to-right then top-to-bottom. Every cell contains the SAME complete full-body character with identical outfit, ornaments, hair, proportions, line thickness and rendering style. Do NOT redesign her. Fixed front camera, identical character scale and foot location within every cell. Keep generous transparent gutters inside EVERY cell; all hair, hands, feet and clothing stay inside their own cell.\nRow 1: (0) exact neutral master pose; (1) half-closed eyelids; (2) fully closed eyelids for blink; (3) tiny chest/shoulder breathing change, feet and torso position fixed.\nRow 2: (4) small talking mouth; (5) wider talking mouth; (6) joyful smiling expression; (7) thoughtful expression. Only face changes, body and hair identical.\nRow 3: four consecutive greeting poses, (8) waving arm relaxed down; (9) same forearm raised with hand near cheek; (10) wrist waves outward; (11) wrist waves inward. Only that arm moves; no duplicate arms.\nRow 4: (12) shallow head nod; (13) slightly deeper head nod; (14) relaxed closed-eye sleep pose; (15) same sleep pose with minimal breathing change. Legs and outfit stay fixed.\nGenuine transparent alpha everywhere outside figures, no colored background, painted checkerboard, grid lines, cell labels, text, shadows, extra objects or effects. Clean consistent keyframes, not whole-image shaking. Preserve the approved visual style exactly.\nPreserve this approved refined anime drawing and its face exactly; no chibi proportions.\nEach figure occupies at most 78 percent of its cell HEIGHT. Leave EMPTY TRANSPARENT PADDING above ornaments and below feet in EVERY cell. Exactly 16 figures arranged in a strict 4x4 grid.",
+      "generatedFile": "$HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc/exec-5af0c6da-f517-4e4b-9eef-a79a24f57235.png"
+    },
+    {
+      "style": "chibi",
+      "prompt": "Edit the attached approved character master into ONE production animation SPRITE SHEET: exactly 4 columns by 4 rows, 16 equally sized cells, read left-to-right then top-to-bottom. Every cell contains the SAME complete full-body character with identical outfit, ornaments, hair, proportions, line thickness and rendering style. Do NOT redesign her. Fixed front camera, identical character scale and foot location within every cell. Keep generous transparent gutters inside EVERY cell; all hair, hands, feet and clothing stay inside their own cell.\nRow 1: (0) exact neutral master pose; (1) half-closed eyelids; (2) fully closed eyelids for blink; (3) tiny chest/shoulder breathing change, feet and torso position fixed.\nRow 2: (4) small talking mouth; (5) wider talking mouth; (6) joyful smiling expression; (7) thoughtful expression. Only face changes, body and hair identical.\nRow 3: four consecutive greeting poses, (8) waving arm relaxed down; (9) same forearm raised with hand near cheek; (10) wrist waves outward; (11) wrist waves inward. Only that arm moves; no duplicate arms.\nRow 4: (12) shallow head nod; (13) slightly deeper head nod; (14) relaxed closed-eye sleep pose; (15) same sleep pose with minimal breathing change. Legs and outfit stay fixed.\nGenuine transparent alpha everywhere outside figures, no colored background, painted checkerboard, grid lines, cell labels, text, shadows, extra objects or effects. Clean consistent keyframes, not whole-image shaking. Preserve the approved visual style exactly.\nPreserve this rounded 2.5-head chibi design, soft cel shading and detailed accessories.\nEach figure occupies at most 78 percent of its cell HEIGHT. Leave EMPTY TRANSPARENT PADDING above ornaments and below feet in EVERY cell. Exactly 16 figures arranged in a strict 4x4 grid.",
+      "generatedFile": "$HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc/exec-b097556e-e989-4637-8d45-d73ee9954804.png"
+    },
+    {
+      "style": "pixel",
+      "prompt": "Edit the attached approved character master into ONE production animation SPRITE SHEET: exactly 4 columns by 4 rows, 16 equally sized cells, read left-to-right then top-to-bottom. Every cell contains the SAME complete full-body character with identical outfit, ornaments, hair, proportions, line thickness and rendering style. Do NOT redesign her. Fixed front camera, identical character scale and foot location within every cell. Keep generous transparent gutters inside EVERY cell; all hair, hands, feet and clothing stay inside their own cell.\nRow 1: (0) exact neutral master pose; (1) half-closed eyelids; (2) fully closed eyelids for blink; (3) tiny chest/shoulder breathing change, feet and torso position fixed.\nRow 2: (4) small talking mouth; (5) wider talking mouth; (6) joyful smiling expression; (7) thoughtful expression. Only face changes, body and hair identical.\nRow 3: four consecutive greeting poses, (8) waving arm relaxed down; (9) same forearm raised with hand near cheek; (10) wrist waves outward; (11) wrist waves inward. Only that arm moves; no duplicate arms.\nRow 4: (12) shallow head nod; (13) slightly deeper head nod; (14) relaxed closed-eye sleep pose; (15) same sleep pose with minimal breathing change. Legs and outfit stay fixed.\nGenuine transparent alpha everywhere outside figures, no colored background, painted checkerboard, grid lines, cell labels, text, shadows, extra objects or effects. Clean consistent keyframes, not whole-image shaking. Preserve the approved visual style exactly.\nPreserve this detailed pixel-art silhouette. Hard pixel clusters on a 64x96 logical grid, no smooth anime rendering.\nEach figure occupies at most 78 percent of its cell HEIGHT. Leave EMPTY TRANSPARENT PADDING above ornaments and below feet in EVERY cell. Exactly 16 figures arranged in a strict 4x4 grid.",
+      "generatedFile": "$HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc/exec-38e945b5-3c99-48d3-99f7-67b13d676564.png"
+    },
+    {
+      "style": "8bit",
+      "prompt": "Edit the attached approved character master into ONE production animation SPRITE SHEET: exactly 4 columns by 4 rows, 16 equally sized cells, read left-to-right then top-to-bottom. Every cell contains the SAME complete full-body character with identical outfit, ornaments, hair, proportions, line thickness and rendering style. Do NOT redesign her. Fixed front camera, identical character scale and foot location within every cell. Keep generous transparent gutters inside EVERY cell; all hair, hands, feet and clothing stay inside their own cell.\nRow 1: (0) exact neutral master pose; (1) half-closed eyelids; (2) fully closed eyelids for blink; (3) tiny chest/shoulder breathing change, feet and torso position fixed.\nRow 2: (4) small talking mouth; (5) wider talking mouth; (6) joyful smiling expression; (7) thoughtful expression. Only face changes, body and hair identical.\nRow 3: four consecutive greeting poses, (8) waving arm relaxed down; (9) same forearm raised with hand near cheek; (10) wrist waves outward; (11) wrist waves inward. Only that arm moves; no duplicate arms.\nRow 4: (12) shallow head nod; (13) slightly deeper head nod; (14) relaxed closed-eye sleep pose; (15) same sleep pose with minimal breathing change. Legs and outfit stay fixed.\nGenuine transparent alpha everywhere outside figures, no colored background, painted checkerboard, grid lines, cell labels, text, shadows, extra objects or effects. Clean consistent keyframes, not whole-image shaking. Preserve the approved visual style exactly.\nPreserve the coarse retro sprite with bold colored blocks and very simple facial marks. 48x64 logical pixels, at most sixteen colors.\nEach figure occupies at most 78 percent of its cell HEIGHT. Leave EMPTY TRANSPARENT PADDING above ornaments and below feet in EVERY cell. Exactly 16 figures arranged in a strict 4x4 grid.",
+      "generatedFile": "$HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc/exec-79059f8d-42fc-476d-92c8-a2d5a2da4d9d.png"
+    },
+    {
+      "style": "3d",
+      "prompt": "Edit the attached approved character master into ONE production animation SPRITE SHEET: exactly 4 columns by 4 rows, 16 equally sized cells, read left-to-right then top-to-bottom. Every cell contains the SAME complete full-body character with identical outfit, ornaments, hair, proportions, line thickness and rendering style. Do NOT redesign her. Fixed front camera, identical character scale and foot location within every cell. Keep generous transparent gutters inside EVERY cell; all hair, hands, feet and clothing stay inside their own cell.\nRow 1: (0) exact neutral master pose; (1) half-closed eyelids; (2) fully closed eyelids for blink; (3) tiny chest/shoulder breathing change, feet and torso position fixed.\nRow 2: (4) small talking mouth; (5) wider talking mouth; (6) joyful smiling expression; (7) thoughtful expression. Only face changes, body and hair identical.\nRow 3: four consecutive greeting poses, (8) waving arm relaxed down; (9) same forearm raised with hand near cheek; (10) wrist waves outward; (11) wrist waves inward. Only that arm moves; no duplicate arms.\nRow 4: (12) shallow head nod; (13) slightly deeper head nod; (14) relaxed closed-eye sleep pose; (15) same sleep pose with minimal breathing change. Legs and outfit stay fixed.\nGenuine transparent alpha everywhere outside figures, no colored background, painted checkerboard, grid lines, cell labels, text, shadows, extra objects or effects. Clean consistent keyframes, not whole-image shaking. Preserve the approved visual style exactly.\nPreserve the low-poly 3D faceted geometry, modeled nose, hair and hard directional lighting in every pose. Do not turn it into drawn anime.\nEach figure occupies at most 78 percent of its cell HEIGHT. Leave EMPTY TRANSPARENT PADDING above ornaments and below feet in EVERY cell. Exactly 16 figures arranged in a strict 4x4 grid.",
+      "generatedFile": "$HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc/exec-3672d4fb-d0b4-4f7f-bbe9-d69977e44e32.png"
+    }
+  ],
+  "powerpuffGeneration": {
+    "source": "Generated images are saved to $HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc as $HOME/.codex/generated_images/01a0dd49-bdf9-76e0-bc51-822e9402c9cc/exec-072e9d24-0af8-49e1-91ff-0b789d5dbfb3.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+  },
+  "masters": [
+    {
+      "style": "original",
+      "builtin": "cyrene-original-v1",
+      "reference": "$MORI_ROOT/artifacts/animation/cyrene-v1/masters/original.png",
+      "original": "$MORI_ROOT/public/art/cyrene-original-v1.png",
+      "unpackedNeutralCell": false
+    },
+    {
+      "style": "anime",
+      "builtin": "cyrene-anime-v5",
+      "reference": "$MORI_ROOT/artifacts/animation/cyrene-v1/masters/anime.png",
+      "original": "$MORI_ROOT/public/art/cyrene-anime-v5.png",
+      "unpackedNeutralCell": false
+    },
+    {
+      "style": "chibi",
+      "builtin": "cyrene-chibi-v4",
+      "reference": "$MORI_ROOT/artifacts/animation/cyrene-v1/masters/chibi.png",
+      "original": "$MORI_ROOT/public/art/cyrene-chibi-v4.png",
+      "unpackedNeutralCell": true
+    },
+    {
+      "style": "powerpuff",
+      "builtin": "cyrene-powerpuff-v1",
+      "reference": "$MORI_ROOT/artifacts/animation/cyrene-v1/masters/powerpuff.png",
+      "original": "$MORI_ROOT/public/art/cyrene-powerpuff-v1.png",
+      "unpackedNeutralCell": false
+    },
+    {
+      "style": "pixel",
+      "builtin": "cyrene-pixel-v4",
+      "reference": "$MORI_ROOT/artifacts/animation/cyrene-v1/masters/pixel.png",
+      "original": "$MORI_ROOT/public/art/cyrene-pixel-v4.png",
+      "unpackedNeutralCell": true
+    },
+    {
+      "style": "8bit",
+      "builtin": "cyrene-8bit-v5",
+      "reference": "$MORI_ROOT/artifacts/animation/cyrene-v1/masters/8bit.png",
+      "original": "$MORI_ROOT/public/art/cyrene-8bit-v5.png",
+      "unpackedNeutralCell": true
+    },
+    {
+      "style": "3d",
+      "builtin": "cyrene-3d-v5",
+      "reference": "$MORI_ROOT/artifacts/animation/cyrene-v1/masters/3d.png",
+      "original": "$MORI_ROOT/public/art/cyrene-3d-v5.png",
+      "unpackedNeutralCell": false
+    }
+  ],
+  "animations": [
+    {
+      "builtin": "cyrene-original-v1",
+      "style": "original",
+      "file": "cyrene-original-motion-v1.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "frames": [
+          {
+            "rect": [
+              0,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          }
+        ],
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false
+      },
+      "source": "artifacts/animation/cyrene-v1/sheets/original.png",
+      "sourceSha256": "0d7b1276ce165e6c55e4a8a1ee95a4ac3686926a8fa54afaf10454d76b162fde",
+      "sha256": "052bb82fa4f476ee0d5c1d0ae5a73f430c284cc4f28ccfe0b320fc7b8f45f875",
+      "bytes": 3743325,
+      "frameHeights": [
+        366,
+        366,
+        366,
+        366,
+        383,
+        383,
+        383,
+        383,
+        373,
+        373,
+        373,
+        373,
+        373,
+        369,
+        373,
+        375
+      ],
+      "footRegistration": "translation only; fixed scale across stationary poses"
+    },
+    {
+      "builtin": "cyrene-anime-v5",
+      "style": "anime",
+      "file": "cyrene-anime-motion-v1.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "frames": [
+          {
+            "rect": [
+              0,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          }
+        ],
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false
+      },
+      "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+      "sourceSha256": "2a4f056a0714f7e52fd5482da72ca3c620924b7d65da809127b13c97229b26f4",
+      "sha256": "5606e43075ad89a2891124bdcd3f022ec5bd7e84642b38bddf7ce512ab28bab6",
+      "bytes": 3416724,
+      "frameHeights": [
+        359,
+        359,
+        359,
+        359,
+        359,
+        359,
+        359,
+        358,
+        360,
+        359,
+        359,
+        359,
+        361,
+        362,
+        362,
+        362
+      ],
+      "footRegistration": "translation only; fixed scale across stationary poses"
+    },
+    {
+      "builtin": "cyrene-chibi-v4",
+      "style": "chibi",
+      "file": "cyrene-chibi-motion-v1.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "frames": [
+          {
+            "rect": [
+              0,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          }
+        ],
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false
+      },
+      "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+      "sourceSha256": "db8fb1d9bf7c7bfd86814faf9516d2351e03315b1db4c5f712ca489ab0bb2b7e",
+      "sha256": "79f5c546478bb001b3a45db31f02f0d28db6b93d20ddbe20f5dadc8eb9ac7343",
+      "bytes": 4772473,
+      "frameHeights": [
+        348,
+        348,
+        348,
+        347,
+        350,
+        350,
+        349,
+        350,
+        351,
+        351,
+        351,
+        351,
+        351,
+        349,
+        350,
+        351
+      ],
+      "footRegistration": "translation only; fixed scale across stationary poses"
+    },
+    {
+      "builtin": "cyrene-powerpuff-v1",
+      "style": "powerpuff",
+      "file": "cyrene-powerpuff-motion-v1.png",
+      "animation": {
+        "width": 384,
+        "height": 384,
+        "frames": [
+          {
+            "rect": [
+              0,
+              0,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              0,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              0,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              0,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              384,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              384,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              384,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              384,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              768,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              768,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              768,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              768,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1152,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1152,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1152,
+              384,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1152,
+              384,
+              384
+            ],
+            "duration": 140
+          }
+        ],
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false
+      },
+      "source": "artifacts/animation/cyrene-v1/sheets/powerpuff.png",
+      "sourceSha256": "4b1cb9ed155d603916a58093addead5d1d73171bee9028e1ab5bef9bb3a663fa",
+      "sha256": "0782b62c559e6365e09f11c6cca6da815d39a08211ba557a2f95cf21f8b0a7c6",
+      "bytes": 3307887,
+      "frameHeights": [
+        308,
+        308,
+        308,
+        308,
+        306,
+        306,
+        306,
+        306,
+        305,
+        305,
+        306,
+        306,
+        303,
+        302,
+        303,
+        303
+      ],
+      "footRegistration": "translation only; fixed scale across stationary poses"
+    },
+    {
+      "builtin": "cyrene-pixel-v6",
+      "style": "pixel",
+      "file": "cyrene-pixel-motion-v1.png",
+      "animation": {
+        "width": 64,
+        "height": 96,
+        "frames": [
+          {
+            "rect": [
+              0,
+              0,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              256,
+              0,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              512,
+              0,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              0,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              384,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              256,
+              384,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              512,
+              384,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              384,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              768,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              256,
+              768,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              512,
+              768,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              768,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1152,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              256,
+              1152,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              512,
+              1152,
+              256,
+              384
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1152,
+              256,
+              384
+            ],
+            "duration": 140
+          }
+        ],
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": true,
+        "palette": [
+          "#30213d",
+          "#583a69",
+          "#815488",
+          "#ad5887",
+          "#e88bb3",
+          "#ffd1df",
+          "#fff2db",
+          "#e8b2a0",
+          "#c47b86",
+          "#ffffff",
+          "#c8c4e4",
+          "#897bba",
+          "#4a398a",
+          "#302765",
+          "#69a6eb",
+          "#f6d37e",
+          "#1c172c",
+          "#7b3b76",
+          "#c65299",
+          "#f478b0",
+          "#a273ce",
+          "#966de4",
+          "#342557",
+          "#384578",
+          "#4173bf",
+          "#8093ed",
+          "#8bd5ff",
+          "#c2eafe",
+          "#eee6fc",
+          "#fff5f6",
+          "#ffddbf",
+          "#df9eae"
+        ]
+      },
+      "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+      "sourceSha256": "c9e76dc8c45fee3a7a92083a2389df2899dac1e675b089e3bdc9680ab22f6ecf",
+      "sha256": "44b2529fef2b1c65ec16774a2083c98aa674b27f8f2b735f4d18f76b6f28e22e",
+      "bytes": 1824975,
+      "frameHeights": [
+        348,
+        348,
+        348,
+        348,
+        349,
+        349,
+        349,
+        349,
+        349,
+        349,
+        349,
+        349,
+        348,
+        348,
+        348,
+        348
+      ],
+      "footRegistration": "translation only; fixed scale across stationary poses"
+    },
+    {
+      "builtin": "cyrene-8bit-v5",
+      "style": "8bit",
+      "file": "cyrene-8bit-motion-v1.png",
+      "animation": {
+        "width": 48,
+        "height": 64,
+        "frames": [
+          {
+            "rect": [
+              0,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          }
+        ],
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": true,
+        "palette": [
+          "#30213d",
+          "#583a69",
+          "#815488",
+          "#ad5887",
+          "#e88bb3",
+          "#ffd1df",
+          "#fff2db",
+          "#e8b2a0",
+          "#c47b86",
+          "#ffffff",
+          "#c8c4e4",
+          "#897bba",
+          "#4a398a",
+          "#302765",
+          "#69a6eb",
+          "#f6d37e"
+        ]
+      },
+      "source": "artifacts/animation/cyrene-v1/sheets/8bit.png",
+      "sourceSha256": "7f129761ebd2986c450c99d69831a6b1f8de7d7be84842a3e8594035e52ae268",
+      "sha256": "5ec28899a7a5fc75bc6b5b8bacc7cc5b80a527d9ac51eebecb9cb30b232366f4",
+      "bytes": 4491123,
+      "frameHeights": [
+        315,
+        315,
+        315,
+        315,
+        314,
+        314,
+        314,
+        314,
+        314,
+        314,
+        314,
+        314,
+        314,
+        314,
+        314,
+        314
+      ],
+      "footRegistration": "translation only; fixed scale across stationary poses"
+    },
+    {
+      "builtin": "cyrene-3d-v5",
+      "style": "3d",
+      "file": "cyrene-3d-motion-v1.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "frames": [
+          {
+            "rect": [
+              0,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              0,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              512,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1024,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              0,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              384,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              768,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          },
+          {
+            "rect": [
+              1152,
+              1536,
+              384,
+              512
+            ],
+            "duration": 140
+          }
+        ],
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false
+      },
+      "source": "artifacts/animation/cyrene-v1/sheets/3d.png",
+      "sourceSha256": "0c297df7e81137840b5c44052a23e5b5f3dcac3b50cbec397d0b6631e9ffcc03",
+      "sha256": "802c057b253955845864e9c032e6e0e7f5bcdd27a6d963476a634c1b4dec2429",
+      "bytes": 3436847,
+      "frameHeights": [
+        363,
+        363,
+        363,
+        364,
+        366,
+        365,
+        364,
+        366,
+        365,
+        365,
+        365,
+        365,
+        365,
+        365,
+        365,
+        365
+      ],
+      "footRegistration": "translation only; fixed scale across stationary poses"
+    }
+  ],
+  "packing": "Native Electron codec for grid unpacking and atlas compilation; authored poses retained; common scale and stationary foot registration; no raster warping",
+  "runtimeVerification": "artifacts/animation/cyrene-v1/runtime-verification.json",
+  "reviewVideo": "artifacts/animation/cyrene-v1/seven-styles-runtime.webm",
+  "limitations": [
+    "16 authored key poses per style; not continuous skeletal animation",
+    "Available: idle, blink, talk, wave, nod, sleep, happy, thinking, sleepy",
+    "Shake, bounce, sad and surprised were not authored for these packs",
+    "Low-poly 3D style is a PNG sequence, not a rigged 3D mesh"
+  ],
+  "pixelPalette": "32 deliberately selected pink, blue, purple, skin, white, gold and outline colors; not most-frequent RGB values",
+  "verified": {
+    "unitTests": 164,
+    "typeCheck": true,
+    "productionBuild": true,
+    "runtime": {
+      "styles": [
+        {
+          "style": "original",
+          "idle": [
+            "0",
+            "3",
+            "1",
+            "2"
+          ],
+          "nod": [
+            "0",
+            "12",
+            "13",
+            "3"
+          ],
+          "talk": [
+            "3",
+            "4",
+            "0",
+            "5"
+          ],
+          "sleep": [
+            "0",
+            "14",
+            "15"
+          ]
+        },
+        {
+          "style": "anime",
+          "idle": [
+            "0",
+            "3",
+            "1",
+            "2"
+          ],
+          "nod": [
+            "0",
+            "12",
+            "13",
+            "3"
+          ],
+          "talk": [
+            "3",
+            "5",
+            "4",
+            "0"
+          ],
+          "sleep": [
+            "0",
+            "14",
+            "15"
+          ]
+        },
+        {
+          "style": "chibi",
+          "idle": [
+            "0",
+            "3",
+            "1",
+            "2"
+          ],
+          "nod": [
+            "0",
+            "12",
+            "13",
+            "3"
+          ],
+          "talk": [
+            "3",
+            "5",
+            "4",
+            "0"
+          ],
+          "sleep": [
+            "0",
+            "14",
+            "15"
+          ]
+        },
+        {
+          "style": "powerpuff",
+          "idle": [
+            "0",
+            "3",
+            "1",
+            "2"
+          ],
+          "nod": [
+            "0",
+            "12",
+            "13",
+            "3"
+          ],
+          "talk": [
+            "3",
+            "5",
+            "4",
+            "0"
+          ],
+          "sleep": [
+            "0",
+            "14",
+            "15"
+          ]
+        },
+        {
+          "style": "pixel",
+          "idle": [
+            "0",
+            "3",
+            "1",
+            "2"
+          ],
+          "nod": [
+            "0",
+            "12",
+            "13",
+            "3"
+          ],
+          "talk": [
+            "3",
+            "5",
+            "4",
+            "0"
+          ],
+          "sleep": [
+            "0",
+            "14",
+            "15"
+          ]
+        },
+        {
+          "style": "8bit",
+          "idle": [
+            "0",
+            "3",
+            "1",
+            "2"
+          ],
+          "nod": [
+            "0",
+            "12",
+            "13",
+            "3"
+          ],
+          "talk": [
+            "3",
+            "5",
+            "4",
+            "0"
+          ],
+          "sleep": [
+            "0",
+            "14",
+            "15"
+          ]
+        },
+        {
+          "style": "3d",
+          "idle": [
+            "0",
+            "3",
+            "1",
+            "2"
+          ],
+          "nod": [
+            "0",
+            "12",
+            "13",
+            "3"
+          ],
+          "talk": [
+            "3",
+            "5",
+            "4",
+            "0"
+          ],
+          "sleep": [
+            "0",
+            "14",
+            "15"
+          ]
+        }
+      ],
+      "pause": true,
+      "reducedMotion": true,
+      "headpat": true,
+      "desktopPet": true,
+      "networkCalls": 0
+    },
+    "nativeCharacterPackRegression": true,
+    "development": {
+      "developmentOpened": true,
+      "styles": 7,
+      "activeSkin": "cyrene-powerpuff-v1",
+      "observedFrames": [
+        "6",
+        "0",
+        "1",
+        "2"
+      ],
+      "oldAssetsAndDataPreserved": true,
+      "credentialsBytesUnchanged": true,
+      "modelRequests": 0,
+      "screenshot": "$MORI_ROOT/.local/cyrene-motion-development.png"
+    },
+    "developmentWatcher": {
+      "ownRendererPathsWatched": 4,
+      "unrelatedPathsIgnored": 5,
+      "ignoredFileEvents": 0
+    }
+  }
+}

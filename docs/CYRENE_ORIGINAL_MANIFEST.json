@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-04",
+  "style": "original",
+  "name": "最初的模样 · 原作画风",
+  "file": "public/art/cyrene-original-v1.png",
+  "generator": "built-in image_gen",
+  "builtinImageCalls": 2,
+  "usesConfiguredImageApi": false,
+  "animated": false,
+  "reviewStatus": "newly drawn original-style illustration; visual fidelity awaits user review",
+  "method": "new illustration from four original visual references, followed by silhouette/background refinement",
+  "dimensions": [
+    1024,
+    1536
+  ],
+  "sha256": "2166f08feace70e2ebbea20c7408778d9cb5d292ae6951fc86344c3482b9fba4",
+  "promptFiles": [
+    "docs/art/cyrene-original-v1-prompt.txt",
+    "docs/art/cyrene-original-v1-alpha-edit.txt"
+  ],
+  "references": [
+    {
+      "file": "references/01-original-standing.png",
+      "label": "昔涟 · 游戏站姿",
+      "sourceUrl": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+      "sha256": "0ef1ebdc5463715e105f7a2c5cb7cefe406070b744cb8df31388ead1d2fee10b",
+      "bytes": 204281
+    },
+    {
+      "file": "references/02-original-artwork.png",
+      "label": "昔涟 · 角色立绘",
+      "sourceUrl": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+      "sha256": "2694185f8022b48444ed03afeb2d960cafee7736782e40c40cdbe648e90e84e1",
+      "bytes": 3731443
+    },
+    {
+      "file": "references/03-original-face.png",
+      "label": "昔涟 · 面部",
+      "sourceUrl": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+      "sha256": "699ccd2f8d2528d0ad1bb0c70320c1146ccab9853a62de0a6c8d426481c51a67",
+      "bytes": 74174
+    },
+    {
+      "file": "references/04-original-back.png",
+      "label": "昔涟 · 背部发饰",
+      "sourceUrl": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+      "sha256": "48bfeca7c7cda7b8a671d8a25f18a714df1e6bda0fd9495bb0e89daf525f816a",
+      "bytes": 946800
+    }
+  ]
+}

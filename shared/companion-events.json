@@ -1,0 +1,184 @@
+{
+  "greet": {
+    "emotion": "happy",
+    "actions": [
+      "wave",
+      "nod",
+      "idle"
+    ],
+    "lines": [
+      "你好，我在这里。",
+      "又见面了。今天过得怎么样？"
+    ],
+    "quietActions": [
+      "nod",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "touch": {
+    "emotion": "happy",
+    "actions": [
+      "nod",
+      "idle"
+    ],
+    "lines": [
+      "我在。",
+      "嗯，听见你啦。"
+    ],
+    "quietActions": [
+      "nod",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "headpat": {
+    "emotion": "happy",
+    "actions": [
+      "nod",
+      "idle"
+    ],
+    "lines": [
+      "嗯，收到你的关心了。",
+      "谢谢你，稍微放松一点了。"
+    ],
+    "quietActions": [
+      "nod",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "poke": {
+    "emotion": "surprised",
+    "actions": [
+      "shake",
+      "nod",
+      "idle"
+    ],
+    "lines": [
+      "嗯？你在叫我吗？",
+      "我在这里。怎么啦？"
+    ],
+    "quietActions": [
+      "nod",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "drag": {
+    "emotion": "neutral",
+    "actions": [
+      "idle"
+    ],
+    "lines": [
+      "换到这里了。"
+    ],
+    "quietActions": [
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "rest": {
+    "emotion": "sleepy",
+    "actions": [
+      "sleep",
+      "idle"
+    ],
+    "lines": [
+      "先休息一下吧。"
+    ],
+    "quietActions": [
+      "sleep",
+      "idle"
+    ],
+    "reservedEmotion": "sleepy"
+  },
+  "wake": {
+    "emotion": "happy",
+    "actions": [
+      "wave",
+      "nod",
+      "idle"
+    ],
+    "lines": [
+      "休息好了，我们继续。"
+    ],
+    "quietActions": [
+      "nod",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "comfort": {
+    "emotion": "neutral",
+    "actions": [
+      "idle"
+    ],
+    "lines": [
+      "先放慢一点，休息一下。"
+    ],
+    "quietActions": [
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "thanks": {
+    "emotion": "happy",
+    "actions": [
+      "nod",
+      "idle"
+    ],
+    "lines": [
+      "不客气。"
+    ],
+    "quietActions": [
+      "nod",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "focus": {
+    "emotion": "neutral",
+    "actions": [
+      "read",
+      "idle"
+    ],
+    "lines": [
+      "先专心做眼前的事吧。"
+    ],
+    "quietActions": [
+      "read",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "farewell": {
+    "emotion": "neutral",
+    "actions": [
+      "wave",
+      "nod",
+      "idle"
+    ],
+    "lines": [
+      "下次见，记得休息。"
+    ],
+    "quietActions": [
+      "nod",
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  },
+  "unknown": {
+    "emotion": "neutral",
+    "actions": [
+      "idle"
+    ],
+    "lines": [
+      "本地台词模式只能回应已设置的场景。可以试试“你好”“给我一点鼓励”或“晚安”；自由聊天需要切换到模型对话。"
+    ],
+    "quietActions": [
+      "idle"
+    ],
+    "reservedEmotion": "neutral"
+  }
+}

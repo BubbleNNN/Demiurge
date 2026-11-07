@@ -1,0 +1,2943 @@
+import { isActivity, activityDuration } from './animation/activities';
+import { FeatureNavigation } from './features/FeatureNavigation';
+import { featureTitle, startupView, type AppView } from './features/navigation';
+import { CompanionScene } from './features/companion/CompanionScene';
+import { ConversationPanel, type ConversationMode } from './features/conversation/ConversationPanel';
+import { DesktopPage } from './features/desktop/DesktopPage';
+import { PetProductionStudio } from './features/appearance/PetProductionStudio';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { selectedSearchProvider, searchProviderNames } from './research';
+import {
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  Download,
+  ExternalLink,
+  Flower2,
+  Heart,
+  ImagePlus,
+  Layers3,
+  LoaderCircle,
+  MessageCircle,
+  Palette,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Upload,
+  WandSparkles,
+  X,
+  BookOpen,
+  Gamepad2,
+  Square,
+  Eye,
+  Box,
+  SlidersHorizontal,
+  RefreshCw,
+  Orbit,
+  Film,
+  Pin,
+  Search,
+  EyeOff,
+  FolderHeart,
+  Moon,
+  Sun,
+} from 'lucide-react';
+import { bridge, isDesktop } from './bridge';
+import { initialState, migrateState } from './initial';
+import {
+  themes,
+  themeVars,
+  resolveTheme,
+  skinImage,
+  styleName,
+  engineName,
+  availableStyle,
+  styles,
+} from './theme';
+import { AvatarStage } from './components/AvatarStage';
+import { Modal } from './components/Modal';
+import { SettingsPanel } from './components/SettingsPanel';
+import { GenerationStudio } from './components/GenerationStudio';
+import { ReferencePanel } from './components/ReferencePanel';
+import { ModelStudio } from './components/ModelStudio';
+import { ArtWorkflow } from './components/ArtWorkflow';
+import { CharacterPacks } from './components/CharacterPacks';
+import { CharacterSetup } from './components/CharacterSetup';
+import { CharacterReadiness } from './components/CharacterReadiness';
+import { usableCharacterSkin, selectedCharacterSkin, existingCharacter } from './characterReadiness';
+import { creationDraftKey, parseCreationDraft } from './creationDraft';
+import {
+  activateCharacterPack,
+  installStarterPack,
+  matchingCharacterPacks,
+  type CharacterPack,
+} from './characterPacks';
+import { createLocalCharacter } from './characterCreation';
+import { admitBehavior, freshBehavior, interactionPlan, proactiveInterval } from './companion';
+import { SkinArtwork } from './components/SkinArtwork';
+import { spriteAnimation, animationDescription, supportsAction, supportsEmotion } from './artwork';
+import { clipDuration } from './animation/timeline';
+import { hitCharacter } from './animation/framing';
+import { PersonaEditor } from './components/PersonaEditor';
+import { PersonaPreview } from './components/PersonaPreview';
+import { userError } from './errors';
+import { personaDraftError } from './personaValidation';
+import { appendCompletedReply, type CompletedReply } from './conversation';
+import type {
+  AppState,
+  Character,
+  CompanionEvent,
+  ChatStatus,
+  Emotion,
+  KeyStatus,
+  Memory,
+  PetAction,
+  ProgressEvent,
+  Skin,
+  VisualReference,
+} from './types';
+const id = (): string => crypto.randomUUID();
+const now = () => new Date().toISOString();
+const errorText = userError;
+const emotions: { id: Emotion; name: string; mark: string }[] = [
+  { id: 'neutral', name: '平静', mark: '◡' },
+  { id: 'happy', name: '开心', mark: '♡' },
+  { id: 'thinking', name: '思考', mark: '…' },
+  { id: 'sad', name: '低落', mark: '☂' },
+  { id: 'sleepy', name: '困倦', mark: '☾' },
+  { id: 'surprised', name: '惊讶', mark: '✧' },
+];
+const actionNames: Record<PetAction, string> = {
+  idle: '待机',
+  bounce: '小跳',
+  nod: '点头',
+  shake: '摇头',
+  sleep: '休息',
+  wave: '招呼',
+  read: '读书',
+  gaming: '玩掌机',
+};
+export default function App() {
+  const [state, setState] = useState<AppState>(initialState);
+  const stateRef = useRef(state);
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [hasPreviousState, setHasPreviousState] = useState(false);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryError, setRecoveryError] = useState('');
+  const [view, setView] = useState<AppView>(() => startupView(location.search));
+  const [keys, setKeys] = useState<KeyStatus>({
+    llmKey: false,
+    searchKey: false,
+    imageKey: false,
+    ttsKey: false,
+    secure: false,
+  });
+  const [toast, setToast] = useState('');
+  const [emotion, setEmotion] = useState<Emotion>('neutral');
+  const [action, setAction] = useState<PetAction>('idle');
+  const [actionKey, setActionKey] = useState(0);
+  const [tracking, setTracking] = useState(true);
+  const [motionEnabled, setMotionEnabled] = useState(true);
+  const [previewSpeech, setPreviewSpeech] = useState(false);
+  const [showEarlierArt, setShowEarlierArt] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [petChat, setPetChat] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
+  const [bubbleHidden, setBubbleHidden] = useState(false);
+  const [sceneSettingsOpen, setSceneSettingsOpen] = useState(false);
+  const [touchFeedback, setTouchFeedback] = useState<{ kind: 'headpat' | 'poke'; key: number } | null>(null);
+  const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
+  const [chatBusy, setChatBusy] = useState(false);
+  const [sharedChatStatus, setSharedChatStatus] = useState<ChatStatus>({ busy: false });
+  const interactionBusy = chatBusy || sharedChatStatus.busy;
+  const [chatError, setChatError] = useState('');
+  const [chatStopping, setChatStopping] = useState(false);
+  const chatCancelled = useRef(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyQuery, setHistoryQuery] = useState('');
+  const [newTopicCharacters, setNewTopicCharacters] = useState<Record<string, boolean>>({});
+  const [talking, setTalking] = useState(false);
+  const [audioBusy, setAudioBusy] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+  const audioFrame = useRef(0);
+  const audioRequest = useRef(0);
+  const mouth = useRef(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const creationGuard = useRef(false);
+  const [creationStage, setCreationStage] = useState('');
+  const [creationDraftSaved, setCreationDraftSaved] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newWork, setNewWork] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [newMode, setNewMode] = useState<'draft' | 'links' | 'search' | 'manual'>('manual');
+  const manualCreate = newMode === 'manual';
+  const [newUrls, setNewUrls] = useState('');
+  const [sourceUpdateOpen, setSourceUpdateOpen] = useState(false);
+  const [updateMode, setUpdateMode] = useState<'links' | 'search' | 'saved'>('links');
+  const [updateUrls, setUpdateUrls] = useState('');
+  const [updateError, setUpdateError] = useState('');
+  const updateResult = useRef<{ characterId: string; character: Character } | null>(null);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [petProductionOpen, setPetProductionOpen] = useState(false);
+  const [modelStudioOpen, setModelStudioOpen] = useState(false);
+  const [artWorkflowOpen, setArtWorkflowOpen] = useState(false);
+  const [packsOpen, setPacksOpen] = useState(false);
+  const [setupCharacterId, setSetupCharacterId] = useState('');
+  const behavior = useRef(freshBehavior());
+  const interactionCounts = useRef<Record<string, number>>({});
+  const [interactionLine, setInteractionLine] = useState('');
+  const [resting, setResting] = useState(false);
+  const [collectOnCreate, setCollectOnCreate] = useState(true);
+  const [jobBusy, setJobBusy] = useState(false);
+  const [jobError, setJobError] = useState('');
+  const [progress, setProgress] = useState<ProgressEvent | null>(null);
+  const pending = useRef<{ character?: Character }>({});
+  const [profile, setProfile] = useState<Character | null>(null);
+  const [personaPreviewOpen, setPersonaPreviewOpen] = useState(false);
+  const profileBase = useRef<AppState | null>(null);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [modelOpen, setModelOpen] = useState(false);
+  const [editedModel, setEditedModel] = useState<Skin | null>(null);
+  const [memoryDraft, setMemoryDraft] = useState('');
+  const [memoryQuery, setMemoryQuery] = useState('');
+  const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
+  const memoryBase = useRef<AppState | null>(null);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const petMode = new URLSearchParams(location.search).get('pet') === '1';
+  const drag = useRef<{ x: number; y: number; moved: boolean; hit: 'headpat' | 'poke' } | null>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
+  const failedChat = useRef<Parameters<typeof bridge.chat>[0] | null>(null);
+  const completedReplies = useRef(new Map<string, CompletedReply>());
+  const seenReplies = useRef(new Map<string, string>());
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const character = state.characters.find((c) => c.id === state.activeCharacterId) || state.characters[0];
+  const matchingPacks = matchingCharacterPacks(state, newName, newWork);
+  const setupCharacter = state.characters.find((c) => c.id === setupCharacterId);
+  const message = messageDrafts[character.id] || '';
+  const newTopicPending = Boolean(newTopicCharacters[character.id]);
+  const allSkins = state.skins.filter((s) => s.characterId === character.id && availableStyle(s.style));
+  const earlierArt = (s: Skin) =>
+    Boolean(
+      s.builtin &&
+        /^(cyrene-(anime|chibi|pixel|plush)|cyrene-reference-v3|cyrene-(anime|pixel)-v4)$/.test(s.builtin),
+    );
+  const skins = allSkins.filter((s) => showEarlierArt || !earlierArt(s) || s.id === state.activeSkinId);
+  const displaySkins = skins.filter((s) => usableCharacterSkin(s, character));
+  const skin = displaySkins.find((s) => s.id === state.activeSkinId) || displaySkins[0];
+  const messages = state.messages[character.id] || [];
+  const memories = state.memories.filter((m) => m.characterId === character.id);
+  const filteredMemories = memories
+    .filter((m) => m.text.toLowerCase().includes(memoryQuery.toLowerCase().trim()))
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.createdAt.localeCompare(a.createdAt),
+    );
+  const theme = resolveTheme(character);
+  const lastReply = messages.filter((m) => m.role === 'assistant').at(-1);
+  const connected = isDesktop && keys.llmKey && Boolean(state.settings.llmModel);
+  const localChat = state.settings.chatMode === 'local';
+  const profileChanged =
+    profile &&
+    JSON.stringify({
+      ...profileBase.current?.characters.find((c) => c.id === profile.id),
+      visualReferences: undefined,
+    }) !==
+      JSON.stringify({ ...state.characters.find((c) => c.id === profile.id), visualReferences: undefined });
+  const profileInputError = profile ? personaDraftError(profile) : '';
+  const latestEditingMemory =
+    editingMemory && state.memories.find((memory) => memory.id === editingMemory.id);
+  const memoryChanged =
+    editingMemory &&
+    JSON.stringify(memoryBase.current?.memories.find((memory) => memory.id === editingMemory.id)) !==
+      JSON.stringify(latestEditingMemory);
+  useEffect(() => {
+    if (action === 'idle' || action === 'sleep') return;
+    const animation = spriteAnimation(skin),
+      clip = animation?.clips[action];
+    const duration = isActivity(action)
+      ? activityDuration
+      : animation && clip
+        ? Math.min(120000, clipDuration(animation, clip) + 80)
+        : 2600;
+    const timeout = setTimeout(() => setAction('idle'), duration);
+    return () => clearTimeout(timeout);
+  }, [action, actionKey, skin]);
+  useEffect(() => {
+    if (!previewSpeech) return;
+    const timeout = setTimeout(() => setPreviewSpeech(false), 2500);
+    return () => clearTimeout(timeout);
+  }, [previewSpeech]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('pet-window', petMode);
+    document.body.classList.toggle('pet-window', petMode);
+    document.title = petMode ? 'Mori 桌宠' : 'Mori · 角色陪伴';
+    let mounted = true;
+    bridge
+      .load()
+      .then(async (result) => {
+        const loaded = migrateState(result.state);
+        if (!mounted) return;
+        stateRef.current = loaded;
+        setState(loaded);
+        setKeys(result.keys);
+        setSharedChatStatus(result.chatStatus || { busy: false });
+        setReady(true);
+        if (loaded !== result.state) applyState(await bridge.save(loaded, result.state));
+      })
+      .catch((e) => {
+        if (mounted) setLoadError(errorText(e));
+      });
+    const off = bridge.onStateChanged((value) => {
+      applyState(value);
+    });
+    const offProgress = bridge.onProgress(setProgress);
+    const offKeys = bridge.onKeysChanged(setKeys);
+    const offChat = bridge.onChatStatusChanged?.(setSharedChatStatus);
+    return () => {
+      mounted = false;
+      off();
+      offProgress();
+      offKeys();
+      offChat?.();
+    };
+  }, [petMode]);
+  useEffect(() => {
+    if (!loadError || !isDesktop) return;
+    let mounted = true;
+    setHasPreviousState(false);
+    void bridge.getRecoveryStatus().then(
+      (status) => {
+        if (mounted) setHasPreviousState(status.hasPreviousState);
+      },
+      (error) => {
+        if (mounted) setRecoveryError(errorText(error));
+      },
+    );
+    return () => {
+      mounted = false;
+    };
+  }, [loadError]);
+  useEffect(() => {
+    if (!ready) return;
+    setMotionEnabled(state.settings.motionEnabled !== false);
+    setTracking(state.settings.trackingEnabled !== false);
+  }, [ready, state.settings.motionEnabled, state.settings.trackingEnabled]);
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = setTimeout(() => setToast(''), 5500);
+    return () => clearTimeout(timeout);
+  }, [toast]);
+  useEffect(() => {
+    if (!interactionLine) return;
+    const timeout = setTimeout(() => {
+      setInteractionLine('');
+      setBubbleHidden(true);
+    }, 6500);
+    return () => clearTimeout(timeout);
+  }, [interactionLine]);
+  useEffect(() => {
+    historyRef.current?.scrollTo({ top: historyRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages.length, chatBusy, petChat, chatExpanded, view]);
+  useEffect(() => {
+    setBubbleHidden(false);
+  }, [lastReply?.id, character.id]);
+  useEffect(() => {
+    if (!lastReply || interactionBusy || talking || chatExpanded || petChat) return;
+    const timer = setTimeout(
+      () => setBubbleHidden(true),
+      Math.min(22000, Math.max(9000, lastReply.content.length * 85)),
+    );
+    return () => clearTimeout(timer);
+  }, [lastReply?.id, character.id, interactionBusy, talking, chatExpanded, petChat]);
+  useEffect(() => {
+    if (!createOpen || jobBusy) return;
+    try {
+      localStorage.setItem(
+        creationDraftKey,
+        JSON.stringify({ name: newName, work: newWork, notes: newNotes, urls: newUrls, mode: newMode }),
+      );
+      setCreationDraftSaved(true);
+    } catch {
+      setCreationDraftSaved(false);
+    }
+  }, [createOpen, jobBusy, newName, newWork, newNotes, newUrls, newMode]);
+  useEffect(() => {
+    if (!touchFeedback) return;
+    const timeout = setTimeout(() => setTouchFeedback(null), 1200);
+    return () => clearTimeout(timeout);
+  }, [touchFeedback]);
+  useEffect(() => {
+    if (!ready) return;
+    const replyId = lastReply?.id || '';
+    if (!seenReplies.current.has(character.id)) {
+      seenReplies.current.set(character.id, replyId);
+      setEmotion(lastReply?.emotion || 'neutral');
+      setAction('idle');
+      return;
+    }
+    if (seenReplies.current.get(character.id) === replyId) return;
+    seenReplies.current.set(character.id, replyId);
+    setInteractionLine('');
+    const nextAction = supportsAction(skin, lastReply?.action || 'idle')
+      ? lastReply?.action || 'idle'
+      : 'idle';
+    const isRest = nextAction === 'sleep' || lastReply?.interaction === 'rest';
+    const isWake = lastReply?.interaction === 'wake';
+    if (isActivity(action)) behavior.current = freshBehavior();
+    const admitted = admitBehavior(behavior.current, {
+      event: 'reply',
+      now: performance.now(),
+      duration: actionDuration(nextAction),
+      priority: isWake ? 100 : isRest ? 90 : 60,
+      cooldown: 0,
+      rest: isRest,
+      wake: isWake,
+    });
+    if (admitted) {
+      behavior.current = admitted;
+      setResting(admitted.resting);
+      setEmotion(
+        supportsEmotion(skin, lastReply?.emotion || 'neutral') ? lastReply?.emotion || 'neutral' : 'neutral',
+      );
+      setAction(nextAction);
+      setActionKey((v) => v + 1);
+    }
+    setTalking(Boolean(lastReply));
+    const timeout = setTimeout(() => {
+      if (!audioRef.current) setTalking(false);
+    }, 3500);
+    return () => clearTimeout(timeout);
+  }, [lastReply?.id, character.id, ready]);
+  useEffect(() => {
+    if (!ready) return;
+    setChatError('');
+    setChatExpanded(false);
+    setSceneSettingsOpen(false);
+    setZoom(1);
+    setPersonaPreviewOpen(false);
+    stopAudio();
+    setEmotion(lastReply?.emotion || 'neutral');
+    setAction('idle');
+    seenReplies.current.set(character.id, lastReply?.id || '');
+  }, [character.id, ready]);
+  useEffect(() => {
+    behavior.current = freshBehavior();
+    interactionCounts.current = {};
+    setResting(false);
+    setInteractionLine('');
+    setTouchFeedback(null);
+    setAction('idle');
+  }, [character.id, skin?.id]);
+  useEffect(() => {
+    if ((!petMode && view !== 'home') || resting || talking || interactionBusy || emotion === 'neutral')
+      return;
+    const timer = setTimeout(() => setEmotion('neutral'), 6000);
+    return () => clearTimeout(timer);
+  }, [petMode, view, resting, talking, interactionBusy, emotion, actionKey]);
+  useEffect(() => {
+    if (!petChat) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPetChat(false);
+    };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [petChat]);
+  useEffect(() => {
+    if (!state.settings.proactiveEnabled || !petMode || !motionEnabled) return;
+    const timer = setInterval(() => {
+      if (
+        !document.hidden &&
+        !interactionBusy &&
+        !talking &&
+        action === 'idle' &&
+        supportsAction(skin, 'wave')
+      )
+        interact('greet', true);
+    }, proactiveInterval(character));
+    return () => clearInterval(timer);
+  }, [state.settings.proactiveEnabled, petMode, motionEnabled, interactionBusy, talking, action, skin]);
+  useEffect(() => {
+    if (!petMode || !isDesktop) return;
+    let ignore = false;
+    const pointer = (e: MouseEvent) => {
+      const controls =
+        e.target instanceof Element && e.target.closest('.pet-toolbar,.pet-chat-panel,.pet-speech');
+      const figure = document.querySelector('.pet-draggable');
+      const next = !drag.current && !controls && !(figure && hitCharacter(figure, e.clientX, e.clientY));
+      if (next !== ignore) {
+        ignore = next;
+        bridge.setPetClickThrough(next);
+      }
+    };
+    window.addEventListener('mousemove', pointer);
+    return () => {
+      window.removeEventListener('mousemove', pointer);
+      bridge.setPetClickThrough(false);
+    };
+  }, [petMode]);
+  useEffect(
+    () => () => {
+      audioRef.current?.pause();
+      cancelAnimationFrame(audioFrame.current);
+      void audioContext.current?.close();
+    },
+    [],
+  );
+  async function save(updater: (s: AppState) => AppState, original?: AppState | null) {
+    const pending = saveQueue.current
+      .catch(() => {})
+      .then(async () => {
+        const base = original || stateRef.current;
+        const next = updater(base);
+        if (next.activeSkinId && next.activeSkinId !== base.activeSkinId) {
+          const owner = next.characters.find((c) => c.id === next.activeCharacterId);
+          const selected = next.skins.find((s) => s.id === next.activeSkinId);
+          if (owner && selected && usableCharacterSkin(selected, owner))
+            next.preferredSkins = { ...next.preferredSkins, [owner.id]: selected.id };
+        }
+        applyState(await bridge.save(next, base));
+      });
+    saveQueue.current = pending;
+    await pending;
+  }
+  function applyState(value: AppState) {
+    if ((value.revision || 0) < (stateRef.current.revision || 0)) return;
+    stateRef.current = value;
+    setState(value);
+  }
+  function commit(updater: (s: AppState) => AppState) {
+    void save(updater).catch((e) => setToast(`保存失败：${errorText(e)}`));
+  }
+  function updatePlayback(key: 'motionEnabled' | 'trackingEnabled', value: boolean) {
+    commit((s) => ({ ...s, settings: { ...s.settings, [key]: value } }));
+  }
+  async function saveDraft(updater: (s: AppState) => AppState, done: () => void, original?: AppState | null) {
+    if (draftSaving) return;
+    setDraftSaving(true);
+    try {
+      await save(updater, original);
+      done();
+      setToast('修改已保存。');
+    } catch (error) {
+      setToast(`保存失败，草稿已保留：${errorText(error)}`);
+    } finally {
+      setDraftSaving(false);
+    }
+  }
+  function openProfile() {
+    profileBase.current = stateRef.current;
+    setProfile(structuredClone(character));
+  }
+  function openMemory(memory: Memory) {
+    memoryBase.current = stateRef.current;
+    setEditingMemory({ ...memory });
+  }
+  async function copyMessage(text: string) {
+    try {
+      await bridge.copyText(text);
+      setToast('已复制回复。');
+    } catch (error) {
+      setToast(`复制失败：${errorText(error)}`);
+    }
+  }
+  function move(value: PetAction, face: Emotion = emotion) {
+    behavior.current = {
+      ...freshBehavior(),
+      resting: value === 'sleep',
+      until: performance.now() + actionDuration(value),
+      priority: 100,
+    };
+    setResting(value === 'sleep');
+    setAction(supportsAction(skin, value) ? value : 'idle');
+    setEmotion(supportsEmotion(skin, face) ? face : 'neutral');
+    setActionKey((v) => v + 1);
+  }
+  function actionDuration(value: PetAction) {
+    const animation = spriteAnimation(skin),
+      clip = animation?.clips[value];
+    return isActivity(value)
+      ? activityDuration
+      : value === 'idle'
+        ? 500
+        : animation && clip
+          ? clipDuration(animation, clip) + 80
+          : 2600;
+  }
+  function interact(event: CompanionEvent, automatic = false) {
+    if (interactionBusy || talking || (automatic && (!motionEnabled || !state.settings.proactiveEnabled)))
+      return false;
+    if (!automatic && isActivity(action)) behavior.current = freshBehavior();
+    const plan = interactionPlan(
+      event,
+      character,
+      (Object.keys(actionNames) as PetAction[]).filter((action) => supportsAction(skin, action)),
+      emotions.map((face) => face.id).filter((face) => supportsEmotion(skin, face)),
+      interactionCounts.current[event] || 0,
+    );
+    const admitted = admitBehavior(behavior.current, {
+      event: automatic ? 'proactive' : ['touch', 'headpat', 'poke'].includes(event) ? 'touch' : event,
+      now: performance.now(),
+      duration: actionDuration(plan.action),
+      priority: automatic ? 10 : event === 'wake' ? 100 : event === 'rest' ? 90 : event === 'drag' ? 80 : 40,
+      cooldown: automatic
+        ? proactiveInterval(character)
+        : event === 'headpat' || event === 'poke'
+          ? 1800
+          : event === 'touch'
+            ? 4000
+            : event === 'greet'
+              ? 8000
+              : 1000,
+      rest: event === 'rest',
+      wake: event === 'wake',
+    });
+    if (!admitted) return false;
+    behavior.current = admitted;
+    interactionCounts.current[event] = (interactionCounts.current[event] || 0) + 1;
+    setResting(admitted.resting);
+    setAction(motionEnabled || event === 'rest' ? plan.action : 'idle');
+    setEmotion(plan.emotion);
+    setActionKey((key) => key + 1);
+    if (!automatic) {
+      setInteractionLine(plan.text);
+      setBubbleHidden(false);
+    }
+    return true;
+  }
+  function touchCharacter(kind: 'headpat' | 'poke') {
+    if (interact(kind)) setTouchFeedback({ kind, key: performance.now() });
+  }
+  async function switchChatMode(mode: 'model' | 'local') {
+    if (interactionBusy) return;
+    try {
+      await save((state) => ({ ...state, settings: { ...state.settings, chatMode: mode } }));
+      setChatError('');
+    } catch (error) {
+      setToast(errorText(error));
+    }
+  }
+  function selectCharacter(c: Character) {
+    if (jobBusy || chatBusy) {
+      setToast('请等当前任务完成。');
+      return;
+    }
+    commit((s) => ({
+      ...s,
+      activeCharacterId: c.id,
+      activeSkinId: selectedCharacterSkin(s, c)?.id || '',
+    }));
+  }
+  function stopAudio() {
+    audioRequest.current++;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    cancelAnimationFrame(audioFrame.current);
+    mouth.current = 0;
+    setTalking(false);
+    setAudioBusy(false);
+    void audioContext.current?.close();
+    audioContext.current = null;
+  }
+  async function speak(text: string) {
+    stopAudio();
+    const token = audioRequest.current;
+    setAudioBusy(true);
+    try {
+      const data = await bridge.speak(text);
+      if (token !== audioRequest.current) return;
+      const audio = new Audio(data);
+      const context = new AudioContext();
+      audioContext.current = context;
+      audioRef.current = audio;
+      const source = context.createMediaElementSource(audio);
+      const analyzer = context.createAnalyser();
+      analyzer.fftSize = 256;
+      source.connect(analyzer);
+      analyzer.connect(context.destination);
+      const samples = new Uint8Array(analyzer.frequencyBinCount);
+      const tick = () => {
+        analyzer.getByteTimeDomainData(samples);
+        let energy = 0;
+        for (const x of samples) energy += ((x - 128) / 128) ** 2;
+        mouth.current = Math.min(1, Math.sqrt(energy / samples.length) * 5);
+        audioFrame.current = requestAnimationFrame(tick);
+      };
+      await context.resume();
+      await audio.play();
+      setTalking(true);
+      tick();
+      audio.onended = stopAudio;
+      audio.onerror = () => {
+        stopAudio();
+        setToast('音频播放失败，请检查服务返回格式。');
+      };
+    } catch (e) {
+      if (token === audioRequest.current) {
+        stopAudio();
+        setToast(errorText(e));
+      }
+    } finally {
+      if (token === audioRequest.current) setAudioBusy(false);
+    }
+  }
+  async function sendChat(text = message, retry = false) {
+    if (interactionBusy || (!text.trim() && !retry)) return;
+    if (!connected && !localChat && !(retry && completedReplies.current.has(character.id))) {
+      setChatError('自由聊天需要对话 API Key 与模型；也可以选择上方的「本地台词」，使用已编写的日常回应。');
+      return;
+    }
+    const currentCharacter = character;
+    setChatBusy(true);
+    chatCancelled.current = false;
+    setChatStopping(false);
+    setChatError('');
+    stopAudio();
+    setInteractionLine('');
+    setBubbleHidden(true);
+    if (!behavior.current.resting) {
+      if (isActivity(action)) behavior.current = freshBehavior();
+      setAction('idle');
+      setEmotion(supportsEmotion(skin, 'thinking') ? 'thinking' : 'neutral');
+    }
+    try {
+      const cached = completedReplies.current.get(currentCharacter.id);
+      if (cached) {
+        await save((s) => appendCompletedReply(s, cached));
+        completedReplies.current.delete(currentCharacter.id);
+        failedChat.current = null;
+        if (retry) {
+          if (stateRef.current.settings.voiceEnabled && cached.reply.origin !== 'script')
+            void speak(cached.reply.text);
+          return;
+        }
+      }
+      let history = stateRef.current.messages[currentCharacter.id] || [];
+      if (!retry) {
+        failedChat.current = null;
+        const userMessage = {
+          id: id(),
+          role: 'user' as const,
+          content: text.trim(),
+          createdAt: now(),
+          ...(newTopicPending ? { contextStart: true } : {}),
+        };
+        await save((s) => ({
+          ...s,
+          messages: {
+            ...s.messages,
+            [currentCharacter.id]: [...(s.messages[currentCharacter.id] || []), userMessage],
+          },
+        }));
+        history = stateRef.current.messages[currentCharacter.id] || [];
+        history = history.slice(0, history.findIndex((m) => m.id === userMessage.id) + 1);
+        setNewTopicCharacters((topics) => ({ ...topics, [currentCharacter.id]: false }));
+        setMessageDrafts((drafts) => ({
+          ...drafts,
+          [currentCharacter.id]:
+            drafts[currentCharacter.id]?.trim() === text.trim() ? '' : drafts[currentCharacter.id] || '',
+        }));
+      }
+      if (chatCancelled.current) throw new Error('已停止等待这次回复。');
+      const request =
+        retry && failedChat.current?.character.id === character.id
+          ? failedChat.current
+          : {
+              character: { ...currentCharacter, visualReferences: undefined },
+              messages: history.slice(-24),
+              memories: stateRef.current.memories.filter((m) => m.characterId === currentCharacter.id),
+              skinId: skin?.id,
+            };
+      failedChat.current = request;
+      const reply = await bridge.chat({ ...request, skinId: skin?.id });
+      if (chatCancelled.current) throw new Error('已停止等待这次回复。');
+      const completed = {
+        characterId: currentCharacter.id,
+        reply,
+        messageId: id(),
+        memoryId: id(),
+        replyTo: request.messages.at(-1)?.id,
+        createdAt: now(),
+      };
+      completedReplies.current.set(currentCharacter.id, completed);
+      await save((s) => appendCompletedReply(s, completed));
+      completedReplies.current.delete(currentCharacter.id);
+      failedChat.current = null;
+      if (stateRef.current.settings.voiceEnabled && reply.origin !== 'script') void speak(reply.text);
+    } catch (e) {
+      setChatError(
+        `${completedReplies.current.has(currentCharacter.id) ? '回复已生成，暂未保存到本机。重试只保存，不会再次调用模型。' : ''}${errorText(e)}`,
+      );
+      move('idle', 'neutral');
+    } finally {
+      setChatBusy(false);
+      setChatStopping(false);
+    }
+  }
+  function stopChat() {
+    if (!chatBusy || chatStopping) return;
+    chatCancelled.current = true;
+    setChatStopping(true);
+    void bridge.cancelChat().catch((error) => setToast(errorText(error)));
+  }
+  async function exportConversation() {
+    try {
+      if (await bridge.exportChat(character.id)) setToast('对话已导出为文本。');
+    } catch (error) {
+      setToast(errorText(error));
+    }
+  }
+  function revealMessage(messageId: string) {
+    setHistoryOpen(false);
+    setChatExpanded(true);
+    if (petMode) setPetChat(true);
+    else setView('home');
+    setTimeout(
+      () =>
+        document.querySelector(`[data-message-id="${CSS.escape(messageId)}"]`)?.scrollIntoView({
+          block: 'center',
+          behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        }),
+      80,
+    );
+  }
+  function beginTopic() {
+    setNewTopicCharacters((topics) => ({ ...topics, [character.id]: true }));
+    setHistoryOpen(false);
+    setChatError('');
+    failedChat.current = null;
+    if (petMode) setPetChat(true);
+    else setView('home');
+    setTimeout(() => document.querySelector<HTMLTextAreaElement>('[aria-label="聊天消息"]')?.focus(), 80);
+  }
+  function openCreate() {
+    let draft = parseCreationDraft(null);
+    try {
+      draft = parseCreationDraft(localStorage.getItem(creationDraftKey));
+    } catch {
+      /* Storage can be unavailable. */
+    }
+    setNewName(draft.name);
+    setNewWork(draft.work);
+    setNewNotes(draft.notes);
+    setNewMode(draft.mode);
+    setNewUrls(draft.urls);
+    setCreationStage('');
+    setJobError('');
+    setCreateOpen(true);
+  }
+  async function useMatchingPack(pack: CharacterPack) {
+    setJobBusy(true);
+    setJobError('');
+    try {
+      await save((state) => activateCharacterPack(state, pack));
+      setCreateOpen(false);
+      setView('home');
+      pending.current = {};
+      try {
+        localStorage.removeItem(creationDraftKey);
+      } catch {
+        /* Selection has been saved. */
+      }
+      setToast('已使用匹配的人物与素材，保留原有设定和聊天记录。');
+    } catch (error) {
+      setJobError(errorText(error));
+    } finally {
+      setJobBusy(false);
+    }
+  }
+  async function create(event: FormEvent) {
+    event.preventDefault();
+    if (creationGuard.current || jobBusy) return;
+    creationGuard.current = true;
+    setJobBusy(true);
+    setJobError('');
+    setCreationStage(manualCreate ? '正在保存角色档案' : '正在整理角色资料');
+    try {
+      let result = pending.current.character || existingCharacter(stateRef.current, newName, newWork);
+      if (!result) {
+        result = manualCreate
+          ? createLocalCharacter({
+              id: id(),
+              name: newName,
+              work: newWork,
+              notes: newNotes,
+              urls: newUrls,
+              createdAt: now(),
+            })
+          : await bridge.research({
+              name: newName,
+              work: newWork,
+              notes: newNotes,
+              mode: newMode as 'draft' | 'links' | 'search',
+              urls:
+                newMode === 'links'
+                  ? newUrls
+                      .split('\n')
+                      .map((url) => url.trim())
+                      .filter(Boolean)
+                  : undefined,
+            });
+        pending.current.character = result;
+      }
+      const savedCharacter = result;
+      if (!stateRef.current.characters.some((c) => c.id === result.id))
+        await save((s) => ({
+          ...s,
+          characters: [...s.characters, savedCharacter],
+          activeCharacterId: savedCharacter.id,
+          activeSkinId: '',
+          messages: { ...s.messages, [savedCharacter.id]: [] },
+        }));
+      else
+        await save((s) => ({
+          ...s,
+          activeCharacterId: savedCharacter.id,
+          activeSkinId: selectedCharacterSkin(s, savedCharacter)?.id || '',
+        }));
+      let imageNotice = '角色已保存。接下来选择原图，或导入外观与动作。';
+      if (
+        collectOnCreate &&
+        !savedCharacter.visualReferences?.length &&
+        !savedCharacter.referenceCandidates?.length
+      ) {
+        setCreationStage('档案已保存 · 正在收集参考图');
+        try {
+          await bridge.discoverReferences(savedCharacter.id);
+          imageNotice = '图片收集已完成。请核对原图后直接作为立绘，或继续导入动作素材。';
+        } catch (error) {
+          imageNotice = `角色已保存，图片收集暂未完成：${errorText(error)}`;
+        }
+      }
+      setCreateOpen(false);
+      setView('characters');
+      setSetupCharacterId(savedCharacter.id);
+      pending.current = {};
+      try {
+        localStorage.removeItem(creationDraftKey);
+      } catch {
+        /* Profile is already saved. */
+      }
+      setToast(imageNotice);
+    } catch (e) {
+      setJobError(`${pending.current.character ? '角色档案已暂存，重试不会重复检索。' : ''}${errorText(e)}`);
+    } finally {
+      creationGuard.current = false;
+      setJobBusy(false);
+      setProgress(null);
+      setCreationStage('');
+    }
+  }
+  async function updateReferences(references: VisualReference[], characterId = character.id) {
+    await save((s) => {
+      const current = s.characters.find((c) => c.id === characterId)!;
+      const previous = current.visualReferences || [];
+      const changed =
+        previous.length !== references.length ||
+        references.some((r, i) => r.id !== previous[i]?.id || r.image !== previous[i]?.image);
+      return {
+        ...s,
+        characters: s.characters.map((c) =>
+          c.id === characterId
+            ? {
+                ...c,
+                visualReferences: references,
+                referenceCandidates: c.referenceCandidates?.filter(
+                  (candidate) => !references.some((ref) => ref.id === candidate.id),
+                ),
+              }
+            : c,
+        ),
+        skins: changed
+          ? s.skins.map((item) =>
+              item.characterId === characterId && item.review
+                ? { ...item, review: { ...item.review, status: 'pending' as const, reviewedAt: undefined } }
+                : item,
+            )
+          : s.skins,
+      };
+    });
+  }
+  function chooseSkin(item: Skin) {
+    if (!usableCharacterSkin(item, character)) {
+      setGenerateOpen(true);
+      return;
+    }
+    commit((s) => ({
+      ...s,
+      activeSkinId: item.id,
+      preferredSkins: { ...s.preferredSkins, [item.characterId]: item.id },
+    }));
+  }
+  const reviewLabel = (item: Skin) =>
+    spriteAnimation(item)
+      ? item.generation || item.builtin
+        ? '原图衍生 · 逐帧动画'
+        : '已导入 · 逐帧动画'
+      : item.builtin === 'cyrene-original-v1'
+        ? '原作画风重绘 · 待核对'
+        : item.builtin === 'cyrene-powerpuff-v1'
+          ? '卡通画风重绘 · 待核对'
+          : item.builtin?.endsWith('-v5') || item.builtin?.endsWith('-v4')
+            ? '原图衍生 · 待核对'
+            : item.builtin === 'cyrene-reference-v3'
+              ? '原图重制 · 待核对'
+              : item.builtin
+                ? '早期素材 · 未核对'
+                : item.generation
+                  ? item.review?.status === 'approved' && displaySkins.some((s) => s.id === item.id)
+                    ? '基准已确认'
+                    : item.review?.status === 'rejected'
+                      ? '需要重做'
+                      : '待对照原图'
+                  : '';
+  async function importAsset(kind: 'image' | 'sprite' | 'live2d' | 'vrm') {
+    setJobBusy(true);
+    try {
+      const result =
+        kind === 'sprite'
+          ? await bridge.importSprite(character.id, skin?.style || 'anime')
+          : kind === 'image'
+            ? await bridge.importImage(character.id, skin?.style || 'anime')
+            : await bridge.importModel(character.id, kind);
+      if (result) {
+        await save((s) => ({ ...s, skins: [...s.skins, result], activeSkinId: result.id }));
+        setToast(`${engineName(result)} 已导入。`);
+      }
+    } catch (e) {
+      setToast(errorText(e));
+    } finally {
+      setJobBusy(false);
+    }
+  }
+  async function refreshProfile() {
+    setUpdateError('');
+    setJobBusy(true);
+    setProgress(null);
+    try {
+      const targetId = updateResult.current?.characterId || character.id;
+      const result =
+        updateResult.current?.character ||
+        (await bridge.research({
+          characterId: targetId,
+          name: character.name,
+          work: character.work,
+          notes: character.summary,
+          mode: updateMode,
+          urls:
+            updateMode === 'links'
+              ? updateUrls
+                  .split('\n')
+                  .map((url) => url.trim())
+                  .filter(Boolean)
+              : undefined,
+        }));
+      updateResult.current = { characterId: targetId, character: result };
+      await save((s) => ({
+        ...s,
+        characters: s.characters.map((c) =>
+          c.id === targetId
+            ? {
+                ...result,
+                id: c.id,
+                createdAt: c.createdAt,
+                theme: c.theme,
+                accent: c.accent,
+                visualReferences: c.visualReferences,
+                roleplay: c.roleplay,
+                behavior: c.behavior,
+              }
+            : c,
+        ),
+      }));
+      setToast(updateMode === 'saved' ? '已保存资料已整理，来源未联网更新。' : '资料已更新，请核对来源。');
+      setSourceUpdateOpen(false);
+      updateResult.current = null;
+    } catch (e) {
+      setUpdateError(`${updateResult.current ? '结果已暂存，重试只保存本机档案。' : ''}${errorText(e)}`);
+    } finally {
+      setJobBusy(false);
+      setProgress(null);
+    }
+  }
+  async function importCharacter() {
+    try {
+      const pack = await bridge.importCharacter();
+      if (!pack) return;
+      const char = { ...pack.character, id: id() };
+      const skinIds = new Map(pack.skins.map((a) => [a.id, id()]));
+      const imported = pack.skins.map((a) => ({
+        ...a,
+        id: skinIds.get(a.id)!,
+        characterId: char.id,
+        ...(a.generation
+          ? {
+              generation: {
+                ...a.generation,
+                parentSkinId: a.generation.parentSkinId ? skinIds.get(a.generation.parentSkinId) : undefined,
+              },
+            }
+          : {}),
+      }));
+      await save((s) => ({
+        ...s,
+        characters: [...s.characters, char],
+        skins: [...s.skins, ...imported],
+        activeCharacterId: char.id,
+        activeSkinId: imported[0]?.id || '',
+        messages: { ...s.messages, [char.id]: [] },
+      }));
+      setToast('角色包已导入。');
+    } catch (e) {
+      setToast(errorText(e));
+    }
+  }
+  const notifyError = (job: Promise<unknown>) => {
+    void job.catch((e) => setToast(errorText(e)));
+  };
+  const avatar = (
+    <AvatarStage
+      skin={skin}
+      emotion={emotion}
+      action={action}
+      actionKey={actionKey}
+      talking={talking || previewSpeech}
+      audioDriven={Boolean(audioRef.current)}
+      motionEnabled={motionEnabled}
+      mouth={mouth}
+      tracking={tracking}
+      zoom={view === 'desktop' ? 1 : zoom}
+      compact={petMode}
+    />
+  );
+  const assetThumb = (item?: Skin) =>
+    skinImage(item) ? <SkinArtwork skin={item} /> : item?.kind === 'live2d' ? <Layers3 /> : <Box />;
+  const progressCard = jobBusy && (
+    <div className="progress-card" role="status">
+      <LoaderCircle className="spin" size={18} />
+      <div>
+        <strong>{progress?.stage || '正在处理'}</strong>
+        <p>{progress?.detail || '完成后会保存在本机。'}</p>
+        {progress?.total && <progress value={progress.completed || 0} max={progress.total} />}
+      </div>
+    </div>
+  );
+  const conversationPanel = (mode: ConversationMode) => (
+    <ConversationPanel
+      mode={mode}
+      character={character}
+      thumbnail={assetThumb(skin)}
+      messages={messages}
+      message={message}
+      localChat={localChat}
+      connected={connected}
+      chatBusy={chatBusy}
+      sharedChatStatus={sharedChatStatus}
+      chatError={chatError}
+      chatStopping={chatStopping}
+      chatExpanded={chatExpanded}
+      audioBusy={audioBusy}
+      talking={talking}
+      newTopicPending={newTopicPending}
+      replyNeedsSave={completedReplies.current.has(character.id)}
+      historyRef={historyRef}
+      actionNames={actionNames}
+      switchChatMode={switchChatMode}
+      sendChat={sendChat}
+      copyMessage={copyMessage}
+      speak={speak}
+      stopChat={stopChat}
+      stopAudio={stopAudio}
+      beginTopic={beginTopic}
+      onDraft={(value) => setMessageDrafts((drafts) => ({ ...drafts, [character.id]: value }))}
+      onCancelTopic={() => setNewTopicCharacters((topics) => ({ ...topics, [character.id]: false }))}
+      onOpenHistory={() => {
+        setHistoryQuery('');
+        setHistoryOpen(true);
+      }}
+      onOpenSettings={() => (petMode ? notifyError(bridge.openWorkshop()) : setView('settings'))}
+      onToggleExpanded={() => setChatExpanded(!chatExpanded)}
+    />
+  );
+  if (loadError)
+    return (
+      <div className="startup-screen">
+        <CircleHelp />
+        <h1>无法读取工作区</h1>
+        <p>{loadError}</p>
+        {recoveryError && (
+          <p className="inline-error" role="alert">
+            {recoveryError}
+          </p>
+        )}
+        <button className="button primary" disabled={recoveryBusy} onClick={() => location.reload()}>
+          重新读取
+        </button>
+        {hasPreviousState && (
+          <>
+            <p>可恢复上一份有效存档。当前无法读取的文件会保留，供之后检查。</p>
+            <button
+              className="button secondary"
+              aria-label="恢复上一份有效存档"
+              disabled={recoveryBusy}
+              onClick={async () => {
+                setRecoveryBusy(true);
+                setRecoveryError('');
+                try {
+                  const recovered = await bridge.restorePreviousState();
+                  const restored = migrateState(recovered.state);
+                  stateRef.current = restored;
+                  setState(restored);
+                  setKeys(recovered.keys);
+                  setSharedChatStatus({ busy: false });
+                  setReady(true);
+                  setLoadError('');
+                  setToast('已恢复上一份有效存档，原文件已保留。');
+                } catch (error) {
+                  setRecoveryError(errorText(error));
+                } finally {
+                  setRecoveryBusy(false);
+                }
+              }}
+            >
+              {recoveryBusy ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}
+              恢复上一份有效存档
+            </button>
+          </>
+        )}
+        {isDesktop && (
+          <button
+            className="button secondary"
+            aria-label="打开数据文件夹"
+            disabled={recoveryBusy}
+            onClick={() => {
+              setRecoveryError('');
+              void bridge.openDataDirectory().catch((error) => setRecoveryError(errorText(error)));
+            }}
+          >
+            打开数据文件夹
+          </button>
+        )}
+      </div>
+    );
+  if (!ready)
+    return (
+      <div className="startup-screen">
+        <Flower2 className="spin" />
+        <p>正在打开你的角色空间…</p>
+      </div>
+    );
+  if (petMode)
+    return (
+      <div className={`desktop-pet-shell ${petChat ? 'with-chat' : ''}`} style={themeVars(character)}>
+        <div className="pet-toolbar">
+          <button aria-label="打开工坊" onClick={() => notifyError(bridge.openWorkshop())}>
+            <Flower2 size={16} />
+          </button>
+          <button aria-label="打开桌宠聊天" onClick={() => setPetChat(!petChat)}>
+            <MessageCircle size={16} />
+          </button>
+          <button
+            aria-label={resting ? '唤醒角色' : '让角色休息'}
+            onClick={() => interact(resting ? 'wake' : 'rest')}
+          >
+            {resting ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          {(['read', 'gaming'] as const)
+            .filter((value) => supportsAction(skin, value))
+            .map((value) => (
+              <button
+                key={value}
+                aria-label={`桌宠${actionNames[value]}`}
+                aria-pressed={action === value}
+                disabled={interactionBusy || talking}
+                title={`${actionNames[value]}，约一分钟`}
+                onClick={() => move(value, 'neutral')}
+              >
+                {value === 'read' ? <BookOpen size={16} /> : <Gamepad2 size={16} />}
+              </button>
+            ))}
+          {isActivity(action) && (
+            <button aria-label="停止桌宠活动" title="停止活动" onClick={() => move('idle', 'neutral')}>
+              <Square size={16} />
+            </button>
+          )}
+          <button aria-label="收起桌宠" onClick={() => notifyError(bridge.closePet())}>
+            <X size={16} />
+          </button>
+        </div>
+        {petChat && <div className="pet-chat-panel">{conversationPanel('pet')}</div>}
+        {!petChat && !bubbleHidden && (interactionLine || lastReply) && (
+          <button className="pet-speech" onClick={() => setPetChat(true)}>
+            {(interactionLine || lastReply?.content || '').slice(0, 70)}
+          </button>
+        )}
+        <div
+          className="pet-draggable"
+          role="button"
+          tabIndex={0}
+          aria-label={`和${character.name}互动，按 Enter 轻触，拖动可移动桌宠`}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              interact(resting ? 'wake' : 'touch');
+            }
+          }}
+          onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            const hit = hitCharacter(e.currentTarget, e.clientX, e.clientY);
+            if (!hit) return;
+            drag.current = { x: e.screenX, y: e.screenY, moved: false, hit };
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            if (!drag.current) return;
+            const x = e.screenX - drag.current.x,
+              y = e.screenY - drag.current.y;
+            if (Math.abs(x) + Math.abs(y) > 2) {
+              drag.current.moved = true;
+              bridge.movePet({ x, y });
+              drag.current.x = e.screenX;
+              drag.current.y = e.screenY;
+            }
+          }}
+          onPointerUp={(event) => {
+            if (!drag.current) return;
+            if (drag.current.moved) interact('drag');
+            else if (resting) interact('wake');
+            else touchCharacter(drag.current.hit);
+            drag.current = null;
+            if (event.currentTarget.hasPointerCapture(event.pointerId))
+              event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onLostPointerCapture={() => {
+            drag.current = null;
+          }}
+          onPointerCancel={() => {
+            drag.current = null;
+          }}
+        >
+          {avatar}
+          {touchFeedback && (
+            <div
+              key={touchFeedback.key}
+              className={`touch-feedback ${touchFeedback.kind}`}
+              aria-hidden="true"
+            >
+              <i>{touchFeedback.kind === 'headpat' ? '♡' : '✧'}</i>
+              <i>✧</i>
+            </div>
+          )}
+        </div>
+        <span className="pet-name-tag">
+          {character.name}
+          <i />
+          {engineName(skin)}
+        </span>
+        {toast && <div className="pet-toast">{toast}</div>}
+      </div>
+    );
+  return (
+    <div className={`studio theme-${theme.id}`} style={themeVars(character)}>
+      <FeatureNavigation view={view} onNavigate={setView} />
+      <aside className="library-sidebar">
+        <div className="wordmark">
+          mori<span>与你，此刻</span>
+        </div>
+        <div className="library-heading">
+          <span>我的角色</span>
+          <button className="icon-button" aria-label="添加角色" onClick={openCreate}>
+            <Plus size={17} />
+          </button>
+        </div>
+        <div className="character-list">
+          {state.characters.map((c) => (
+            <button
+              className={`character-item ${c.id === character.id ? 'selected' : ''}`}
+              key={c.id}
+              onClick={() => selectCharacter(c)}
+            >
+              <span className="character-thumb" style={{ background: resolveTheme(c).paper }}>
+                {assetThumb(c.id === character.id ? skin : selectedCharacterSkin(state, c))}
+              </span>
+              <span>
+                <strong>{c.name}</strong>
+                <small>{c.work || '原创角色'}</small>
+              </span>
+              {c.id === character.id && <i />}
+            </button>
+          ))}
+        </div>
+        <button className="new-character" onClick={openCreate}>
+          <Plus size={15} />
+          遇见新角色
+        </button>
+        <button
+          className="new-character pack-library-entry"
+          aria-label="角色包与本地互动"
+          onClick={() => setPacksOpen(true)}
+        >
+          <FolderHeart size={15} />
+          角色包与本地互动
+        </button>
+        <div className="sidebar-quote">
+          <span>✧</span>
+          <p>
+            让喜欢的角色，
+            <br />
+            住进你的日常。
+          </p>
+          <i />
+        </div>
+        <div className="sidebar-bottom">
+          <button onClick={importCharacter}>
+            <Upload size={14} />
+            导入角色包
+          </button>
+          <div className="local-indicator">
+            <span />
+            <span>
+              本地工作区<small>开发版本</small>
+            </span>
+            <ShieldCheck size={14} />
+          </div>
+        </div>
+      </aside>
+      <section className="studio-body">
+        <header className="studio-topbar">
+          <nav className="breadcrumb" aria-label="页面导航">
+            <button type="button" aria-label="返回我的空间" onClick={() => setView('home')}>
+              我的空间
+            </button>
+            <ChevronRight size={12} aria-hidden="true" />
+            <strong aria-current="page">{featureTitle(view)}</strong>
+          </nav>
+          <div className="topbar-actions">
+            {view !== 'home' && (
+              <button
+                className="icon-button"
+                aria-label="查找与导出对话"
+                title="查找与导出对话"
+                onClick={() => {
+                  setHistoryQuery('');
+                  setHistoryOpen(true);
+                }}
+              >
+                <Search size={16} />
+              </button>
+            )}
+            <button className="theme-shortcut" onClick={() => setThemeOpen(true)}>
+              <span className="theme-dot" />
+              {theme.name}
+              <Palette size={13} />
+            </button>
+            <button
+              className={`service-status ${connected ? 'connected' : ''}`}
+              onClick={() => setView('settings')}
+            >
+              <i />
+              {localChat ? '本地台词' : connected ? '对话已配置' : '连接服务'}
+              <ArrowUpRight size={13} />
+            </button>
+          </div>
+        </header>
+        <div className={`content-layout companion-layout ${view === 'settings' ? 'settings-layout' : ''}`}>
+          <main className={`main-content ${view === 'home' ? 'home-content' : ''}`} data-feature={view}>
+            {view === 'home' && (
+              <>
+                <CharacterReadiness
+                  character={character}
+                  skins={allSkins}
+                  onSetup={() => setSetupCharacterId(character.id)}
+                  onVoice={openProfile}
+                  onInteraction={() => setPacksOpen(true)}
+                  onAnimation={() => setArtWorkflowOpen(true)}
+                />
+                <div className="companion-room">
+                  <CompanionScene
+                    character={character}
+                    skin={skin}
+                    avatar={avatar}
+                    interactionBusy={interactionBusy}
+                    talking={talking}
+                    resting={resting}
+                    touchFeedback={touchFeedback}
+                    bubbleHidden={bubbleHidden}
+                    interactionLine={interactionLine}
+                    lastReply={lastReply}
+                    audioBusy={audioBusy}
+                    sceneSettingsOpen={sceneSettingsOpen}
+                    tracking={tracking}
+                    motionEnabled={motionEnabled}
+                    skinReview={skin ? reviewLabel(skin) : ''}
+                    presence={`${actionNames[action]} · ${emotions.find((e) => e.id === emotion)?.name}`}
+                    touchCharacter={touchCharacter}
+                    interact={interact}
+                    copyMessage={copyMessage}
+                    speak={speak}
+                    onHideBubble={() => {
+                      setBubbleHidden(true);
+                      setInteractionLine('');
+                    }}
+                    onOpenConversation={() => {
+                      setChatExpanded(true);
+                      document
+                        .querySelector('.inline-conversation')
+                        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }}
+                    onOpenProfile={() => setView('characters')}
+                    onOpenAppearance={() => setView('wardrobe')}
+                    onOpenDesktop={() => notifyError(bridge.openPet())}
+                    onToggleSettings={() => setSceneSettingsOpen(!sceneSettingsOpen)}
+                    onToggleTracking={() => updatePlayback('trackingEnabled', !tracking)}
+                  />
+                  <section
+                    className={`inline-conversation ${chatExpanded ? 'expanded' : ''}`}
+                    aria-label="人物下方的对话栏"
+                  >
+                    {conversationPanel('compact')}
+                  </section>
+                </div>
+                <section className="appearance-shelf">
+                  <div className="section-heading">
+                    <div>
+                      <h2>
+                        她的不同模样 <span>{skins.length}</span>
+                      </h2>
+                      <p>熟悉的她，也有新的风格。</p>
+                    </div>
+                    <button className="text-button" onClick={() => setView('wardrobe')}>
+                      全部外观
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                  <div className="skin-strip">
+                    {skins.map((item) => (
+                      <button
+                        key={item.id}
+                        className={`skin-tile ${skin?.id === item.id ? 'selected' : ''}`}
+                        onClick={() => chooseSkin(item)}
+                      >
+                        <span className="skin-art">{assetThumb(item)}</span>
+                        <span>
+                          <strong>{item.name}</strong>
+                          <small>
+                            {item.kind === 'live2d' || item.kind === 'vrm' || item.kind === 'glb'
+                              ? engineName(item)
+                              : `${styleName(item.style)} · ${reviewLabel(item) || '导入立绘'}`}
+                          </small>
+                        </span>
+                        {skin?.id === item.id && <Check size={14} />}
+                      </button>
+                    ))}
+                    <button
+                      className="new-skin-tile"
+                      onClick={() => {
+                        setSetupCharacterId(character.id);
+                      }}
+                    >
+                      <Plus size={20} />
+                      <span>准备外观与动作</span>
+                    </button>
+                  </div>
+                </section>
+                <div className="home-footer">
+                  <Flower2 size={13} />
+                  <span>属于你们的故事，正在慢慢发生。</span>
+                  <span>{memories.length} 段相处记忆</span>
+                </div>
+              </>
+            )}
+            {view === 'chat' && (
+              <section className="conversation-workspace" aria-label="对话与语音模块">
+                {conversationPanel('full')}
+              </section>
+            )}
+            {view === 'desktop' && (
+              <DesktopPage
+                preview={avatar}
+                size={state.settings.petSize || 'medium'}
+                onSize={(petSize) => commit((s) => ({ ...s, settings: { ...s.settings, petSize } }))}
+                characterName={character.name}
+                skinName={skin?.name}
+                desktopAvailable={isDesktop}
+                onOpen={() => notifyError(bridge.openPet())}
+                onClose={() => notifyError(bridge.closePet())}
+                onAppearance={() => setView('wardrobe')}
+                onSettings={() => setView('settings')}
+              />
+            )}
+            {view === 'wardrobe' && (
+              <>
+                <div className="page-heading">
+                  <span className="page-kicker">外观工作台</span>
+                  <h1>每一种模样，都是她。</h1>
+                  <p>从角色原图自动制作多画风形象和逐帧动作，也可以导入已有素材。</p>
+                </div>
+                <button
+                  className="production-entry"
+                  aria-label="自动制作多画风桌宠"
+                  onClick={() => setPetProductionOpen(true)}
+                >
+                  <span className="production-icon">
+                    <WandSparkles size={26} />
+                  </span>
+                  <span>
+                    <small>自动制作</small>
+                    <strong>角色图、桌宠和动作，一起完成。</strong>
+                    <p>选择画风与动作 → 自动生成并整理 → 试播后启用</p>
+                  </span>
+                  <span className="production-entry-action">
+                    开始制作
+                    <ArrowUpRight size={17} />
+                  </span>
+                </button>
+                <div className="engine-grid">
+                  <button aria-label="使用预制角色包" onClick={() => setPacksOpen(true)}>
+                    <FolderHeart />
+                    <strong>角色包与本地互动</strong>
+                    <span>预制外观 / 真实动作 / 无图像 API</span>
+                    <ArrowUpRight size={17} />
+                  </button>
+                  <button aria-label="画风与素材制作" onClick={() => setArtWorkflowOpen(true)}>
+                    <Palette />
+                    <strong>画风与素材制作</strong>
+                    <span>{styles.length} 种制作说明 / 现成素材 / 动作预览</span>
+                    <ArrowUpRight size={17} />
+                  </button>
+                  <button aria-label="制作 3D 模型" onClick={() => setModelStudioOpen(true)}>
+                    <Box />
+                    <strong>制作 3D 模型</strong>
+                    <span>主参考原图 / 图生模型 / 骨骼绑定</span>
+                    <ArrowUpRight size={17} />
+                  </button>
+                  <button
+                    aria-label="制作立绘与像素动画"
+                    onClick={() => {
+                      pending.current = {};
+                      setJobError('');
+                      setGenerateOpen(true);
+                    }}
+                  >
+                    <WandSparkles />
+                    <strong>制作立绘与像素动画</strong>
+                    <span>原图编辑 / 可选像素绘图 / 候选核对</span>
+                    <ArrowUpRight size={17} />
+                  </button>
+                  <button disabled={jobBusy} onClick={() => importAsset('live2d')}>
+                    <Layers3 />
+                    <strong>导入 Live2D</strong>
+                    <span>model3.json / ZIP 模型包</span>
+                    <Upload size={17} />
+                  </button>
+                  <button disabled={jobBusy} onClick={() => importAsset('vrm')}>
+                    <Box />
+                    <strong>导入 VRM 3D</strong>
+                    <span>VRM 0.x / 1.0</span>
+                    <Upload size={17} />
+                  </button>
+                  <button disabled={jobBusy} onClick={() => importAsset('sprite')}>
+                    <Film />
+                    <strong>导入逐帧动画</strong>
+                    <span>Aseprite JSON + PNG / Mori 动画包</span>
+                    <Upload size={17} />
+                  </button>
+                </div>
+                <div className="workbench">
+                  <div className="workbench-stage">
+                    {avatar}
+                    <span className="engine-tag">{engineName(skin)}</span>
+                  </div>
+                  <div className="workbench-controls">
+                    <h3>表现调节</h3>
+                    <label>
+                      角色缩放 <span>{Math.round(zoom * 100)}%</span>
+                      <input
+                        type="range"
+                        min="0.65"
+                        max="1.4"
+                        step=".05"
+                        value={zoom}
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                      />
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        disabled={skin?.kind !== 'live2d' && skin?.kind !== 'vrm'}
+                        checked={tracking}
+                        onChange={(e) => updatePlayback('trackingEnabled', e.target.checked)}
+                      />
+                      视线跟随光标
+                    </label>
+                    <h4>表情</h4>
+                    {skin &&
+                      (spriteAnimation(skin) ||
+                        skin.kind === 'live2d' ||
+                        skin.kind === 'vrm' ||
+                        skin.kind === 'glb') && (
+                        <div className="motion-settings">
+                          <label className="checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={motionEnabled}
+                              onChange={(e) => updatePlayback('motionEnabled', e.target.checked)}
+                            />
+                            {spriteAnimation(skin) ? '播放逐帧动画' : '播放角色动作'}
+                          </label>
+                          <p>
+                            {spriteAnimation(skin)
+                              ? animationDescription(skin)
+                              : '使用模型绑定与动作 · 遵循系统减少动态效果'}
+                          </p>
+                          {spriteAnimation(skin) && (
+                            <button
+                              className="button secondary full"
+                              disabled={previewSpeech || !spriteAnimation(skin)?.clips.talk}
+                              onClick={() => setPreviewSpeech(true)}
+                            >
+                              {previewSpeech ? '正在预览口型' : '预览说话口型'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    <div className="emotion-grid">
+                      {emotions.map((e) => (
+                        <button
+                          key={e.id}
+                          className={emotion === e.id ? 'selected' : ''}
+                          disabled={!supportsEmotion(skin, e.id)}
+                          title={!supportsEmotion(skin, e.id) ? '此外观尚未制作此表情' : undefined}
+                          onClick={() => move('idle', e.id)}
+                        >
+                          <b>{e.mark}</b>
+                          {e.name}
+                        </button>
+                      ))}
+                    </div>
+                    <h4>动作</h4>
+                    <div className="action-list">
+                      {Object.entries(actionNames).map(([value, title]) => (
+                        <button
+                          key={value}
+                          disabled={!supportsAction(skin, value as PetAction)}
+                          title={
+                            !supportsAction(skin, value as PetAction) ? '此外观尚未制作此动作' : undefined
+                          }
+                          onClick={() => move(value as PetAction, value === 'sleep' ? 'sleepy' : emotion)}
+                        >
+                          {title}
+                        </button>
+                      ))}
+                    </div>
+                    {skin?.kind === 'live2d' && skin.model && (
+                      <button
+                        className="button secondary full"
+                        onClick={() => {
+                          setEditedModel(structuredClone(skin));
+                          setModelOpen(true);
+                        }}
+                      >
+                        <SlidersHorizontal size={15} />
+                        配置动作与表情映射
+                      </button>
+                    )}
+                    <p className="fine-print">
+                      {skin?.kind === 'live2d'
+                        ? '模型按自身绑定与动作文件播放。可将聊天情绪映射到已有表情。'
+                        : skin?.kind === 'vrm'
+                          ? '支持骨骼待机、眨眼与音频口型。实际表情取决于模型。'
+                          : skin && spriteAnimation(skin)
+                            ? '使用完整原画帧，按制作时序切换。招手结束回到待机；语音静音时闭嘴。未制作的动作不可用。'
+                            : skin?.style === '3d'
+                              ? '这是具有三维观感的 PNG 立绘。要旋转角色和驱动骨骼，请导入 VRM 模型。'
+                              : '此外观保持静态。导入逐帧动画或已绑定的 Live2D / VRM 模型后，可播放相应动作。'}
+                    </p>
+                  </div>
+                </div>
+                <div className="section-heading">
+                  <h2>外观收藏</h2>
+                  <button className="text-button" onClick={() => importAsset('image')}>
+                    <ImagePlus size={15} />
+                    导入现有立绘
+                  </button>
+                </div>
+                {allSkins.some(earlierArt) && (
+                  <button className="earlier-art-toggle" onClick={() => setShowEarlierArt(!showEarlierArt)}>
+                    {showEarlierArt ? '收起早期外观' : '查看早期外观'}
+                  </button>
+                )}
+                <div className="wardrobe-grid">
+                  {skins.map((item) => (
+                    <button
+                      className={`wardrobe-card ${skin?.id === item.id ? 'selected' : ''}`}
+                      key={item.id}
+                      onClick={() => chooseSkin(item)}
+                    >
+                      <div>
+                        {assetThumb(item)}
+                        <span>{engineName(item)}</span>
+                      </div>
+                      <strong>{item.name}</strong>
+                      <small>
+                        {styleName(item.style)} · {reviewLabel(item) || '导入外观'}
+                        {skin?.id === item.id && <Check size={14} />}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            {view === 'characters' && (
+              <>
+                <div className="page-heading">
+                  <span className="page-kicker">角色档案</span>
+                  <h1>认真了解，才更靠近。</h1>
+                  <p>设定、语气与出处，让每一次回应有迹可循。</p>
+                </div>
+                <div className="profile-hero">
+                  <div className="profile-art">{assetThumb(skin)}</div>
+                  <div>
+                    <span>{character.work}</span>
+                    <h2>{character.name}</h2>
+                    <div className="tags">
+                      {character.personality.map((t, i) => (
+                        <span key={i}>{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <button className="button secondary" onClick={openProfile}>
+                    <Pencil size={14} />
+                    编辑档案
+                  </button>
+                </div>
+                {character.knowledge && (
+                  <div className="notice" role="status">
+                    <BookOpen size={17} />
+                    <p>
+                      {character.knowledge.kind === 'draft'
+                        ? '模型草稿 · 原作设定尚未核实。添加官方或 Wiki 资料链接后可更新档案。'
+                        : character.knowledge.kind === 'manual'
+                          ? '手动档案 · 内容来自你的设定，尚未读取原作资料。'
+                          : character.knowledge.method === 'saved'
+                            ? `基于已保存来源 · ${new Date(character.knowledge.collectedAt).toLocaleDateString('zh-CN')}整理，未联网更新资料。请核对摘要与未知项。`
+                            : `有来源的档案 · ${character.knowledge.method === 'links' ? '资料链接' : searchProviderNames[character.knowledge.method as keyof typeof searchProviderNames]}整理，${new Date(character.knowledge.collectedAt).toLocaleDateString('zh-CN')}更新。请核对来源、摘要和未知项。`}
+                    </p>
+                  </div>
+                )}
+                <ReferencePanel
+                  character={character}
+                  references={character.visualReferences || []}
+                  disabled={jobBusy}
+                  onChange={updateReferences}
+                  onUseOriginal={async () => {
+                    const result = await bridge.useReferenceImage(character.id);
+                    await save((s) => ({
+                      ...s,
+                      skins: [...s.skins.filter((skin) => skin.id !== result.id), result],
+                      activeCharacterId: result.characterId,
+                      activeSkinId: result.id,
+                    }));
+                    setToast('已使用来源原图作为静态立绘，未调用图像生成服务。');
+                  }}
+                />
+                <div className="profile-copy">
+                  <p>{character.summary}</p>
+                  <div className="profile-columns">
+                    <section>
+                      <h3>说话的方式</h3>
+                      <p>{character.speakingStyle || '尚未填写'}</p>
+                    </section>
+                    <section>
+                      <h3>外貌与标志</h3>
+                      <p>{character.appearance || '尚未填写'}</p>
+                    </section>
+                  </div>
+                  <div className="behavior-grid">
+                    {(
+                      [
+                        ['energy', '活跃程度'],
+                        ['affection', '亲近程度'],
+                        ['curiosity', '好奇程度'],
+                      ] as const
+                    ).map(([key, title]) => (
+                      <div key={key}>
+                        <span>
+                          {title}
+                          <b>{character.behavior[key]}%</b>
+                        </span>
+                        <progress max={100} value={character.behavior[key]} />
+                      </div>
+                    ))}
+                  </div>
+                  <section className="persona-summary">
+                    <span>
+                      <ShieldCheck size={16} /> 角色一致性
+                    </span>
+                    <h3>{character.roleplay?.timeline || '尚未指定剧情阶段'}</h3>
+                    <p>{character.roleplay?.relationship || '相处关系尚未设定'}</p>
+                    <div className="tags">
+                      <span>
+                        {character.roleplay?.spoilerPolicy === 'allow' ? '允许讨论剧情' : '不主动剧透'}
+                      </span>
+                      <span>{character.roleplay?.voiceRules.length || 0} 条语气习惯</span>
+                      <span>{character.roleplay?.customFacts.length || 0} 条创作设定</span>
+                    </div>
+                    <div className="persona-actions">
+                      <button className="text-button" onClick={openProfile}>
+                        调整语气与关系 <ChevronRight size={14} />
+                      </button>
+                      <button
+                        className="button secondary"
+                        disabled={interactionBusy || jobBusy}
+                        onClick={() => {
+                          stopAudio();
+                          setPersonaPreviewOpen(true);
+                        }}
+                      >
+                        <MessageCircle size={14} />
+                        角色试聊
+                      </button>
+                    </div>
+                  </section>
+                </div>
+                <div className="toolbar">
+                  <button
+                    className="button primary"
+                    disabled={jobBusy}
+                    onClick={() => {
+                      setUpdateUrls('');
+                      setUpdateError('');
+                      setUpdateMode('links');
+                      updateResult.current = null;
+                      setSourceUpdateOpen(true);
+                    }}
+                  >
+                    {jobBusy ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />}
+                    补充与更新资料
+                  </button>
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      notifyError(
+                        bridge.exportCharacter({ character, skins }).then((ok) => {
+                          if (ok) setToast('已导出档案和 2D 外观。Live2D/VRM 原模型需要单独分享。');
+                        }),
+                      )
+                    }
+                  >
+                    <Download size={15} />
+                    导出角色包
+                  </button>
+                </div>
+                {progressCard}
+                <div className="section-heading">
+                  <h2>原作台词</h2>
+                  <span>{character.quotes.length} 条</span>
+                </div>
+                {character.quotes.length ? (
+                  character.quotes.map((q, i) => (
+                    <blockquote key={i}>
+                      <p>“{q.text}”</p>
+                      {q.sourceUrl && (
+                        <button
+                          className="text-button"
+                          onClick={() => notifyError(bridge.openExternal(q.sourceUrl!))}
+                        >
+                          核对出处
+                          <ExternalLink size={12} />
+                        </button>
+                      )}
+                    </blockquote>
+                  ))
+                ) : (
+                  <div className="empty-note">
+                    尚无可核对的台词。读取资料链接或联网搜集后，仅保留来源中实际存在的原句。
+                  </div>
+                )}
+                <div className="section-heading spaced">
+                  <h2>资料来源</h2>
+                  <span>{character.sources.length} 个</span>
+                </div>
+                {character.sources.map((source, i) => (
+                  <button
+                    key={i}
+                    className="source-row"
+                    onClick={() => notifyError(bridge.openExternal(source.url))}
+                  >
+                    <BookOpen size={18} />
+                    <span>
+                      <strong>{source.title}</strong>
+                      <small>{source.url}</small>
+                    </span>
+                    <ExternalLink size={14} />
+                  </button>
+                ))}
+                {character.unknowns.length > 0 && (
+                  <div className="notice spaced">
+                    <CircleHelp size={17} />
+                    <div>
+                      <strong>仍需核对</strong>
+                      {character.unknowns.map((t, i) => (
+                        <p key={i}>{t}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {view === 'memories' && (
+              <>
+                <div className="page-heading">
+                  <span className="page-kicker">相处记忆</span>
+                  <h1>那些，被认真记住的小事。</h1>
+                  <p>{character.name}与你的记忆保存在本机，可以随时整理。</p>
+                </div>
+                <form
+                  className="memory-compose"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!memoryDraft.trim() || draftSaving) return;
+                    const draft = memoryDraft;
+                    void saveDraft(
+                      (s) => ({
+                        ...s,
+                        memories: [
+                          ...s.memories,
+                          { id: id(), characterId: character.id, text: draft.trim(), createdAt: now() },
+                        ],
+                      }),
+                      () => setMemoryDraft((value) => (value === draft ? '' : value)),
+                    );
+                  }}
+                >
+                  <textarea
+                    aria-label="添加相处记忆"
+                    placeholder="一件希望她记住的小事…"
+                    value={memoryDraft}
+                    onChange={(e) => setMemoryDraft(e.target.value)}
+                    maxLength={500}
+                  />
+                  <button className="button primary" disabled={!memoryDraft.trim() || draftSaving}>
+                    <Plus size={15} />
+                    存下这段记忆
+                  </button>
+                </form>
+                <div className="memory-toolbar">
+                  <label>
+                    <Search size={16} />
+                    <input
+                      aria-label="搜索记忆"
+                      placeholder="找一段记忆…"
+                      value={memoryQuery}
+                      onChange={(e) => setMemoryQuery(e.target.value)}
+                    />
+                  </label>
+                  <span>
+                    {memories.filter((m) => !m.excluded).length} 段用于对话 ·{' '}
+                    {memories.filter((m) => m.pinned).length} 段置顶
+                  </span>
+                </div>
+                <div className="memory-list">
+                  {filteredMemories.map((m) => (
+                    <article key={m.id} className={`memory-card ${m.excluded ? 'excluded' : ''}`}>
+                      <Heart size={18} />
+                      <div>
+                        <p>{m.text}</p>
+                        <time>{new Date(m.createdAt).toLocaleDateString('zh-CN')}</time>
+                        {m.pinned && <span className="memory-tag">优先记住</span>}
+                        {m.excluded && <span className="memory-tag">暂不用于对话</span>}
+                      </div>
+                      <button
+                        className={`icon-button ${m.pinned ? 'active' : ''}`}
+                        aria-label={m.pinned ? '取消置顶记忆' : '置顶记忆'}
+                        title={m.pinned ? '取消置顶' : '优先记住'}
+                        onClick={() =>
+                          commit((s) => ({
+                            ...s,
+                            memories: s.memories.map((x) =>
+                              x.id === m.id ? { ...x, pinned: !x.pinned } : x,
+                            ),
+                          }))
+                        }
+                      >
+                        <Pin size={15} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        aria-label={m.excluded ? '恢复用于对话' : '暂不用于对话'}
+                        title={m.excluded ? '恢复用于对话' : '暂不用于对话'}
+                        onClick={() =>
+                          commit((s) => ({
+                            ...s,
+                            memories: s.memories.map((x) =>
+                              x.id === m.id ? { ...x, excluded: !x.excluded } : x,
+                            ),
+                          }))
+                        }
+                      >
+                        {m.excluded ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                      <button
+                        className="icon-button"
+                        aria-label={`编辑记忆：${m.text}`}
+                        onClick={() => openMemory(m)}
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        aria-label={`删除记忆：${m.text}`}
+                        onClick={() =>
+                          commit((s) => ({ ...s, memories: s.memories.filter((x) => x.id !== m.id) }))
+                        }
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </article>
+                  ))}
+                </div>
+                {!memories.length && (
+                  <div className="memory-empty">
+                    <Orbit size={44} />
+                    <h3>记忆会在相处中长出来。</h3>
+                    <p>聊聊你的喜好，或亲手记下一件小事。</p>
+                  </div>
+                )}
+                {memories.length > 0 && !filteredMemories.length && (
+                  <div className="empty-note">没有找到匹配的记忆。试试另一种关键词。</div>
+                )}
+              </>
+            )}
+            {view === 'settings' && (
+              <SettingsPanel
+                settings={state.settings}
+                keys={keys}
+                notify={setToast}
+                onSaved={(_settings, value) => {
+                  setKeys(value);
+                  setToast('服务配置已保存。');
+                }}
+              />
+            )}
+          </main>
+        </div>
+      </section>
+      {toast && (
+        <div className="toast" role="status">
+          <Check size={17} />
+          <span>{toast}</span>
+          <button aria-label="关闭提示" onClick={() => setToast('')}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {createOpen && (
+        <Modal
+          title="遇见一个新角色"
+          subtitle="先匹配已有角色包，也可以直接建立新档案。参考原图与素材导入无需模型 Key。"
+          onClose={() => {
+            if (!jobBusy) setCreateOpen(false);
+          }}
+          wide
+        >
+          <form className="modal-form" onSubmit={create}>
+            <div className="creation-draft-status">
+              <span>
+                {creationStage || (creationDraftSaved ? '草稿已自动保留在本机' : '先填写身份，再准备外观')}
+              </span>
+              <button
+                type="button"
+                className="text-button"
+                disabled={jobBusy}
+                onClick={() => {
+                  pending.current = {};
+                  setNewName('');
+                  setNewWork('');
+                  setNewNotes('');
+                  setNewUrls('');
+                  setNewMode('manual');
+                  setJobError('');
+                }}
+              >
+                清空草稿
+              </button>
+            </div>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={collectOnCreate}
+                disabled={jobBusy}
+                onChange={(e) => setCollectOnCreate(e.target.checked)}
+                aria-label="建档后自动收集参考图"
+              />
+              建档后自动收集参考图（不调用图像生成模型）
+            </label>
+            <label>
+              建立方式
+              <select
+                aria-label="角色建档方式"
+                value={newMode}
+                disabled={jobBusy || Boolean(pending.current.character)}
+                onChange={(event) => {
+                  setNewMode(event.target.value as typeof newMode);
+                  setJobError('');
+                }}
+              >
+                <option value="manual">直接建立 · 不调用模型</option>
+                <option value="draft">模型草稿 · 只需聊天 key</option>
+                <option value="links">资料链接 · 从网页建立档案</option>
+                <option value="search">自动联网搜集 · 使用已选搜索服务</option>
+              </select>
+            </label>
+            <div className="form-row">
+              <label>
+                角色名字
+                <input
+                  required
+                  aria-label="新角色名字"
+                  maxLength={80}
+                  value={newName}
+                  disabled={jobBusy || Boolean(pending.current.character)}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="例如：昔涟"
+                />
+              </label>
+              <label>
+                来自哪部作品
+                <input
+                  required={!manualCreate}
+                  aria-label="新角色作品"
+                  maxLength={120}
+                  value={newWork}
+                  disabled={jobBusy || Boolean(pending.current.character)}
+                  onChange={(e) => setNewWork(e.target.value)}
+                  placeholder="作品或世界观"
+                />
+              </label>
+            </div>
+            {newName.trim() && (
+              <section className="creation-match" aria-label="新角色素材匹配">
+                <strong>
+                  {matchingPacks.length
+                    ? `找到 ${matchingPacks.length} 套同名角色素材`
+                    : existingCharacter(state, newName, newWork)
+                      ? '已有这个角色的档案'
+                      : '暂未找到匹配角色包'}
+                </strong>
+                <p>
+                  {matchingPacks.length
+                    ? '核对作品后可直接使用已有素材，不重复创建人物。'
+                    : existingCharacter(state, newName, newWork)
+                      ? '继续会打开已有档案，接着准备外观；已保存的资料与聊天保持原样。'
+                      : '继续创建独立角色档案；接下来收集原图或导入现成素材。当前精选包只有昔涟，其他人物不会套用她的形象。'}
+                </p>
+                {matchingPacks.map((pack) => (
+                  <div className="creation-match-row" key={pack.id}>
+                    <span>
+                      {pack.title}
+                      <small>
+                        {pack.skins.length} 套外观 ·{' '}
+                        {pack.origin === 'builtin' ? '随项目提供' : '已保存在本机'}
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={jobBusy || Boolean(pending.current.character)}
+                      aria-label={`使用匹配角色包：${pack.title}`}
+                      onClick={() => void useMatchingPack(pack)}
+                    >
+                      <FolderHeart size={15} />
+                      使用已有角色
+                    </button>
+                  </div>
+                ))}
+              </section>
+            )}
+            <label>
+              补充设定
+              <textarea
+                value={newNotes}
+                aria-label="新角色补充设定"
+                disabled={jobBusy || Boolean(pending.current.character)}
+                onChange={(e) => setNewNotes(e.target.value)}
+                maxLength={3000}
+                placeholder="剧情阶段、角色别名；原创角色请写下性格、语气与外貌。"
+              />
+            </label>
+            {(newMode === 'links' || manualCreate) && (
+              <label>
+                {manualCreate ? '参考来源（可选）' : '资料链接'}
+                <textarea
+                  aria-label="新角色资料链接"
+                  required={!manualCreate}
+                  maxLength={12000}
+                  rows={4}
+                  disabled={jobBusy || Boolean(pending.current.character)}
+                  value={newUrls}
+                  onChange={(event) => setNewUrls(event.target.value)}
+                  placeholder="官方角色介绍或 Wiki 页面 HTTPS 链接，每行一个，最多 6 个。"
+                />
+              </label>
+            )}
+            <div className="notice">
+              <CircleHelp size={16} />
+              <p>
+                {newMode === 'draft'
+                  ? '模型会根据名称、作品和补充设定生成可编辑草稿。原作细节标为待核实，不生成冒充原作的台词或来源；无需搜索 key。'
+                  : newMode === 'links'
+                    ? '读取公开网页的实际正文，再让模型整理设定并保留来源。无需搜索 key；动态页面或登录页面可能无法读取。'
+                    : newMode === 'manual'
+                      ? '只填名字也能建立档案。作品名称能帮助区分同名人物；参考来源只用于收集真实图片，尚未整理的原作设定保留为空。'
+                      : `当前搜索服务：${searchProviderNames[selectedSearchProvider(state.settings, keys)]}。可以在「连接与设置」中选择与测试；搜索失败不会自动替换为模型草稿。`}
+                {
+                  '保存后进入外观与动作设置。原图可直接作为静态桌宠；其他画风和动作需要对应素材或可选的图像服务。'
+                }
+                {pending.current.character && '档案已暂存，继续不会重复检索。'}
+              </p>
+            </div>
+            {progressCard}
+            {jobError && <div className="inline-error">{jobError}</div>}
+            <button className="button primary full" disabled={jobBusy}>
+              {jobBusy ? <LoaderCircle className="spin" size={17} /> : <Sparkles size={17} />}{' '}
+              {jobBusy ? '正在准备角色…' : pending.current.character ? '重试保存档案' : '创建角色'}
+            </button>
+          </form>
+        </Modal>
+      )}
+      {setupCharacter && (
+        <CharacterSetup
+          key={setupCharacter.id}
+          character={setupCharacter}
+          skins={state.skins.filter((skin) => usableCharacterSkin(skin, setupCharacter))}
+          activeSkinId={state.activeSkinId}
+          onReferences={(references) => updateReferences(references, setupCharacter.id)}
+          onUseOriginal={async () => {
+            const result = await bridge.useReferenceImage(setupCharacter.id);
+            await save((state) => ({
+              ...state,
+              skins: [...state.skins.filter((skin) => skin.id !== result.id), result],
+              activeCharacterId: result.characterId,
+              activeSkinId: result.id,
+            }));
+            setToast('已使用核对过的原图作为静态桌宠，无需图像模型。');
+          }}
+          onAssets={() => {
+            setSetupCharacterId('');
+            setArtWorkflowOpen(true);
+          }}
+          onPacks={() => {
+            setSetupCharacterId('');
+            setPacksOpen(true);
+          }}
+          onGenerate={() => {
+            setSetupCharacterId('');
+            setGenerateOpen(true);
+          }}
+          onDone={() => {
+            setSetupCharacterId('');
+            setView('home');
+          }}
+        />
+      )}
+      {sourceUpdateOpen && (
+        <Modal
+          title={`为${character.name}补充资料`}
+          subtitle="根据所选资料方式整理文字档案，保留你的语气、关系、参考图与动作偏好。"
+          onClose={() => {
+            if (!jobBusy) setSourceUpdateOpen(false);
+          }}
+          wide
+        >
+          <form
+            className="modal-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void refreshProfile();
+            }}
+          >
+            <label>
+              资料方式
+              <select
+                aria-label="更新资料方式"
+                disabled={jobBusy || Boolean(updateResult.current)}
+                value={updateMode}
+                onChange={(event) => {
+                  setUpdateMode(event.target.value as 'links' | 'search' | 'saved');
+                  setUpdateError('');
+                }}
+              >
+                <option value="links">资料链接 · 无需搜索 key</option>
+                <option value="search">自动联网搜集</option>
+                <option value="saved" disabled={!character.sources.some((source) => source.snippet.trim())}>
+                  已保存资料 · 不访问资料站点
+                </option>
+              </select>
+            </label>
+            {updateMode === 'links' ? (
+              <label>
+                资料链接
+                <textarea
+                  aria-label="更新资料链接"
+                  required
+                  maxLength={12000}
+                  rows={4}
+                  value={updateUrls}
+                  disabled={jobBusy || Boolean(updateResult.current)}
+                  onChange={(event) => setUpdateUrls(event.target.value)}
+                  placeholder="官方或 Wiki 资料网页，每行一个，最多 6 个。"
+                />
+              </label>
+            ) : updateMode === 'saved' ? (
+              <div className="notice">
+                将使用档案中 {character.sources.filter((source) => source.snippet.trim()).length}{' '}
+                个来源的已保存文本，只调用聊天模型整理。不会读取新网页；此前资料可能过时，结果会标明未联网更新。
+              </div>
+            ) : (
+              <div className="notice">
+                当前搜索服务：{searchProviderNames[selectedSearchProvider(state.settings, keys)]}
+                。仅使用实际取得的资料，失败后保留现有档案。
+              </div>
+            )}
+            {progressCard}
+            {updateError && <div className="inline-error">{updateError}</div>}
+            {updateError &&
+              updateMode !== 'saved' &&
+              !updateResult.current &&
+              character.sources.some((source) => source.snippet.trim()) && (
+                <button
+                  type="button"
+                  className="button secondary"
+                  disabled={jobBusy}
+                  onClick={() => {
+                    setUpdateMode('saved');
+                    setUpdateError('');
+                  }}
+                >
+                  改用已保存资料
+                </button>
+              )}
+            <button className="button primary full" disabled={jobBusy}>
+              {jobBusy ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}
+              {jobBusy
+                ? updateMode === 'saved'
+                  ? '正在整理已有资料…'
+                  : '正在读取资料…'
+                : updateResult.current
+                  ? '重试保存档案'
+                  : updateMode === 'saved'
+                    ? '整理已有资料'
+                    : '读取并更新档案'}
+            </button>
+          </form>
+        </Modal>
+      )}
+      {generateOpen && (
+        <GenerationStudio
+          key={character.id}
+          character={character}
+          skins={skins}
+          imageReady={keys.imageKey && Boolean(state.settings.imageModel)}
+          llmReady={keys.llmKey && Boolean(state.settings.llmModel)}
+          onReferences={updateReferences}
+          onBusy={setJobBusy}
+          onClose={() => setGenerateOpen(false)}
+          onOpenAssets={() => {
+            setGenerateOpen(false);
+            setArtWorkflowOpen(true);
+          }}
+          onSaveSkin={async (result, activate) => {
+            await save((s) => ({
+              ...s,
+              skins: [...s.skins.filter((a) => a.id !== result.id), result],
+              ...(activate ? { activeCharacterId: result.characterId, activeSkinId: result.id } : {}),
+            }));
+          }}
+        />
+      )}
+      {petProductionOpen && (
+        <PetProductionStudio
+          key={character.id}
+          character={character}
+          skins={skins}
+          imageReady={isDesktop && keys.imageKey && Boolean(state.settings.imageModel)}
+          onClose={() => setPetProductionOpen(false)}
+          onBusy={setJobBusy}
+          onOpenSettings={() => {
+            setPetProductionOpen(false);
+            setView('settings');
+          }}
+          onReferences={updateReferences}
+          onSaveSkin={async (result, activate) => {
+            await save((s) => ({
+              ...s,
+              skins: [...s.skins.filter((a) => a.id !== result.id), result],
+              ...(activate ? { activeCharacterId: result.characterId, activeSkinId: result.id } : {}),
+            }));
+          }}
+        />
+      )}
+      {packsOpen && (
+        <CharacterPacks
+          key={character.id}
+          character={character}
+          skins={skins}
+          onSetup={() => {
+            setPacksOpen(false);
+            setSetupCharacterId(character.id);
+          }}
+          onClose={() => setPacksOpen(false)}
+          onInstall={async (style) => {
+            await save((state) => installStarterPack(state, style));
+            setView('home');
+            setToast('角色包已启用，可以直接使用本地互动。');
+          }}
+          onSaveProfile={async (profile, base) => {
+            if (
+              JSON.stringify(
+                stateRef.current.characters.find((item) => item.id === character.id)?.companion,
+              ) !== JSON.stringify(base)
+            )
+              throw new Error('互动台词已在另一窗口修改，请重新打开后编辑。');
+            await save((state) => ({
+              ...state,
+              characters: state.characters.map((item) =>
+                item.id === character.id ? { ...item, companion: profile } : item,
+              ),
+            }));
+          }}
+          onExport={() => bridge.exportCharacter({ character, skins })}
+          onImport={async () => {
+            await importCharacter();
+          }}
+          onAssets={() => {
+            setPacksOpen(false);
+            setArtWorkflowOpen(true);
+          }}
+        />
+      )}
+      {artWorkflowOpen && (
+        <ArtWorkflow
+          key={character.id}
+          character={character}
+          initialStyle={skin?.style || 'anime'}
+          onClose={() => setArtWorkflowOpen(false)}
+          onSaveSkin={async (result, activate) => {
+            await save((s) => ({
+              ...s,
+              skins: [...s.skins.filter((item) => item.id !== result.id), result],
+              ...(activate ? { activeCharacterId: result.characterId, activeSkinId: result.id } : {}),
+            }));
+          }}
+        />
+      )}
+      {modelStudioOpen && (
+        <ModelStudio
+          key={character.id}
+          character={character}
+          skins={skins}
+          onClose={() => setModelStudioOpen(false)}
+          onSaveSkin={async (result, activate) => {
+            await save((s) => ({
+              ...s,
+              skins: [...s.skins.filter((item) => item.id !== result.id), result],
+              ...(activate ? { activeCharacterId: result.characterId, activeSkinId: result.id } : {}),
+            }));
+          }}
+        />
+      )}
+      {themeOpen && (
+        <Modal
+          title="让空间，染上她的颜色"
+          subtitle="主题保存在角色档案中，切换角色时一起切换。"
+          onClose={() => setThemeOpen(false)}
+        >
+          <div className="theme-options">
+            {themes.map((t) => (
+              <button
+                key={t.id}
+                className={theme.id === t.id ? 'selected' : ''}
+                onClick={() =>
+                  commit((s) => ({
+                    ...s,
+                    characters: s.characters.map((c) =>
+                      c.id === character.id ? { ...c, theme: t.id, accent: undefined } : c,
+                    ),
+                  }))
+                }
+              >
+                <span style={{ background: t.accent }} />
+                <span style={{ background: t.companion }} />
+                <strong>{t.name}</strong>
+                {theme.id === t.id && <Check size={15} />}
+              </button>
+            ))}
+          </div>
+          <div className="custom-color">
+            <label>
+              自定义强调色
+              <input
+                type="color"
+                value={character.accent || theme.accent}
+                onChange={(e) =>
+                  commit((s) => ({
+                    ...s,
+                    characters: s.characters.map((c) =>
+                      c.id === character.id ? { ...c, accent: e.target.value } : c,
+                    ),
+                  }))
+                }
+              />
+            </label>
+            <button
+              className="text-button"
+              onClick={() =>
+                commit((s) => ({
+                  ...s,
+                  characters: s.characters.map((c) =>
+                    c.id === character.id ? { ...c, theme: 'auto', accent: undefined } : c,
+                  ),
+                }))
+              }
+            >
+              根据角色自动匹配
+            </button>
+          </div>
+        </Modal>
+      )}
+      {personaPreviewOpen && (
+        <Modal
+          title="听听角色的语气"
+          subtitle="连续聊几轮，检查角色语气、设定与动作。试聊不会写入正式聊天或记忆。"
+          onClose={() => setPersonaPreviewOpen(false)}
+          wide
+        >
+          <PersonaPreview
+            key={character.id}
+            character={character}
+            skin={skin}
+            connected={connected}
+            blocked={sharedChatStatus.busy}
+            mouth={mouth}
+            talking={talking}
+            audioDriven={Boolean(audioRef.current)}
+            motionEnabled={motionEnabled}
+            onSpeak={(text) => {
+              void speak(text);
+            }}
+            onStopAudio={stopAudio}
+            onEdit={() => {
+              setPersonaPreviewOpen(false);
+              openProfile();
+            }}
+            notify={setToast}
+          />
+        </Modal>
+      )}
+      {historyOpen && (
+        <Modal
+          title="那些聊过的话"
+          subtitle={`${character.name} · ${messages.length} 条本机消息`}
+          onClose={() => setHistoryOpen(false)}
+          wide
+        >
+          <label className="conversation-search">
+            <Search size={18} />
+            <input
+              autoFocus
+              aria-label="搜索对话"
+              placeholder="输入一个词，找回那次对话…"
+              value={historyQuery}
+              onChange={(e) => setHistoryQuery(e.target.value)}
+            />
+          </label>
+          <div className="conversation-results">
+            {messages
+              .filter((m) => m.content.toLowerCase().includes(historyQuery.trim().toLowerCase()))
+              .slice(-60)
+              .reverse()
+              .map((m) => (
+                <button key={m.id} onClick={() => revealMessage(m.id)}>
+                  <span>
+                    <strong>{m.role === 'assistant' ? character.name : '你'}</strong>
+                    <time>
+                      {new Date(m.createdAt).toLocaleString('zh-CN', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </time>
+                    <ArrowUpRight size={15} />
+                  </span>
+                  <p>
+                    {m.content.slice(0, 400)}
+                    {m.content.length > 400 ? '…' : ''}
+                  </p>
+                </button>
+              ))}
+            {!messages.some((m) => m.content.toLowerCase().includes(historyQuery.trim().toLowerCase())) && (
+              <p className="empty-search">
+                {messages.length ? '没有找到包含这个词的消息。' : '还没有对话。第一句你好，会从这里开始。'}
+              </p>
+            )}
+          </div>
+          <div className="conversation-footer">
+            <span>显示最近 60 条匹配消息 · 点击回到对话</span>
+            <button
+              className="button secondary"
+              disabled={!messages.length || interactionBusy || completedReplies.current.has(character.id)}
+              title="下一句使用新的近期上下文，保留历史与长期记忆"
+              onClick={beginTopic}
+            >
+              <MessageCircle size={15} />
+              开启新话题
+            </button>
+            <button
+              className="button secondary"
+              disabled={!messages.length || !isDesktop}
+              onClick={exportConversation}
+            >
+              <Download size={15} />
+              导出完整记录
+            </button>
+          </div>
+        </Modal>
+      )}
+      {profile && (
+        <Modal title="编辑角色档案" onClose={() => setProfile(null)} wide>
+          <form
+            className="modal-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const draft = profile;
+              void saveDraft(
+                (s) => ({
+                  ...s,
+                  characters: s.characters.map((c) => (c.id === draft.id ? draft : c)),
+                }),
+                () => setProfile((value) => (value === draft ? null : value)),
+                profileBase.current,
+              );
+            }}
+          >
+            <div className="form-row">
+              <label>
+                名字
+                <input
+                  required
+                  aria-label="角色名字"
+                  maxLength={200}
+                  value={profile.name}
+                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                />
+              </label>
+              <label>
+                作品
+                <input
+                  aria-label="角色作品"
+                  maxLength={500}
+                  value={profile.work}
+                  onChange={(e) => setProfile({ ...profile, work: e.target.value })}
+                />
+              </label>
+            </div>
+            <label>
+              简介
+              <textarea
+                maxLength={4000}
+                value={profile.summary}
+                onChange={(e) => setProfile({ ...profile, summary: e.target.value })}
+              />
+            </label>
+            <label>
+              性格标签（顿号分隔）
+              <input
+                value={profile.personality.join('、')}
+                onChange={(e) =>
+                  setProfile({ ...profile, personality: e.target.value.split(/[、,，]/).slice(0, 12) })
+                }
+              />
+            </label>
+            <label>
+              说话方式
+              <textarea
+                maxLength={2000}
+                value={profile.speakingStyle}
+                onChange={(e) => setProfile({ ...profile, speakingStyle: e.target.value })}
+              />
+            </label>
+            <label>
+              外貌描述
+              <textarea
+                maxLength={2000}
+                value={profile.appearance}
+                onChange={(e) => setProfile({ ...profile, appearance: e.target.value })}
+              />
+            </label>
+            <PersonaEditor character={profile} onChange={setProfile} />
+            {profileInputError && (
+              <div className="inline-error" role="alert">
+                {profileInputError}
+              </div>
+            )}
+            {profileChanged && (
+              <div className="notice">
+                另一窗口更新了档案；独立修改可合并，同一项修改需要先核对。
+                <button className="text-button" type="button" onClick={openProfile}>
+                  重新读取最新档案
+                </button>
+              </div>
+            )}
+            <button className="button primary full" disabled={draftSaving || Boolean(profileInputError)}>
+              {draftSaving ? '正在保存…' : '保存角色档案'}
+            </button>
+          </form>
+        </Modal>
+      )}
+      {editingMemory && (
+        <Modal title="编辑这段记忆" onClose={() => setEditingMemory(null)}>
+          <form
+            className="modal-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const draft = editingMemory;
+              void saveDraft(
+                (s) => ({
+                  ...s,
+                  memories: s.memories.map((m) =>
+                    m.id === draft.id ? { ...draft, text: draft.text.trim() } : m,
+                  ),
+                }),
+                () => setEditingMemory((value) => (value === draft ? null : value)),
+                memoryBase.current,
+              );
+            }}
+          >
+            <textarea
+              aria-label="记忆内容"
+              maxLength={8000}
+              rows={5}
+              value={editingMemory.text}
+              onChange={(e) => setEditingMemory({ ...editingMemory, text: e.target.value })}
+            />
+            {memoryChanged && (
+              <div className="notice">
+                {latestEditingMemory ? (
+                  <>
+                    <span>另一窗口更新了这段记忆，独立修改仍可合并。</span>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => openMemory(latestEditingMemory)}
+                    >
+                      重新读取最新记忆
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>另一窗口删除了这段记忆，草稿仍保留在这里。</span>
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={draftSaving || !editingMemory.text.trim()}
+                      onClick={() => {
+                        const draft = editingMemory;
+                        void saveDraft(
+                          (s) => ({
+                            ...s,
+                            memories: [...s.memories, { ...draft, id: id(), text: draft.text.trim() }],
+                          }),
+                          () => setEditingMemory(null),
+                        );
+                      }}
+                    >
+                      保存为新记忆
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            <button className="button primary" disabled={!editingMemory.text.trim() || draftSaving}>
+              保存记忆
+            </button>
+          </form>
+        </Modal>
+      )}
+      {modelOpen && editedModel?.model && (
+        <Modal
+          title="动作与表情映射"
+          subtitle="将聊天情绪关联到这个模型实际包含的资源。"
+          wide
+          onClose={() => setModelOpen(false)}
+        >
+          <div className="mapping-grid">
+            {emotions.map((e) => (
+              <label key={e.id}>
+                {e.name}
+                <select
+                  value={editedModel.model?.expressionMap?.[e.id] || ''}
+                  onChange={(event) =>
+                    setEditedModel({
+                      ...editedModel,
+                      model: {
+                        ...editedModel.model!,
+                        expressionMap: { ...editedModel.model!.expressionMap, [e.id]: event.target.value },
+                      },
+                    })
+                  }
+                >
+                  <option value="">自动匹配 / 无</option>
+                  {editedModel.model!.expressions.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+          <div className="mapping-grid spaced">
+            {Object.entries(actionNames).map(([key, title]) => (
+              <label key={key}>
+                {title}
+                <select
+                  value={editedModel.model?.motionMap?.[key as PetAction] || ''}
+                  onChange={(e) =>
+                    setEditedModel({
+                      ...editedModel,
+                      model: {
+                        ...editedModel.model!,
+                        motionMap: { ...editedModel.model!.motionMap, [key]: e.target.value },
+                      },
+                    })
+                  }
+                >
+                  <option value="">自动匹配 / 无</option>
+                  {Object.keys(editedModel.model!.motions).map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+          <button
+            className="button primary full spaced"
+            onClick={() => {
+              commit((s) => ({
+                ...s,
+                skins: s.skins.map((a) => (a.id === editedModel.id ? editedModel : a)),
+              }));
+              setModelOpen(false);
+            }}
+          >
+            保存映射
+          </button>
+        </Modal>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,13 @@
+Reference: artifacts/animation/cyrene-v1/masters/original.png
+Output: artifacts/animation/cyrene-v3/sources/original-face-raw.png
+
+Use case: identity-preserve.
+Asset: production animation source for Mori, Cyrene in the original Honkai Star Rail illustration style.
+Use the attached approved full-body drawing as the exact visual master: preserve face, long pink hair with cyan tips, feather/crystal rose ornaments, eye color, precise white/lavender bodice, purple chest emblem, violet split rear panels, shoes, original adult anime proportions and polished original colored-line/cel-shaded illustration. No costume redesign. Remove its surrounding glow completely.
+Create a transparent PNG PORTRAIT canvas, preferably 2048 by 3072 pixels at the tool's highest native detail. EXACTLY FOUR complete figures in a strict 2-column by 2-row grid, row-major order. Each figure fits well inside one portrait cell, at identical scale and foot baseline, with 10% clear transparent margins including ornaments, long hair and heels. Each occupies about 78% of its cell height. Camera locked, near-front view, grounded feet. No labels, no dividing lines, no contact sheet border, no background, floor, shadows or glow. Actual transparent alpha.
+These four frames are subtle sequential facial/idle frames:
+0 top-left: approved neutral standing pose, warm closed-mouth smile, eyes open.
+1 top-right: SAME standing pose, eyelids halfway closed during a blink.
+2 bottom-left: SAME standing pose, both eyes fully closed naturally, no mouth change.
+3 bottom-right: SAME standing pose, eyes open, a tiny gentle inhalation visible only in shoulders/chest and a few hair tips, heels stay planted.
+Exactly two connected arms and two hands in every figure. One hand remains gently extended at waist height as in the master, other relaxed. Do not leave any previous hand silhouette when changing anything. Keep all 4 frames remarkably consistent in face, size, limbs, costume, hair silhouette and viewpoint. Genuine drawing changes only in designated face/shoulders, no whole-body rotation or bouncing. Full head ornament and both complete shoes visible in every cell.

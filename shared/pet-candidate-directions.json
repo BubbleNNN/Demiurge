@@ -1,0 +1,20 @@
+{
+  "balanced": {
+    "label": "均衡表现",
+    "description": "保留完整特征，在小尺寸清晰度与服装细节之间取得平衡。",
+    "prompt": "BALANCED interpretation: balance a readable full-body silhouette with the character's signature costume details. Use a calm neutral expression and a relaxed, animation-ready standing pose. Keep all identity features and outfit color divisions clear within the selected medium.",
+    "originalPrompt": "BALANCED original-style interpretation: retain the exact reference rendering, proportions and detail density. Use a calm neutral expression and a new relaxed standing rest pose, preserving all identity and costume features."
+  },
+  "bold": {
+    "label": "鲜明轮廓",
+    "description": "让四肢、发型与大色块更容易分辨，优先检查缩小后的轮廓。",
+    "prompt": "CLEAR-SILHOUETTE interpretation: favor easily separated hair masses, clear negative space between arms and torso, and distinct large costume color blocks. Simplify only non-signature micro-texture where the selected medium permits it; keep every identity-defining ornament and costume element. Use an open, attentive neutral expression and a stable rest pose. Do not invent thick outlines, extra contrast or a new palette if they conflict with the requested medium.",
+    "originalPrompt": "CLEAR-SILHOUETTE original-style interpretation: preserve the EXACT original line weight, proportions, palette and detail density. Improve readability only through a slightly clearer natural standing rest pose with the existing arms separated from the torso where anatomically appropriate and an attentive neutral expression. Do not simplify or redesign the original costume or rendering."
+  },
+  "soft": {
+    "label": "柔和神态",
+    "description": "用放松的眉眼和自然站姿表现温和感，保留服装与标志细节。",
+    "prompt": "GENTLE-EXPRESSION interpretation: use relaxed eyebrows, clearly open eyes, a soft closed-mouth expression and a comfortable neutral standing pose. Preserve the character's face shape and signature features; do not change age or personality-defining traits. Keep the same outfit and color placement. Material, pixel grid, palette limits and edge treatment must still follow the selected medium; gentleness is expressed through the authored face and posture, not through blur or smoothing.",
+    "originalPrompt": "GENTLE-EXPRESSION original-style interpretation: keep the exact original face design, proportions, linework, palette and material rendering. Use a subtly relaxed closed-mouth expression with open eyes and a comfortable new standing rest pose. Preserve every original costume detail. Do not soften the image with blur or change the drawing medium."
+  }
+}

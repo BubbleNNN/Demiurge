@@ -1,0 +1,15 @@
+Reference: artifacts/animation/cyrene-v1/masters/original.png
+Output: artifacts/animation/cyrene-v3/sources/original-speech.png
+
+Use case: identity-preserve.
+Asset: FOUR authored full-body speech animation frames for Mori's Cyrene companion.
+Use the attached APPROVED static artwork as the exact identity and style master. Match the original Honkai Star Rail polished colored-line/cel-shaded anime art exactly. Preserve adult human proportions, original face, long pink hair with cyan tips, rose/crystal feather headdress, white/lavender bodice, precise violet chest emblem and long dark violet galaxy split panels. Neutral: one hand extended gently at waist height, other relaxed. Two anatomically connected arms and two five-finger hands. No external glow.
+Layout is critical: actual transparent alpha PORTRAIT PNG, 1024x1536 canvas, EXACTLY FOUR figures in strict TWO columns by TWO rows, row-major order.
+Each figure must fit ENTIRELY inside a 400-pixel-wide by 610-pixel-high rectangle CENTERED inside its 512x768 portrait cell. At least 50 px of truly empty transparency around each cell. Scale figures DOWN to obey BOTH width and height; do NOT fill a cell. Same character scale, same locked near-front camera and identical planted shoe positions in all frames and the previous idle sheet. Head ornaments, fingertips, hair tips, long dress panels and BOTH COMPLETE SHOES inside each cell. No silhouettes may touch or cross neighboring cell borders.
+Four frames, precisely this sequence:
+0 top-left: neutral body, eyes open, SMALL slightly open speaking mouth.
+1 top-right: identical body and face, a WIDER rounded open mouth for a louder syllable.
+2 bottom-left: identical body, cheerful warm smile with bright eyes, both arms stay in neutral.
+3 bottom-right: identical body, thoughtful curious face, subtle eyebrow change, arms remain neutral.
+Preserve face structure, outfit, ornament shapes, body proportions and hair silhouette. Hands move from existing shoulders with correct connections. Exactly two legs and two arms, no extra/ghost limbs. No whole-character shaking, spinning, scaling or bouncing. Genuine isolated articulation and facial drawing changes.
+No opaque background, colored halo, glow, checkerboard, floor, shadows, dividing lines, captions, numbers, text, borders, extra character or floating decorative pieces. True transparent PNG, crisp clean silhouette.

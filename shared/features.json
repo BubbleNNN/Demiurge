@@ -1,0 +1,9 @@
+[
+  { "id": "home", "module": "companion", "title": "陪伴空间", "label": "人物陪伴" },
+  { "id": "chat", "module": "chat", "title": "对话与语音", "label": "对话语音" },
+  { "id": "characters", "module": "characters", "title": "角色档案", "label": "角色资料" },
+  { "id": "wardrobe", "module": "appearance", "title": "外观工作台", "label": "外观动作" },
+  { "id": "memories", "module": "memories", "title": "相处记忆", "label": "相处记忆" },
+  { "id": "desktop", "module": "desktop", "title": "桌宠窗口", "label": "桌宠窗口" },
+  { "id": "settings", "module": "settings", "title": "连接与设置", "label": "连接设置" }
+]

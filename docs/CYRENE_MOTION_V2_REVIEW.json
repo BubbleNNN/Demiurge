@@ -1,0 +1,834 @@
+{
+  "version": 1,
+  "reviewedAt": "2026-10-04T15:58:10.025Z",
+  "reviewer": "Codex visual inspection of all source cells; not an automatic anatomy detector",
+  "criteria": [
+    "limb count and limb connections match reference anatomy",
+    "identity, costume and style remain consistent",
+    "pose sequence and ground contact inspected"
+  ],
+  "rejectedSources": [
+    {
+      "file": "artifacts/animation/cyrene-v1/sheets/powerpuff.png",
+      "reason": "Duplicate arm/hand visible in wave, nod and rest poses"
+    },
+    {
+      "file": "artifacts/animation/cyrene-v1/sheets/powerpuff-gestures-v2.png",
+      "reason": "Changed head/body proportions in 4x2 layout; not released"
+    },
+    {
+      "file": "artifacts/animation/cyrene-v1/sheets/powerpuff-rejected-edit-v2.png",
+      "reason": "Edited old sheet still retains duplicate hand; not released"
+    }
+  ],
+  "entries": {
+    "cyrene-original-v1": [
+      {
+        "sha256": "db5487f79178bbd737de65e2ea03b815957c7085bbb186dd225561c21045681b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "448ef5b76991d4f32a3b1e8e01d74c920410454d53a497770990508062797292",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e01a3ae9415ba0896fa31f6f72a68f5b47c1c3a84382ae2dda2eb4e7145347fd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "daeed075857cf3a1a16185e957cf5c7983b507f94d34d1a2ee6b199915b51ab4",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "20f38e37f1856f40809a89c500a16e053a0350ed9611dc7423f045856605d177",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "6d742f4135c17c917ce8bfdfbdf1959aa16c547ed3f7c23a85455d5dda72f59e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "fa7b1e63c38d710c835f59d42411c217f096ad981ecad3043606b53a1e1a03dd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "39782aa23dd452729d3c5799d607e0d61fcf3ce8b0ee2f8747d7563691ed234a",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "65b29a09e3f05d31bcff23f2e9d8cddd02c24904737b2048252d39169fcf29ba",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "a31935d815bfeb4df39a021793528377398c0ec2e04783d51cdb594680716352",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "ebd72e9cf26435be8652dce86864e9fe34c22c43d0a46b1c56804646e2966a28",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c9821dd7bb25b28e47c8fb2ce66296bcd688f9bc7aea26bf9256df15f3814f62",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "78bce348699b7cd76f1d7792c34f1f0af3747d3d3c8ff5422fc18033a0f4feb9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "11ab60dfe96cd5526fa28f59cb3fd9adde992418515fe370e87b8f3c1bf1fc96",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "966bcac27f939b46ef6128b7054c4bb8bc3618595bc20d9e710e43e79b439785",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e80a798b4004929dfbd39184c518bb1e53350445a60069ebffd8a09f1fea4330",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-anime-v5": [
+      {
+        "sha256": "4159c8a5a0f8948845110c46f5de58056e158d7e155b1b1966da8f766d9c702c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "3c4f6560d031ce241731c456a806f011701e8df60bafad40d4e22da14ce1dff5",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c51321e9b5cc17f1ed49c7fea7d486eb5fd73aa470876cfd20d6db290192f011",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "6aa3c8148fc66f7b8c5478c062344dadb3a51f4376df1d1103814530709087ea",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "0805d2f173ba04173b9701ffaf3c33e29f5132380d5e3cfc6466df107b28d556",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1004af071fec5cb5ea764bcd69c25e58faa0eb8752c9afa62d074258b7c731b1",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "2b3e133f2d89c58aee6aacf8dcba44ed15d249efe1e5a2a58d22d1c036016f06",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9074d254f6194670ee876ea9aac254f14166477e6010a41e240a5295ed6e342f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c8f45ea0889cc0e1d42889edcf92588f74088cdb52b9164e182ec48386210808",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "0eac05abceea9fffc7385e16c239943d35c7b0c1510960d1064c9df023d1994d",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "4b96ce4e1cb3cbe1ac4b6495fee08a9585d7b1615ac3fce8e214fe8e4d52128c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9999ec0d80d58a662c1fb7ba8c6b69d8dad7d706802b775f397b37ef8656c7a3",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "4a42b3b758e2d9430a70249b40389b0c8dd9b766f3888b196b50f53d4731a4d2",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "88163a33e24c9065e0be39c0f1711b3f16f2e9fb04943929e7fc6a6b138a16ff",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "f86b7aca6bb8cd7e8665e6f7cf847c2f86f3d4faadf9b6ca2825c0ac96dd2c39",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "ff20d123af94b0043763be330d434d4052ca35fc3dd72ee3ad9be9e9083e87fa",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-chibi-v4": [
+      {
+        "sha256": "8bcfcf808ee2fd07a8d1c989e77752a87f333ade48edda80591a55845ed06097",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "f3ea4ec8df4778864a454450c2f474e7fb3339049470bea7a8559dc9a598254f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9231679095b73ab6f0f8a03e4adbcc8dbd72e5bfd9d77aca585209eb1917c9f3",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c4afe957df3f9dc5b503e13094c547a587a018f32991aa48b506b45a27b93f79",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9e920eaadb74f594926960d92731c83098a97171e3d21cd436fc37bd89ef4690",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b724c83aa142320a05273af2156104c3be0fd4aa82c0676624195e6ff4831782",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "958b34f24920f24e741c40b424ac49bb50a2b49384a3bc40f1d3959e93677060",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1a5279043492ee7a5f9e45549f452ed5d48dc866922b6172f5d7770add9c1323",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "601e4198f3d8d6e0cdd979239b80e61f56ae7e2652b2ccc83faa5bd49023aef3",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "be96721d6beabcef331976363738d1c7e12d9b5f4b5d6d54bad0c443ac644798",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1d97c94be0ba958e173882a64150c4fbcce1721092db1de18b005de08bee9f5b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "cceeb21ce8c0d108410b920095129c3233a44cbd391111c207d9f122537f8752",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c1ba2d6c15d30fee0f98d53334b97a0e6941fedda0c9e9ca18b0438893e365ea",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "be56dddcd0603339442747463c589a050ee979f82d7a59b9a2761f1bb850610f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "fe49c4a4606249f4b509fa0957d2b4813a65f0dd79a2dfb8c025ec242065dd62",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c5c686233552791388b1b600f39156e67e297a892832368b85c3e227c5e85f2c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-powerpuff-v1": [
+      {
+        "sha256": "2c23381cb7c37e8d05e0c9c182e46f0673650d6c8937a95062f4412cc2bfa392",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e2b85acf2592ea8210ae90fc07275c86004b8e3edb1e5a8f253a0923059dd7d8",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "8f8da5d5ef145eca41835c85bbb3df006055e4ddae67078d3a2d0be9ba5c4d06",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e747d1c7e11d13bbfe96bf6b51ffb16c3f8346eb2e3344f223fa5f2bc3c8fe71",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b8da4a6b9486009ca9dc20e6bd19710baff50aa03a33e2f0d83fac53e0c2f802",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b93511189f69073935ae5290721f5f5371bd53fbe2a262cdd8ee9d64411f27fc",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "5d83efef2178ee1cbd83b83a26234377aefe7c985098f1ee8ba587e52e68efdc",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "8d0bd9c61c5dd9601963c84d443cbe335ae95e4cae4a96ffb55007cd58ece7b2",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "935f2e4a7ebca78fda42e84e962344a0a1efea211c661425d7f7e225d5f9d775",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9a8a2c1e7e80a2f4b599840c3766c24cbcfb04e1d41aba035cba01051d22c0da",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "a03866a99ac2897bb5472bf6ebb80c74e09b7672cf3ad344c41f00640fcbc68a",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "200aedd17c31a5af3cc866027882bc5856c3829e4edaaf8a866f20f5993c42e9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "8927697ee7ddd4b7fc78d41cb498aad6b2d31b85859ccb3ec2ff2ed549247fc9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "dd42a7bb51d0d646346955463dcd0b5cdc7c4f8e7514cbc91c8dac10e0d64d65",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e83e2ceabc8ced44d8e478075f3803fda03e61fe0314b744be4528ae314a6ee9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "deb7068aa9036dac866e2f5bcdb497288535afb64fbc3b17cf054fb5c2291ea9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-pixel-v6": [
+      {
+        "sha256": "45d6ec8d8b23a68b516c05f280b9a653c35a3019dbf39a076b8dae42fc330b11",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9c98c659b05793fcce2289f45c059dcd594ac67e2901d4874cb97d681e4659d9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "58a880cf23284a8dc537b5bb5e19e036bf9370006d19f5ae39d196e2a8e3dc4c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e9e45e1af1836ed5b0bc3978b037f4a7a9801ecafe14afefed1090020fbd84fd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "016b48b1e3182b7c1cbb74fff793c928576dfbecbbdc5669529e185eaa818589",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "37678d514c10efa0eb406bb80fd9cfe5330dc73766c4ade463f4c80596446346",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "3cf81e75c9b6db827d3b592dd045fffc961f0db6bcdffcf3e1f5de82b0df3c7f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "992c8c9b4f6ca2c588ed47c20075341f8d8468aab86d6bfa07d2d1c4807afb67",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "6ef6fbf9e22d5585e1ffa0f3b446c1bfb9dd68881ea6f58424b93f7aa847292e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "d176de9b543e411e6f6346c6d389e9c3d4d28bde315e8c027be8f57208e9f258",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "57dcb4e0e22009cce6b17401bc54292cbd3630e242c0003833d73abf5390ec93",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "23b1ba957fd752432e14613b9d70a675b416ce875fdff833c766ccc78a946a5b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "536dc29407c8b9ff201e1e677674132af4ba417f88177d9abbb0ee44f9b755a8",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "31b70eaa0de39747b8da65ae0268948fe11d08ec82864af041cb346f3929ba4f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "586bdd338e725a8dae25c17f260bfb6e04c5474462d341a85e420a3e0769ac3c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "48f82938bbb7f0ec4bfdbad8cbd45d2fb03f8332ea1c067f4760bc45c0079473",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-8bit-v5": [
+      {
+        "sha256": "fb4b931155d13d6213e543fa47519769d1e8d71f85b1c98d699decc233236d96",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "143442056fcfe14e49bd55fdd6e24f7b2355a232a03800f41f8619ef15f27aa8",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b7a898706dc6f31253f724dfee3484ee21ed41f269a81877f078b9e8fa9bdc91",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b06c17e7181bdade30c92c8d6117b030d4cac609cbfb6ec27b3c985189ea4348",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "7df34ee5e3d6db24661bd35f7a62ba5403553a2ef680059ebc108a07130d6034",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b0e3bac23b9a5f93f67d92b54036b4a0f1c52044f5f871079f43fa56392b8ffd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "de9bbd9eb1b6cfae9fd13f03960f09cd16cc5b970bd593deed6f1d8b60b98000",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "02e68ca9e05a33322f26b658360d114402e6907b1ad37145c2cf9d779e86e93a",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "f97289ef1d76103621e1bda27acc669df040332f1d7f28c82030928af3a9894c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c81577859b3fd5998d15325be367dd4d46719c086cb1470e5b3c47c85ed7d333",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b39faae58afeceb0c275e089a62c0bb38170924f8b72fa29bcc059268901ff2b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1ec471b8eab2265f9d64fe2b80f6406713c2a5b429dbf263ae52e9ec6c7f8c51",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "57da291db3321dffd34bc7c1fc011606f774a713149723a2302fe1410b025060",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "4e785fdfaba9ce664b83bef3fd2a95fbaed1633175e9d92969ce6b6b00d019bb",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c24b5eefa6be380ffeecd1902acf64734e5be2a19d0a5f52de5b4be68bb2fd53",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "868c6287ac56bdd6cd3a838a20cf8e4584f6e98408f7f1c83ceab0f53073d0e3",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-3d-v5": [
+      {
+        "sha256": "dbf7f1a7c11a8106a3ca952e3068a57b5e70e84d0c8b4c7fd679d0f108837d92",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "0c7b042167d130abd5e34bdf85079fc6adb2a15ec77bda687cf765ef4795b62c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1a23936576410bb73ea1345f5ff3bcef2f3a6a1005cea3e915c320db1fc256dd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "f305d02b324b39ad7bb40a887d765e08053c93c472d52de6fb6bf29dcdcb780e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "a8f4bd657d43c0744473e5492406217b8cea573d51cdd4524bd7432e0d37251b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "2aad05ee7721d408757721d743597754e568ba971cd4d63311df059299f5227d",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "fcccb562eee44e9c0c813b7e9a78aee0a7c1c9467004978d93d6ece7a81c2ab6",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e2ad28c5bff4974ffb23f7449fb238c96cc045e2aeaaeeb0f0f247e57a8e44bf",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "2848ffc1e5e591c2813178483ca29d46d1b697cdd9a322092a4761f3caae9b38",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "5512e1a95bbf1e4f02150062b96524dc3fbe41143416cdc7019490baa60f58c4",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c14915df8dc9be013ba0dd62f49644e19e4bf12ffb5fbb493af71fa721e93483",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "aa52fd591355605bfd40cacb32bf36a8db101b7b85f508bed1fb1b77a8e50155",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "afbd47ae4596089ae56fefab1de7a763819e5825e124eace3ac2274af57d7f3e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "f348de111bfc87b339e6b918dccc64b17add005f84fb8ce5824ef8c9e2515398",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e358219ff255951eb9581b42eea578a97e851fbaf1f743892be74f6f39286b91",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "12c62f6764f19af698e0ddecc1b48e8546f66ec49abf348e8c78982be101f015",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ]
+  },
+  "cropMethod": "Whole alpha silhouette, one pixel antialias gutter, no fixed grid cutting",
+  "animations": {
+    "cyrene-original-v1": "77616889e107baa93cd3928f98c1f8cd4c751e1b83520080ed7a7363978f0787",
+    "cyrene-anime-v5": "b3d8a6cb3ca5c4f8c6767026cf9a3def93eef963ec323a694308263c1d59620b",
+    "cyrene-chibi-v4": "6331b60b3d9b20b697997976ff3a624c838445cf6037e25a35b6110d28597abc",
+    "cyrene-powerpuff-v1": "2083b2ef6a92b91a9c6eecebe4179d83ab3e08159cdf65e03c3746f18fede6c4",
+    "cyrene-pixel-v6": "81481267ae7042676f9aac05dd82403948ff539c79a07048dca30b959573e7c5",
+    "cyrene-8bit-v5": "c1922bad40bc79090de70f8bdafb7699d2d99deb90f52a9bfdd74508acc46a99",
+    "cyrene-3d-v5": "11fe93c1b4802ec7f72dbc0d11d9e6609af0c64bf20e1c7bb40fdab9c362dffa"
+  }
+}

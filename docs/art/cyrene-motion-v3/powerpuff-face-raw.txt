@@ -1,0 +1,13 @@
+Reference: artifacts/animation/cyrene-v1/masters/powerpuff.png
+Output: artifacts/animation/cyrene-v3/sources/powerpuff-face-raw.png
+
+Use case: identity-preserve.
+Asset: Mori production animation source, powerpuff style. The attached approved static full-body illustration is the direct identity and style master.
+Preserve exactly this Powerpuff Girls-style drawing of Cyrene: huge round head and big lavender eyes, tiny torso, thick crisp black contour, flat pastel fills, small mitten hands and boots, pink hair with cyan tips, rose/crystal ornaments, white/violet dress. Do not alter head/body proportions or invent limbs. IMPORTANT both arms are now relaxed DOWN beside the torso in ALL FOUR frames; remove the reference's lifted cheek-hand and draw only TWO arms, one on each side, no old cheek hand remains. Exactly two hands.
+Create an actual transparent alpha PNG PORTRAIT canvas, preferably 2048 by 3072 pixels, highest native drawing detail. EXACTLY FOUR complete figures in a strict 2-column by 2-row grid, row-major order. Each figure at identical scale occupies about 78% of its portrait cell height with 10% clear gutters and margins. Locked near-front camera, same foot baseline, same costume and hair silhouette, no floating pieces.
+Four subtle sequential facial/idle frames:
+0 top-left: neutral grounded standing, warm small closed-mouth smile and eyes open;
+1 top-right: exactly same body pose, eyelids half closed;
+2 bottom-left: exactly same body pose, both eyes closed naturally;
+3 bottom-right: eyes open, tiny inhalation in shoulders and a few hair tips, feet unmoving.
+No whole-body swaying/rotating/bouncing. Complete ornaments and both shoes inside every cell. No background, glow, floor, shadow, labels, lines, frame border, extra character or detached limbs. Consistent anatomy, no ghost arms/hands.

@@ -1,0 +1,12 @@
+Use case: identity-preserve.
+Create a faithful full-body desktop companion sprite of Cyrene (昔涟) from Honkai: Star Rail, using these FOUR images directly as the visual source of truth. This is a faithful character adaptation to a neutral standing sprite, not an original costume redesign.
+
+Reference roles, in attached order:
+1. idle-first-frame.png: the actual playable in-game character standing front-on. PRIMARY reference for full-body silhouette, clothes construction, hem lengths, footwear, hair arrangement and proportions. Ignore the galaxy background and GIF dithering.
+2. splash.png: high-resolution character splash art. PRIMARY reference for exact costume design, colors, ornament shapes, gradient fabrics and hair colors. Only the woman herself is the subject; omit all surrounding swirls, summoned creatures and effects.
+3. portrait.png: identity reference for her face, eyes, fringe, expression and asymmetric temple ornament.
+4. detail.png: reference for the braided hair and crystalline rear hair ornament; preserve her hair structure, without rotating her away from the viewer.
+
+Deliver ONE clean anime illustration, full body head to toe, facing mostly forward, relaxed balanced standing pose, both feet visible, arms slightly separated from the torso, one hand gently open in welcome. Soft confident friendly smile, eyes looking at viewer. Preserve the playable adult woman's face and body proportions. Maintain the distinctive pink hair with the colored ends seen in the references, exact fringe and tied-back hairstyle; blue-violet crystal/floral hair accessories, white/lilac fitted costume, intricate purple chest motif, short front skirt with the long open split rear fabric panels, saturated purple-to-blue gradient interiors and fine gold outlines, and matching original shoes and leg adornments. Follow the supplied pixels wherever prose is incomplete. Keep the original costume and ornament placement. Do not add a flower crown, bridal gown, generic white-gold fantasy dress, giant roses, props, or new jewelry.
+
+Polished crisp linework and controlled cel shading, close to the character art in reference 2, clear silhouette readable at desktop-pet size. Portrait canvas, character fills about 88% of height with comfortable margin around ALL hair, hands, rear skirt panels and shoes. Transparent alpha background, no opaque rectangle, no floor, no cast shadow, no text, no logos, no graphic border, no decorative background particles. One character only.

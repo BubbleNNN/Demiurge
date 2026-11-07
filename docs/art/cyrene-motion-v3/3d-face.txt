@@ -1,0 +1,13 @@
+Reference: artifacts/animation/cyrene-v1/masters/3d.png
+Output: artifacts/animation/cyrene-v3/sources/3d-face.png
+
+Use case: identity-preserve.
+Asset: Mori production animation source, 3d style. The attached approved static full-body illustration is the direct identity and style master.
+Preserve this exact FACETED low-polygon 3D render, triangulated angular pink/cyan hair, rose/crystal headdress, white/lavender bodice, gold trim and violet split dress. Preserve adult anime body proportions and reference face; keep coherent polygon facets and identical soft studio light/camera across frames. NOT smooth plastic, not chibi, not line-drawn anime. Remove all surrounding colored glow. Exactly TWO connected arms with hands down in every face frame.
+Create an actual transparent alpha PNG PORTRAIT canvas, preferably 2048 by 3072 pixels, highest native drawing detail. EXACTLY FOUR complete figures in a strict 2-column by 2-row grid, row-major order. Each figure at identical scale occupies about 78% of its portrait cell height with 10% clear gutters and margins. Locked near-front camera, same foot baseline, same costume and hair silhouette, no floating pieces.
+Four subtle sequential facial/idle frames:
+0 top-left: neutral grounded standing, warm small closed-mouth smile and eyes open;
+1 top-right: exactly same body pose, eyelids half closed;
+2 bottom-left: exactly same body pose, both eyes closed naturally;
+3 bottom-right: eyes open, tiny inhalation in shoulders and a few hair tips, feet unmoving.
+No whole-body swaying/rotating/bouncing. Complete ornaments and both shoes inside every cell. No background, glow, floor, shadow, labels, lines, frame border, extra character or detached limbs. Consistent anatomy, no ghost arms/hands.

@@ -1,0 +1,13 @@
+Reference: artifacts/animation/cyrene-v1/masters/8bit.png
+Output: artifacts/animation/cyrene-v3/sources/8bit-face-raw.png
+
+Use case: identity-preserve.
+Asset: Mori production animation source, 8bit style. The attached approved static full-body illustration is the direct identity and style master.
+Preserve exactly this polished retro 8-bit RPG sprite design, compact anime proportions, coherent square pixel blocks, a limited palette, pink hair with cyan ends, rose/crystal ornaments and white/violet split dress. Make faithful pixel animation, never painterly shading, gradients, fuzzy antialiasing or fake coarse blocky geometry. A consistent 96x128 logical pixel grid per figure is the intended final game display. Exactly TWO arms, both relaxed in every face frame.
+Create an actual transparent alpha PNG PORTRAIT canvas, preferably 2048 by 3072 pixels, highest native drawing detail. EXACTLY FOUR complete figures in a strict 2-column by 2-row grid, row-major order. Each figure at identical scale occupies about 78% of its portrait cell height with 10% clear gutters and margins. Locked near-front camera, same foot baseline, same costume and hair silhouette, no floating pieces.
+Four subtle sequential facial/idle frames:
+0 top-left: neutral grounded standing, warm small closed-mouth smile and eyes open;
+1 top-right: exactly same body pose, eyelids half closed;
+2 bottom-left: exactly same body pose, both eyes closed naturally;
+3 bottom-right: eyes open, tiny inhalation in shoulders and a few hair tips, feet unmoving.
+No whole-body swaying/rotating/bouncing. Complete ornaments and both shoes inside every cell. No background, glow, floor, shadow, labels, lines, frame border, extra character or detached limbs. Consistent anatomy, no ghost arms/hands.

@@ -1,0 +1,63 @@
+{
+  "tool": "built-in image_gen",
+  "approvedBase": "public/art/cyrene-reference-v3.png",
+  "approvedBaseSha256": "6efa0712fa301b31756e0af21fa2a9aea00330247d367130f4ce48e25217dd7f",
+  "sourceManifest": "docs/CYRENE_REDESIGN_SOURCES.json",
+  "layout": {
+    "width": 1024,
+    "height": 1536,
+    "columns": 2,
+    "rows": 2,
+    "states": ["neutral", "blink", "speaking", "happy"]
+  },
+  "assets": [
+    {
+      "style": "anime",
+      "file": "public/art/cyrene-anime-v4.png",
+      "sha256": "203b53e111aa78440c607ca9ee96c24adb7244676e35200b480671a5a78d50c6",
+      "prompt": "docs/art/cyrene-watercolor-v4-prompt.txt",
+      "promptSha256": "1a5f5d2574395fce471b3a5ba9a74ff6e364af476a8a931bf81559ce2f6c7008",
+      "derivation": "Direct approved-base and original-image reference generation"
+    },
+    {
+      "style": "chibi",
+      "file": "public/art/cyrene-chibi-v4.png",
+      "sha256": "653575f37298cea21d51655db3a3329c21fd714cec5a84213ea9125eb6ab8c26",
+      "prompt": "docs/art/cyrene-chibi-v4-prompt.txt",
+      "promptSha256": "27e2b0eb8688c4617841479cee8099f7b3cad54d881ef7a4f4ba499b6ab2fb3b",
+      "derivation": "Direct approved-base and original-image reference generation"
+    },
+    {
+      "style": "pixel",
+      "file": "public/art/cyrene-pixel-v4.png",
+      "sha256": "aa90ac4e40ad32d56a3e0d4a64c676fb820dacfb43ab614778d1f8543717dcbd",
+      "prompt": "docs/art/cyrene-pixel-v4-prompt.txt",
+      "promptSha256": "af5d177916094b1d8f2089e7ca88d256bf1e0f0ad8cf250a48a6d0de3ceb232f",
+      "derivation": "Direct approved-base and original-image reference generation"
+    },
+    {
+      "style": "watercolor",
+      "file": "public/art/cyrene-watercolor-v4.png",
+      "sha256": "1cf5f03525ea8efc81b3cc8a6c292ee390d3f9346c10cdeab3140ac7e3f4d8ca",
+      "prompt": "docs/art/cyrene-watercolor-v4-final-prompt.txt",
+      "promptSha256": "311bb0a57b06a4eef8e9e019e871164ac3ab44b5d499ef93010b5e5f30cabe91",
+      "derivation": "Medium edit of the anime atlas with original portrait reference"
+    },
+    {
+      "style": "plush",
+      "file": "public/art/cyrene-plush-v4.png",
+      "sha256": "9a9fbd8200a18995aa96de793e4ed24a20322bcc9473b0e69a5a461c6f968681",
+      "prompt": "docs/art/cyrene-plush-v4-prompt.txt",
+      "promptSha256": "392e6bf32bb380c95382ef2525fc537d5d9bfa0c77f64de11c86bf63cde1166d",
+      "derivation": "Direct approved-base and original-image reference generation"
+    },
+    {
+      "style": "figurine",
+      "file": "public/art/cyrene-figurine-v4.png",
+      "sha256": "01ac03bd7fbf4faebe3b8c5045358ec3aa473f0b5f50dddb5671aae1bfafc78f",
+      "prompt": "docs/art/cyrene-figurine-v4-final-prompt.txt",
+      "promptSha256": "621177b3d83a3e42672729cefeae5e1a939b82357273be0269b30e42121a1877",
+      "derivation": "Direct approved-base and original-image reference generation"
+    }
+  ]
+}

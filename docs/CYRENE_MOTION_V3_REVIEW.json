@@ -1,0 +1,1053 @@
+{
+  "version": 1,
+  "reviewedAt": "2026-10-05T09:22:10.239Z",
+  "reviewer": "Codex visual inspection of all 64 new compiled poses composited in Chromium on light backgrounds, plus source sheets and light/dark neutral previews; not an automatic anatomy detector or user final art approval",
+  "criteria": [
+    "limb count and connections match the accepted style reference",
+    "identity, costume and style remain consistent",
+    "key pose sequence, full figure crop and foot registration inspected; no claim of hand-drawn inbetweening"
+  ],
+  "scope": {
+    "updatedStyles": [
+      "original",
+      "8bit",
+      "3d",
+      "powerpuff"
+    ],
+    "inheritedStyles": [
+      "anime",
+      "chibi",
+      "pixel"
+    ],
+    "generatedSheets": 16,
+    "newPoses": 64,
+    "builtinImageCalls": 22
+  },
+  "rejectedSources": [
+    {
+      "file": "artifacts/animation/cyrene-v3/sources/original-face-raw.png",
+      "reason": "Adjacent figures touch; no safe independent crop"
+    },
+    {
+      "file": "artifacts/animation/cyrene-v3/sources/powerpuff-face-raw.png",
+      "reason": "Outer edge clipping and wrong facial state in final cell"
+    },
+    {
+      "file": "artifacts/animation/cyrene-v3/sources/3d-speech-layout-rejected.png",
+      "reason": "Layout clipped figures or ambiguous alpha regions; repaired layout, then inspected all replacement poses"
+    },
+    {
+      "file": "artifacts/animation/cyrene-v3/sources/3d-wave-layout-rejected.png",
+      "reason": "Layout clipped figures or ambiguous alpha regions; repaired layout, then inspected all replacement poses"
+    },
+    {
+      "file": "artifacts/animation/cyrene-v3/sources/3d-rest-layout-rejected.png",
+      "reason": "Layout clipped figures or ambiguous alpha regions; repaired layout, then inspected all replacement poses"
+    },
+    {
+      "file": "artifacts/animation/cyrene-v3/sources/powerpuff-rest-layout-rejected.png",
+      "reason": "Rest figures too close to sheet boundary; repaired layout, then inspected replacement poses"
+    }
+  ],
+  "entries": {
+    "cyrene-original-v1": [
+      {
+        "sha256": "914e6228f570b2b0f9143baa20aeca67037706495e003840d31c67c42c3509db",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 0,
+        "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+        "sourceSha256": "60d4b23e5cd788e804f09338fb8ad52bc8af870dfc1e4d8a8317d2dcf0479b6f"
+      },
+      {
+        "sha256": "4cf91c9145e6f53238f0a188fe3673a3bb50790f4b6cbae2a6a59da3463ab4ad",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 1,
+        "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+        "sourceSha256": "60d4b23e5cd788e804f09338fb8ad52bc8af870dfc1e4d8a8317d2dcf0479b6f"
+      },
+      {
+        "sha256": "825592a1044939e8478855b2a6441a41e0fb2708958f852d5cf422cc0b72f306",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 2,
+        "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+        "sourceSha256": "60d4b23e5cd788e804f09338fb8ad52bc8af870dfc1e4d8a8317d2dcf0479b6f"
+      },
+      {
+        "sha256": "645a327ba6dc7031ed65b6212d4846c1535fde6c014eb509b4af7b25f7633415",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 3,
+        "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+        "sourceSha256": "60d4b23e5cd788e804f09338fb8ad52bc8af870dfc1e4d8a8317d2dcf0479b6f"
+      },
+      {
+        "sha256": "ef87c97442b8d44e1b98d29e9c90117fc7766608eacd4512534e4db83d28b4db",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 4,
+        "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+        "sourceSha256": "38ef485ca18598e24d56094874717ee752d5f5eff8b36ba8cffc586a0329bcef"
+      },
+      {
+        "sha256": "5302748afa4659ea24fbc6cf6f0e053fd1d48da1ebcef142ddba13be68438198",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 5,
+        "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+        "sourceSha256": "38ef485ca18598e24d56094874717ee752d5f5eff8b36ba8cffc586a0329bcef"
+      },
+      {
+        "sha256": "43a3422041e1e070edc42d532669d660573975fd196e6a58c9487d57ff48a819",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 6,
+        "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+        "sourceSha256": "38ef485ca18598e24d56094874717ee752d5f5eff8b36ba8cffc586a0329bcef"
+      },
+      {
+        "sha256": "568212bd4c38198ba284c2c92afcd3756c0174bd50ec5b73ada264db827560b9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 7,
+        "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+        "sourceSha256": "38ef485ca18598e24d56094874717ee752d5f5eff8b36ba8cffc586a0329bcef"
+      },
+      {
+        "sha256": "f8b774606ebed0a546f1b6a55ad00235ad6c8542a5d16bcaaa09c4c2d23453d4",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 8,
+        "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+        "sourceSha256": "7917547ce08dc950e405a515d9a1ee1a432cd16ce4cc6b8d26951e2e4ae5c1ee"
+      },
+      {
+        "sha256": "f9549f855121622f17a43ebee14417a0da66c1484f72d7a15ec1fad97a5b838f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 9,
+        "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+        "sourceSha256": "7917547ce08dc950e405a515d9a1ee1a432cd16ce4cc6b8d26951e2e4ae5c1ee"
+      },
+      {
+        "sha256": "79ed9bac0b36632eee94e4325796e25c6768e4be82e3dc0f110daf10c321dd2f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 10,
+        "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+        "sourceSha256": "7917547ce08dc950e405a515d9a1ee1a432cd16ce4cc6b8d26951e2e4ae5c1ee"
+      },
+      {
+        "sha256": "975950468a9478db9c8a35de13d82e3ce917b34d1f130791e5e31919fdbbaedf",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 11,
+        "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+        "sourceSha256": "7917547ce08dc950e405a515d9a1ee1a432cd16ce4cc6b8d26951e2e4ae5c1ee"
+      },
+      {
+        "sha256": "f66cdbf1c3579654c94df7daa71bbc6e3ae15c7dd711b652640ba7f8fed9d65f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 12,
+        "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+        "sourceSha256": "7556a8904601ce01f981b7172adc1ce0937f91271efbcf59705ac1255fd3b087"
+      },
+      {
+        "sha256": "12ee7a40c51e572581a3340f89815cc5863ba81a2ff277b3daa8a997755cf914",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 13,
+        "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+        "sourceSha256": "7556a8904601ce01f981b7172adc1ce0937f91271efbcf59705ac1255fd3b087"
+      },
+      {
+        "sha256": "6dd6d6b127bc7cd1e19151b7d1baa96457ec35eaa8b963faebe129841fbd4da5",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 14,
+        "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+        "sourceSha256": "7556a8904601ce01f981b7172adc1ce0937f91271efbcf59705ac1255fd3b087"
+      },
+      {
+        "sha256": "d825a2ea7e24d9586ddedbcf781c3910c1da6cddddd36e5050a95d59a1c66fce",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 15,
+        "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+        "sourceSha256": "7556a8904601ce01f981b7172adc1ce0937f91271efbcf59705ac1255fd3b087"
+      }
+    ],
+    "cyrene-anime-v5": [
+      {
+        "sha256": "4159c8a5a0f8948845110c46f5de58056e158d7e155b1b1966da8f766d9c702c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "3c4f6560d031ce241731c456a806f011701e8df60bafad40d4e22da14ce1dff5",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c51321e9b5cc17f1ed49c7fea7d486eb5fd73aa470876cfd20d6db290192f011",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "6aa3c8148fc66f7b8c5478c062344dadb3a51f4376df1d1103814530709087ea",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "0805d2f173ba04173b9701ffaf3c33e29f5132380d5e3cfc6466df107b28d556",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1004af071fec5cb5ea764bcd69c25e58faa0eb8752c9afa62d074258b7c731b1",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "2b3e133f2d89c58aee6aacf8dcba44ed15d249efe1e5a2a58d22d1c036016f06",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9074d254f6194670ee876ea9aac254f14166477e6010a41e240a5295ed6e342f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c8f45ea0889cc0e1d42889edcf92588f74088cdb52b9164e182ec48386210808",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "0eac05abceea9fffc7385e16c239943d35c7b0c1510960d1064c9df023d1994d",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "4b96ce4e1cb3cbe1ac4b6495fee08a9585d7b1615ac3fce8e214fe8e4d52128c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9999ec0d80d58a662c1fb7ba8c6b69d8dad7d706802b775f397b37ef8656c7a3",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "4a42b3b758e2d9430a70249b40389b0c8dd9b766f3888b196b50f53d4731a4d2",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "88163a33e24c9065e0be39c0f1711b3f16f2e9fb04943929e7fc6a6b138a16ff",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "f86b7aca6bb8cd7e8665e6f7cf847c2f86f3d4faadf9b6ca2825c0ac96dd2c39",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "ff20d123af94b0043763be330d434d4052ca35fc3dd72ee3ad9be9e9083e87fa",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-chibi-v4": [
+      {
+        "sha256": "8bcfcf808ee2fd07a8d1c989e77752a87f333ade48edda80591a55845ed06097",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "f3ea4ec8df4778864a454450c2f474e7fb3339049470bea7a8559dc9a598254f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9231679095b73ab6f0f8a03e4adbcc8dbd72e5bfd9d77aca585209eb1917c9f3",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c4afe957df3f9dc5b503e13094c547a587a018f32991aa48b506b45a27b93f79",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9e920eaadb74f594926960d92731c83098a97171e3d21cd436fc37bd89ef4690",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "b724c83aa142320a05273af2156104c3be0fd4aa82c0676624195e6ff4831782",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "958b34f24920f24e741c40b424ac49bb50a2b49384a3bc40f1d3959e93677060",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1a5279043492ee7a5f9e45549f452ed5d48dc866922b6172f5d7770add9c1323",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "601e4198f3d8d6e0cdd979239b80e61f56ae7e2652b2ccc83faa5bd49023aef3",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "be96721d6beabcef331976363738d1c7e12d9b5f4b5d6d54bad0c443ac644798",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "1d97c94be0ba958e173882a64150c4fbcce1721092db1de18b005de08bee9f5b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "cceeb21ce8c0d108410b920095129c3233a44cbd391111c207d9f122537f8752",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c1ba2d6c15d30fee0f98d53334b97a0e6941fedda0c9e9ca18b0438893e365ea",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "be56dddcd0603339442747463c589a050ee979f82d7a59b9a2761f1bb850610f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "fe49c4a4606249f4b509fa0957d2b4813a65f0dd79a2dfb8c025ec242065dd62",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "c5c686233552791388b1b600f39156e67e297a892832368b85c3e227c5e85f2c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-powerpuff-v1": [
+      {
+        "sha256": "f7bd72004f3bf6e75ee4b2c1e7108006d2f4d377c589f0f4880ebf636d01edda",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 0,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+        "sourceSha256": "ca9b6d8ef29d9a9520b5f74d121d6b91d5e08173b2999cd2c241eae119b74d30"
+      },
+      {
+        "sha256": "bc9cb64170244a394e7d34e191768522b444f564f231cf86d933b13a78240194",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 1,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+        "sourceSha256": "ca9b6d8ef29d9a9520b5f74d121d6b91d5e08173b2999cd2c241eae119b74d30"
+      },
+      {
+        "sha256": "64323c6241bb4c67343adb35f553eca50dc936b2f1729d5364bdfc8e2fd0066f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 2,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+        "sourceSha256": "ca9b6d8ef29d9a9520b5f74d121d6b91d5e08173b2999cd2c241eae119b74d30"
+      },
+      {
+        "sha256": "a67df9842339e631cfb08710ccbd8c459c1ebb5c50a30d1b4ebc236fddf2b28d",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 3,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+        "sourceSha256": "ca9b6d8ef29d9a9520b5f74d121d6b91d5e08173b2999cd2c241eae119b74d30"
+      },
+      {
+        "sha256": "3b8b2a9089d0b4e9e08de0568ee65bd0bb7651981fa83d691fefb32d2fb4f261",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 4,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+        "sourceSha256": "15a0d752eb4a7fecf261f7af4eb110fc79a8f729c53da0a1b6a30fa9f672100e"
+      },
+      {
+        "sha256": "e6b6c68c4bd0f1ad85f9a9e1c3f4ed9ce7a6d1f9a0c9acc01c75920ecbf5671e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 5,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+        "sourceSha256": "15a0d752eb4a7fecf261f7af4eb110fc79a8f729c53da0a1b6a30fa9f672100e"
+      },
+      {
+        "sha256": "6de010da8a31984d8257705245c3d0dcc959a51eaf1f835a6acf246ac12021c6",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 6,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+        "sourceSha256": "15a0d752eb4a7fecf261f7af4eb110fc79a8f729c53da0a1b6a30fa9f672100e"
+      },
+      {
+        "sha256": "1ff8dffb42daa1f854d73cf4127ebd6b075fb0bfa7da97f25d9901f51aec534e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 7,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+        "sourceSha256": "15a0d752eb4a7fecf261f7af4eb110fc79a8f729c53da0a1b6a30fa9f672100e"
+      },
+      {
+        "sha256": "97b4ec9bb288b7126ffbf073063d40c0ff7ef35ef68d567abff2404a2a7ce97c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 8,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+        "sourceSha256": "dd8ce9b23c8fb345859ecd97b8de93b15dabf74476ed572046a19b220996ccee"
+      },
+      {
+        "sha256": "fc0cbd91218a5cf1d83e3ddc7545973da86749a8c6f6db6bc1a433edf2cfeb4e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 9,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+        "sourceSha256": "dd8ce9b23c8fb345859ecd97b8de93b15dabf74476ed572046a19b220996ccee"
+      },
+      {
+        "sha256": "b94992adf2efae9c9e2742e504fccc3f4b2d1c81c4177ec104335903411be1dd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 10,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+        "sourceSha256": "dd8ce9b23c8fb345859ecd97b8de93b15dabf74476ed572046a19b220996ccee"
+      },
+      {
+        "sha256": "87d20bd764adfd284b4c7f39d72b08ecbf85e022cc1e7c6a9e1e3dc7c2bfbf2c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 11,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+        "sourceSha256": "dd8ce9b23c8fb345859ecd97b8de93b15dabf74476ed572046a19b220996ccee"
+      },
+      {
+        "sha256": "d5a7f79a2d9e2474323806d881a2fc3b0ff247d9138cf69ddeecf7bd85d4b808",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 12,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+        "sourceSha256": "c2f1247adce8956281af85c409684eb93af2bd180057361ccde82cba5e5eb986"
+      },
+      {
+        "sha256": "5298b6083fc09633fddf049b0cc047b7cdc1c2931571c9603bda8782779291cb",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 13,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+        "sourceSha256": "c2f1247adce8956281af85c409684eb93af2bd180057361ccde82cba5e5eb986"
+      },
+      {
+        "sha256": "cfc6d89ba310b0744d2d7171f49c016ca934f00bba6c2be227dc150bf0fcb630",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 14,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+        "sourceSha256": "c2f1247adce8956281af85c409684eb93af2bd180057361ccde82cba5e5eb986"
+      },
+      {
+        "sha256": "303ca7a0985f5900e4eafb00314e7800c0df6abf0a63ef7c3739a6d3ce3af70a",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 15,
+        "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+        "sourceSha256": "c2f1247adce8956281af85c409684eb93af2bd180057361ccde82cba5e5eb986"
+      }
+    ],
+    "cyrene-pixel-v6": [
+      {
+        "sha256": "45d6ec8d8b23a68b516c05f280b9a653c35a3019dbf39a076b8dae42fc330b11",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "9c98c659b05793fcce2289f45c059dcd594ac67e2901d4874cb97d681e4659d9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "58a880cf23284a8dc537b5bb5e19e036bf9370006d19f5ae39d196e2a8e3dc4c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "e9e45e1af1836ed5b0bc3978b037f4a7a9801ecafe14afefed1090020fbd84fd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "016b48b1e3182b7c1cbb74fff793c928576dfbecbbdc5669529e185eaa818589",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "37678d514c10efa0eb406bb80fd9cfe5330dc73766c4ade463f4c80596446346",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "3cf81e75c9b6db827d3b592dd045fffc961f0db6bcdffcf3e1f5de82b0df3c7f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "992c8c9b4f6ca2c588ed47c20075341f8d8468aab86d6bfa07d2d1c4807afb67",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "6ef6fbf9e22d5585e1ffa0f3b446c1bfb9dd68881ea6f58424b93f7aa847292e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "d176de9b543e411e6f6346c6d389e9c3d4d28bde315e8c027be8f57208e9f258",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "57dcb4e0e22009cce6b17401bc54292cbd3630e242c0003833d73abf5390ec93",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "23b1ba957fd752432e14613b9d70a675b416ce875fdff833c766ccc78a946a5b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "536dc29407c8b9ff201e1e677674132af4ba417f88177d9abbb0ee44f9b755a8",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "31b70eaa0de39747b8da65ae0268948fe11d08ec82864af041cb346f3929ba4f",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "586bdd338e725a8dae25c17f260bfb6e04c5474462d341a85e420a3e0769ac3c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      },
+      {
+        "sha256": "48f82938bbb7f0ec4bfdbad8cbd45d2fb03f8332ea1c067f4760bc45c0079473",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true
+      }
+    ],
+    "cyrene-8bit-v5": [
+      {
+        "sha256": "c6c7084a6b9faa732106e8d8ede4c7fb03361a86512f39f8fda8233a47d18f72",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 0,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+        "sourceSha256": "d447b748631050fcdc94ed63548ca3f2ecceae66b38d7c487b9116300346ebe6"
+      },
+      {
+        "sha256": "c66cc306ab762578f78bc256cf77c7fbd76ade39ddfc153bcbcd7db24448fcf4",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 1,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+        "sourceSha256": "d447b748631050fcdc94ed63548ca3f2ecceae66b38d7c487b9116300346ebe6"
+      },
+      {
+        "sha256": "653368ffc36faf56d319e085c1a001d93ef40548f08dd8b5774cc262eef6a7e5",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 2,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+        "sourceSha256": "d447b748631050fcdc94ed63548ca3f2ecceae66b38d7c487b9116300346ebe6"
+      },
+      {
+        "sha256": "270a00fef902896867bdbf9fc0154ac955ed775ed08d41be7c962d75b4e35270",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 3,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+        "sourceSha256": "d447b748631050fcdc94ed63548ca3f2ecceae66b38d7c487b9116300346ebe6"
+      },
+      {
+        "sha256": "39cbb2a6b9e48252da697052faf5aba8aab12c5ec7d0be05cc8787201b665cf9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 4,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+        "sourceSha256": "f6afcf7418d562ea7a4a334aeae4091878a53240796953219721f101e127758f"
+      },
+      {
+        "sha256": "a0de2a6956e6cb08d0d933f8514021ca405375fdbfe5491e264676b4fdec8180",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 5,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+        "sourceSha256": "f6afcf7418d562ea7a4a334aeae4091878a53240796953219721f101e127758f"
+      },
+      {
+        "sha256": "59913448bc5c95e98a6eb9acb32b2f8d80fb4b08ede00c02a5ab27f41faaafc9",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 6,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+        "sourceSha256": "f6afcf7418d562ea7a4a334aeae4091878a53240796953219721f101e127758f"
+      },
+      {
+        "sha256": "3630b774252d6da2933ed70eb82037c92c04506fcda8d8a46cd0580ec520ee41",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 7,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+        "sourceSha256": "f6afcf7418d562ea7a4a334aeae4091878a53240796953219721f101e127758f"
+      },
+      {
+        "sha256": "bc21be62354c7ba897dc3638c488ac08356ddb055bd7f554fa8cc5d6aa6b7e31",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 8,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+        "sourceSha256": "d5e490d459f75246fb69d38497d08740a72f806cf51ad5d579a62f770e98620b"
+      },
+      {
+        "sha256": "5b736c8266f9f5315e50e090463a4c624dc202f7d33fefeec5270237832607b6",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 9,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+        "sourceSha256": "d5e490d459f75246fb69d38497d08740a72f806cf51ad5d579a62f770e98620b"
+      },
+      {
+        "sha256": "abc9b320dff16d25e1d5bff0f440bd49ef0e567bd601b919cff0c9603dc93352",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 10,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+        "sourceSha256": "d5e490d459f75246fb69d38497d08740a72f806cf51ad5d579a62f770e98620b"
+      },
+      {
+        "sha256": "c1bffb164de13833ce02ab69d84e81b25abc8237d7b1c32e0abb1811c069e409",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 11,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+        "sourceSha256": "d5e490d459f75246fb69d38497d08740a72f806cf51ad5d579a62f770e98620b"
+      },
+      {
+        "sha256": "df61bcaa4b961263e5a0acc2ca0c62e665e7893bbc0c3973968e13789a4dbccc",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 12,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+        "sourceSha256": "f7844ff7870e73562e6a13d07c7f2bebf3b63c64279db7ad14deb1ac87ef1ffd"
+      },
+      {
+        "sha256": "a092e910670a6adf20acbee2fe2e7b940a90ec8703f2253989b6ef17ffedd9bd",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 13,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+        "sourceSha256": "f7844ff7870e73562e6a13d07c7f2bebf3b63c64279db7ad14deb1ac87ef1ffd"
+      },
+      {
+        "sha256": "d0215057b73ef19254f87983c00762310abf8bab4814c1640d1260920be0ac45",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 14,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+        "sourceSha256": "f7844ff7870e73562e6a13d07c7f2bebf3b63c64279db7ad14deb1ac87ef1ffd"
+      },
+      {
+        "sha256": "d59eb41c4e5109d32bc3ebaa8917da83e59c3496da12ea2a88bbc49174df7dd5",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 15,
+        "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+        "sourceSha256": "f7844ff7870e73562e6a13d07c7f2bebf3b63c64279db7ad14deb1ac87ef1ffd"
+      }
+    ],
+    "cyrene-3d-v5": [
+      {
+        "sha256": "d56116e52dc9b26695196d0b09f1ba4664080b7ec984b6df6b7ab95947403882",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 0,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+        "sourceSha256": "5a7bf6783cf8b047bc1a58d2bbcb4e38e84bcd1eedc34a613ed885f22750738d"
+      },
+      {
+        "sha256": "d43c114d031089f1ae2623cb63d0a58f55e75b174644d1865f396cbac409de5c",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 1,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+        "sourceSha256": "5a7bf6783cf8b047bc1a58d2bbcb4e38e84bcd1eedc34a613ed885f22750738d"
+      },
+      {
+        "sha256": "72f609d426bc875e09e41a31710b08fb01eba3abf0f2cc293ecf5e7eff88a724",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 2,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+        "sourceSha256": "5a7bf6783cf8b047bc1a58d2bbcb4e38e84bcd1eedc34a613ed885f22750738d"
+      },
+      {
+        "sha256": "90f24d19442baca8bf784a3a2f11f798c03ec099fddfa7cd49d8c86b6064aa6b",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 3,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+        "sourceSha256": "5a7bf6783cf8b047bc1a58d2bbcb4e38e84bcd1eedc34a613ed885f22750738d"
+      },
+      {
+        "sha256": "a2a62e491606187cb4983b779a7b8fa19341e337b4ed9cb33d1124de71bc01bc",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 4,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+        "sourceSha256": "509fdda24ec16be0e335cb5074d0ad8c98019f25204527cc4d9468ff1654ca5e"
+      },
+      {
+        "sha256": "157c200c4fc3246e19ac703c7a532f50c3b58f874bd706f1eaf03b6d01493f29",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 5,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+        "sourceSha256": "509fdda24ec16be0e335cb5074d0ad8c98019f25204527cc4d9468ff1654ca5e"
+      },
+      {
+        "sha256": "641180fd90b069c25cb967c56436aa06a90730f58bf120c257f7947b7a85d58d",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 6,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+        "sourceSha256": "509fdda24ec16be0e335cb5074d0ad8c98019f25204527cc4d9468ff1654ca5e"
+      },
+      {
+        "sha256": "87d6a014e573a4d1fb6dd07c8583037490826e61f1d588df0ab6d22f0a266e45",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 7,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+        "sourceSha256": "509fdda24ec16be0e335cb5074d0ad8c98019f25204527cc4d9468ff1654ca5e"
+      },
+      {
+        "sha256": "37ea549a1b2bc04b6673f5399b7322c94a5d94c4756eabd09fc6d371fd034080",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 8,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+        "sourceSha256": "53538513c283683f1c75a5dc0c7dc05eeb413934ee540b3ef414063bd4dc0b45"
+      },
+      {
+        "sha256": "389198f94a1e1bfd52b04a254458346548bc86b0ce75fcf6e523df7e573306a6",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 9,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+        "sourceSha256": "53538513c283683f1c75a5dc0c7dc05eeb413934ee540b3ef414063bd4dc0b45"
+      },
+      {
+        "sha256": "ae142933fc947f2daf5e80d35b954fa362b24bf02af33bd950dac90cf02931f6",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 10,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+        "sourceSha256": "53538513c283683f1c75a5dc0c7dc05eeb413934ee540b3ef414063bd4dc0b45"
+      },
+      {
+        "sha256": "558b0dfd3c83c6e786cc302847b3be3dc440895aa8270995154d9ffd356ec0e2",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 11,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+        "sourceSha256": "53538513c283683f1c75a5dc0c7dc05eeb413934ee540b3ef414063bd4dc0b45"
+      },
+      {
+        "sha256": "d1ba11edf21b481f67a5d88423419a0f6294262b0979cb661df3f2addc292a1e",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 12,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+        "sourceSha256": "92c38f392478c7e794cb033aee6b1e205be98cb25c7ac2db869d6cf6a1ce0f99"
+      },
+      {
+        "sha256": "95de085c6260dd1737f315afa09d8086edf319f843e9f2af68d17550c8e6897a",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 13,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+        "sourceSha256": "92c38f392478c7e794cb033aee6b1e205be98cb25c7ac2db869d6cf6a1ce0f99"
+      },
+      {
+        "sha256": "262d288b98478044bdf9c2979ef8283e40cd71120b870456e92441e755fab2e8",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 14,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+        "sourceSha256": "92c38f392478c7e794cb033aee6b1e205be98cb25c7ac2db869d6cf6a1ce0f99"
+      },
+      {
+        "sha256": "414fc3566c6b49537fac83d4db3336d9b6fc3e86e7793af3c1a96875ba83a353",
+        "status": "approved",
+        "anatomy": true,
+        "identity": true,
+        "continuity": true,
+        "frame": 15,
+        "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+        "sourceSha256": "92c38f392478c7e794cb033aee6b1e205be98cb25c7ac2db869d6cf6a1ce0f99"
+      }
+    ]
+  },
+  "animations": {
+    "cyrene-original-v1": "45bdd0e6d8e90b602184dc96784c43773e5bdb2bf295c730910721c9b3397450",
+    "cyrene-anime-v5": "b3d8a6cb3ca5c4f8c6767026cf9a3def93eef963ec323a694308263c1d59620b",
+    "cyrene-chibi-v4": "6331b60b3d9b20b697997976ff3a624c838445cf6037e25a35b6110d28597abc",
+    "cyrene-powerpuff-v1": "b867001b18aa55b5b8638ad21d7c8bcca0df77f69d53b512d4f86c2df3d9c2a2",
+    "cyrene-pixel-v6": "81481267ae7042676f9aac05dd82403948ff539c79a07048dca30b959573e7c5",
+    "cyrene-8bit-v5": "06f82c1a70aee373b5d06019b76d3b728b763ed74c2dd3acb2fcb9953ae280dd",
+    "cyrene-3d-v5": "084a917537a4087d7d8c4917a0f933eaf3c2a4d0adc77fd71d37ffa452f0693b"
+  }
+}

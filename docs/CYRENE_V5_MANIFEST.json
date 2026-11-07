@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "date": "2026-09-30",
+  "sourcePage": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+  "sourceAttribution": "HoYoWiki first-party hosted character entry; public community-curated content",
+  "generator": "built-in image_gen",
+  "originalFilesPreserved": true,
+  "reviewStatus": "derivative assets await user visual review; anime is the previously accepted v3",
+  "entries": [
+    {
+      "style": "anime",
+      "file": "public/art/cyrene-anime-v5.png",
+      "method": "byte-for-byte copy of user-approved v3",
+      "promptFile": null,
+      "animated": false,
+      "sha256": "6efa0712fa301b31756e0af21fa2a9aea00330247d367130f4ce48e25217dd7f",
+      "references": [
+        {
+          "file": "public/art/cyrene-reference-v3.png",
+          "sha256": "6efa0712fa301b31756e0af21fa2a9aea00330247d367130f4ce48e25217dd7f"
+        }
+      ]
+    },
+    {
+      "style": "8bit",
+      "file": "public/art/cyrene-8bit-v5.png",
+      "method": "image_gen reference edit followed by a second reference edit to improve complete-frame spacing",
+      "promptFile": "docs/art/cyrene-8bit-v5-prompt.txt",
+      "sourcePromptFile": "docs/art/cyrene-8bit-v5-source-prompt.txt",
+      "animated": true,
+      "rendering": {
+        "logicalSize": [48, 64],
+        "paletteColors": 16,
+        "sourceGrid": [4, 2],
+        "sourceCellSize": [384, 512],
+        "nearestNeighbor": true
+      },
+      "sha256": "48d47dac279bddba68502d8045476fa606c0a339f65b4cad8e49fc010336fad9",
+      "references": [
+        {
+          "file": "public/art/cyrene-reference-v3.png",
+          "sha256": "6efa0712fa301b31756e0af21fa2a9aea00330247d367130f4ce48e25217dd7f"
+        },
+        {
+          "file": ".local/cyrene-reference/idle-first-frame.png",
+          "sha256": "0ef1ebdc5463715e105f7a2c5cb7cefe406070b744cb8df31388ead1d2fee10b"
+        },
+        {
+          "file": ".local/cyrene-reference/portrait.png",
+          "sha256": "699ccd2f8d2528d0ad1bb0c70320c1146ccab9853a62de0a6c8d426481c51a67"
+        }
+      ],
+      "promptSha256": "fddd1611903f9ce08baa8cf923897a3307a2cc80336db33927ee37b5d41c560e"
+    },
+    {
+      "style": "realistic",
+      "file": "public/art/cyrene-realistic-v5.png",
+      "method": "image_gen reference edit",
+      "promptFile": "docs/art/cyrene-realistic-v5-prompt.txt",
+      "animated": false,
+      "sha256": "1acccc4ae9d536639a9e2d1616a247bd843c53b3e995fcc01a152db9eb260f2d",
+      "references": [
+        {
+          "file": "public/art/cyrene-reference-v3.png",
+          "sha256": "6efa0712fa301b31756e0af21fa2a9aea00330247d367130f4ce48e25217dd7f"
+        },
+        {
+          "file": ".local/cyrene-reference/idle-first-frame.png",
+          "sha256": "0ef1ebdc5463715e105f7a2c5cb7cefe406070b744cb8df31388ead1d2fee10b"
+        },
+        {
+          "file": ".local/cyrene-reference/portrait.png",
+          "sha256": "699ccd2f8d2528d0ad1bb0c70320c1146ccab9853a62de0a6c8d426481c51a67"
+        }
+      ],
+      "promptSha256": "fac6ffabc17118c872ef67669e8491e3803cd6d8032fbd441e012afc3191e9d7"
+    },
+    {
+      "style": "3d",
+      "file": "public/art/cyrene-3d-v5.png",
+      "method": "image_gen reference edit; geometric low-poly PNG, not a rigged model",
+      "promptFile": "docs/art/cyrene-3d-v5-prompt.txt",
+      "animated": false,
+      "sha256": "cc4febd925479b468aec8ed8d3636654f8f2ea12c6b8100bd7e5f15adae97879",
+      "references": [
+        {
+          "file": ".local/cyrene-reference/portrait.png",
+          "sha256": "699ccd2f8d2528d0ad1bb0c70320c1146ccab9853a62de0a6c8d426481c51a67"
+        }
+      ],
+      "promptSha256": "ab299415ffea274a982632f018da3e069f8d63c43006360832710e8659f6f643"
+    }
+  ]
+}

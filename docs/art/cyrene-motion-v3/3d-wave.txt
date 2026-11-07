@@ -1,0 +1,15 @@
+Reference: artifacts/animation/cyrene-v1/masters/3d.png
+Output: artifacts/animation/cyrene-v3/sources/3d-wave.png
+
+Use case: identity-preserve.
+Asset: FOUR authored full-body wave animation frames for Mori's Cyrene companion.
+Use the attached APPROVED static artwork as the exact identity and style master. Match the exact faceted LOW POLYGON 3D appearance, triangular angular pink/cyan hair, rose/crystal headdress, white/lavender bodice, gold trim and split violet skirt. Same adult anime proportions, original face, consistent camera and lighting. Keep polygon facets unmistakable, not smooth plastic or 2D outlined art. Neutral: both arms down. No external glow.
+Layout is critical: actual transparent alpha PORTRAIT PNG, 1024x1536 canvas, EXACTLY FOUR figures in strict TWO columns by TWO rows, row-major order.
+Each figure must fit ENTIRELY inside a 400-pixel-wide by 610-pixel-high rectangle CENTERED inside its 512x768 portrait cell. At least 50 px of truly empty transparency around each cell. Scale figures DOWN to obey BOTH width and height; do NOT fill a cell. Same character scale, same locked near-front camera and identical planted shoe positions in all frames and the previous idle sheet. Head ornaments, fingertips, hair tips, long dress panels and BOTH COMPLETE SHOES inside each cell. No silhouettes may touch or cross neighboring cell borders.
+Four frames, precisely this sequence:
+0 top-left: begin lifting the arm on VIEWER'S LEFT, elbow bends and hand rises halfway toward shoulder; other arm remains neutral.
+1 top-right: that SAME arm raised comfortably to shoulder/head level, palm facing viewer, preparing to wave.
+2 bottom-left: SAME raised forearm and wrist tilt gently inward, friendly greeting.
+3 bottom-right: SAME forearm and wrist tilt gently outward, friendly greeting. This is sequential articulated shoulder/elbow/wrist motion. Torso and both planted feet stay fixed. EXACTLY two arms in each frame; the old arm on the moving side is removed, never left in place.
+Preserve face structure, outfit, ornament shapes, body proportions and hair silhouette. Hands move from existing shoulders with correct connections. Exactly two legs and two arms, no extra/ghost limbs. No whole-character shaking, spinning, scaling or bouncing. Genuine isolated articulation and facial drawing changes.
+No opaque background, colored halo, glow, checkerboard, floor, shadows, dividing lines, captions, numbers, text, borders, extra character or floating decorative pieces. True transparent PNG, crisp clean silhouette.

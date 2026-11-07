@@ -1,0 +1,7 @@
+Use case: stylized-concept
+Asset type: true 8-bit animation atlas, repair of the supplied atlas.
+Edit target: Image 1, the 8-frame Cyrene pixel sprite sheet.
+Primary request: Fix the margins and registration of this sprite sheet, and simplify all eight sprites into much COARSER pixels. Keep the same recognizable pink/blue hair and costume, and the same eight poses. Make the character substantially SMALLER within each cell: use only 70% cell height and 65% cell width, leaving broad empty margins. No silhouette may touch or cross a cell edge.
+Exact layout: landscape 1536x1024 RGBA. Four columns and two rows. Eight cells each384x512. Each sprite is centered at cell x=192 and its feet are at cell y=460, top of crystal ornament at cell y=90. Identical torso, head and feet registration in all frames. Plenty of blank transparent space along all cell borders. Background must stay truly transparent, no gradient, glow or floor.
+Style: remake it as a chunky NES-era 8-bit game sprite with only48x64 logical pixels per cell, upscaled8x nearest neighbor. Head14 pixels wide, eyes single pixels, details reduced to large readable blocks, exactly16-color looking palette. Never draw tiny ornate embroidery or extra fine pastel dithering; no smooth shading or antialiasing.
+Keep frame order: upper row neutral, eyes closed blink, small open speaking mouth, happy face; lower row hand raised to chest, hand beside face greeting, hand tilts outward greeting, hand lowered to chest recovery. On wave frames feet and torso stay fixed. No gridlines, numbers or labels.

@@ -1,0 +1,1822 @@
+{
+  "reviewFile": "docs/CYRENE_MOTION_V3_REVIEW.json",
+  "inspectionFile": "artifacts/animation/cyrene-v3/source-inspection.json",
+  "outputFile": "shared/cyrene-motion-pack.json",
+  "entries": [
+    {
+      "builtin": "cyrene-original-v1",
+      "style": "original",
+      "file": "cyrene-original-motion-v3.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              130,
+              180,
+              200,
+              180,
+              180,
+              180,
+              180,
+              200,
+              180,
+              180
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              150,
+              200,
+              220,
+              200,
+              170
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              2200,
+              2200,
+              2200
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false,
+        "mouthFrames": {
+          "closed": 0,
+          "small": 4,
+          "wide": 5
+        }
+      },
+      "poses": [
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/original-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        }
+      ]
+    },
+    {
+      "builtin": "cyrene-anime-v5",
+      "style": "anime",
+      "file": "cyrene-anime-motion-v2.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false
+      },
+      "poses": [
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 4,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 5,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 6,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 7,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 8,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 9,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 10,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 11,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 12,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 13,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 14,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/anime.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 15,
+          "crop": "alpha"
+        }
+      ]
+    },
+    {
+      "builtin": "cyrene-chibi-v4",
+      "style": "chibi",
+      "file": "cyrene-chibi-motion-v2.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false
+      },
+      "poses": [
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 4,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 5,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 6,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 7,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 8,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 9,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 10,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 11,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 12,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 13,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 14,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/chibi.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 15,
+          "crop": "alpha"
+        }
+      ]
+    },
+    {
+      "builtin": "cyrene-powerpuff-v1",
+      "style": "powerpuff",
+      "file": "cyrene-powerpuff-motion-v3.png",
+      "animation": {
+        "width": 384,
+        "height": 384,
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              130,
+              180,
+              200,
+              180,
+              180,
+              180,
+              180,
+              200,
+              180,
+              180
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              150,
+              200,
+              220,
+              200,
+              170
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              2200,
+              2200,
+              2200
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false,
+        "mouthFrames": {
+          "closed": 0,
+          "small": 4,
+          "wide": 5
+        }
+      },
+      "poses": [
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/powerpuff-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        }
+      ]
+    },
+    {
+      "builtin": "cyrene-pixel-v6",
+      "style": "pixel",
+      "file": "cyrene-pixel-motion-v2.png",
+      "animation": {
+        "width": 64,
+        "height": 96,
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              100,
+              130,
+              210,
+              120,
+              120,
+              120,
+              120,
+              170,
+              130,
+              120
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              130,
+              170,
+              240,
+              170,
+              180
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              1600,
+              1600,
+              1600
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": true,
+        "palette": [
+          "#30213d",
+          "#583a69",
+          "#815488",
+          "#ad5887",
+          "#e88bb3",
+          "#ffd1df",
+          "#fff2db",
+          "#e8b2a0",
+          "#c47b86",
+          "#ffffff",
+          "#c8c4e4",
+          "#897bba",
+          "#4a398a",
+          "#302765",
+          "#69a6eb",
+          "#f6d37e",
+          "#1c172c",
+          "#7b3b76",
+          "#c65299",
+          "#f478b0",
+          "#a273ce",
+          "#966de4",
+          "#342557",
+          "#384578",
+          "#4173bf",
+          "#8093ed",
+          "#8bd5ff",
+          "#c2eafe",
+          "#eee6fc",
+          "#fff5f6",
+          "#ffddbf",
+          "#df9eae"
+        ]
+      },
+      "poses": [
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 4,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 5,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 6,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 7,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 8,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 9,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 10,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 11,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 12,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 13,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 14,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v1/sheets/pixel.png",
+          "columns": 4,
+          "rows": 4,
+          "cell": 15,
+          "crop": "alpha"
+        }
+      ]
+    },
+    {
+      "builtin": "cyrene-8bit-v5",
+      "style": "8bit",
+      "file": "cyrene-8bit-motion-v3.png",
+      "animation": {
+        "width": 96,
+        "height": 128,
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              130,
+              180,
+              200,
+              180,
+              180,
+              180,
+              180,
+              200,
+              180,
+              180
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              150,
+              200,
+              220,
+              200,
+              170
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              2200,
+              2200,
+              2200
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": true,
+        "palette": [
+          "#30213d",
+          "#583a69",
+          "#815488",
+          "#ad5887",
+          "#e88bb3",
+          "#ffd1df",
+          "#fff2db",
+          "#e8b2a0",
+          "#c47b86",
+          "#ffffff",
+          "#c8c4e4",
+          "#897bba",
+          "#4a398a",
+          "#302765",
+          "#69a6eb",
+          "#f6d37e"
+        ],
+        "mouthFrames": {
+          "closed": 0,
+          "small": 4,
+          "wide": 5
+        }
+      },
+      "poses": [
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/8bit-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        }
+      ]
+    },
+    {
+      "builtin": "cyrene-3d-v5",
+      "style": "3d",
+      "file": "cyrene-3d-motion-v3.png",
+      "animation": {
+        "width": 384,
+        "height": 512,
+        "clips": {
+          "idle": {
+            "frames": [
+              0,
+              3,
+              0
+            ],
+            "durations": [
+              1800,
+              1100,
+              1800
+            ],
+            "loop": true
+          },
+          "neutral": {
+            "frames": [
+              0
+            ],
+            "loop": true
+          },
+          "blink": {
+            "frames": [
+              0,
+              1,
+              2,
+              1,
+              0
+            ],
+            "durations": [
+              40,
+              60,
+              95,
+              60,
+              50
+            ]
+          },
+          "talk": {
+            "frames": [
+              0,
+              4,
+              5,
+              4
+            ],
+            "durations": [
+              110,
+              130,
+              150,
+              130
+            ],
+            "loop": true
+          },
+          "happy": {
+            "frames": [
+              6
+            ],
+            "loop": true
+          },
+          "thinking": {
+            "frames": [
+              7
+            ],
+            "loop": true
+          },
+          "wave": {
+            "frames": [
+              0,
+              8,
+              9,
+              10,
+              11,
+              10,
+              11,
+              9,
+              8,
+              0
+            ],
+            "durations": [
+              130,
+              180,
+              200,
+              180,
+              180,
+              180,
+              180,
+              200,
+              180,
+              180
+            ]
+          },
+          "nod": {
+            "frames": [
+              0,
+              12,
+              13,
+              12,
+              0
+            ],
+            "durations": [
+              150,
+              200,
+              220,
+              200,
+              170
+            ]
+          },
+          "sleepy": {
+            "frames": [
+              14
+            ],
+            "loop": true
+          },
+          "sleep": {
+            "frames": [
+              14,
+              15,
+              14
+            ],
+            "durations": [
+              2200,
+              2200,
+              2200
+            ],
+            "loop": true
+          }
+        },
+        "pixelated": false,
+        "mouthFrames": {
+          "closed": 0,
+          "small": 4,
+          "wide": 5
+        }
+      },
+      "poses": [
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-face.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-speech.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-wave.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 0,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 1,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 2,
+          "crop": "alpha"
+        },
+        {
+          "source": "artifacts/animation/cyrene-v3/sources/3d-rest.png",
+          "columns": 2,
+          "rows": 2,
+          "cell": 3,
+          "crop": "alpha"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "page": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+  "name": "昔涟",
+  "images": [
+    {
+      "file": "idle-first-frame.png",
+      "url": "https://act-upload.hoyoverse.com/event-ugc-hoyowiki/2025/11/09/11038150/2dee52a953a604d8e8e182c5da1032be_7504710791621054331.gif",
+      "derivation": "Unmodified first frame; GIF to PNG via sips.",
+      "sha256": "0ef1ebdc5463715e105f7a2c5cb7cefe406070b744cb8df31388ead1d2fee10b",
+      "originalSha256": "92b3477ce895a5728845cac474786d63366e39b4fb78e00b2ad6ff1533472d7a"
+    },
+    {
+      "file": "splash.png",
+      "url": "https://act-upload.hoyoverse.com/event-ugc-hoyowiki/2025/11/02/11038150/9554eede285fec30ccc1705426564da5_3566950257282354898.png",
+      "sha256": "2694185f8022b48444ed03afeb2d960cafee7736782e40c40cdbe648e90e84e1"
+    },
+    {
+      "file": "portrait.png",
+      "url": "https://act-upload.hoyoverse.com/event-ugc-hoyowiki/2025/11/02/11038150/ab1c3cf2d6128a383c1c93f7afec1f05_8691208272719077090.png",
+      "sha256": "699ccd2f8d2528d0ad1bb0c70320c1146ccab9853a62de0a6c8d426481c51a67"
+    },
+    {
+      "file": "detail.png",
+      "url": "https://act-upload.hoyoverse.com/event-ugc-hoyowiki/2025/11/02/11038150/b17310b0045b646e443391d382969d5d_4208053303400213545.png",
+      "sha256": "48bfeca7c7cda7b8a671d8a25f18a714df1e6bda0fd9495bb0e89daf525f816a"
+    }
+  ],
+  "output": {
+    "file": "public/art/cyrene-reference-v3.png",
+    "sha256": "6efa0712fa301b31756e0af21fa2a9aea00330247d367130f4ce48e25217dd7f",
+    "tool": "built-in image_gen",
+    "transparentBackground": true,
+    "prompt": "docs/CYRENE_REDESIGN_PROMPT.txt",
+    "status": "candidate; no user identity approval recorded"
+  }
+}

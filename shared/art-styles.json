@@ -1,0 +1,74 @@
+{
+  "original": {
+    "shape": "保持原作头身比、面部设计、发型、服装与配饰结构；只调整姿势与构图。",
+    "surface": "直接匹配原作参考图的线条、上色、明暗边界、材质处理和细节密度，不改成通用精绘。",
+    "canvas": "新绘全身透明 PNG；原图直接作为视觉参考，不裁切原图或沿用原图像素。",
+    "motion": "确认原作画风基准后，保持同一画风与比例，制作局部表情及真实姿势关键帧。",
+    "tool": "Krita 原画与动画工作流",
+    "url": "https://docs.krita.org/en/user_manual/animation.html",
+    "prompt": "A newly drawn character illustration matching the ORIGINAL reference art style as closely as possible: the same precise linework, shading language, color palette, original body proportions, material rendering and detail density. The original images define both identity and style. Preserve the actual face, hairstyle, costume and accessories. Draw a new natural pose on transparent background, never crop, trace, recolor or reuse source pixels. Do not replace the original art language with a generic anime style."
+  },
+  "anime": {
+    "shape": "保留原角色比例与轮廓，以清晰线稿和平涂明暗塑造形体。",
+    "surface": "赛璐璐色块、少量柔光；避免照片皮肤与塑料反光。",
+    "canvas": "全身透明底；眼、嘴、前后发与双臂需要独立原画层。",
+    "motion": "精绘原画适合 Live2D 分层绑定；没有分层时制作完整姿势 PNG 序列。",
+    "tool": "Live2D Cubism",
+    "url": "https://docs.live2d.com/en/cubism-editor-manual/workflow/",
+    "prompt": "A finished anime character illustration: precise ink contours, flat cel-shaded planes with restrained soft accents. Retain the reference body proportions and distinctive silhouette. No photographic skin, doll plastic, visible polygons or pixel blocks."
+  },
+  "chibi": {
+    "shape": "约 2.5–3 头身，大头与短肢；把复杂饰物归纳为清晰形状。",
+    "surface": "圆润线条、大色块、可读的夸张表情；保留服装分区。",
+    "canvas": "全身透明底，四肢与头发留出招手、跳跃空间。",
+    "motion": "在 Krita 绘制起势、最大姿势、收势，再补中间帧；脚底位置保持一致。",
+    "tool": "Krita 动画教程",
+    "url": "https://docs.krita.org/en/user_manual/animation.html",
+    "prompt": "A distinctly super-deformed 2.5-to-3-head-tall chibi character with an oversized head, short limbs, rounded silhouette and large readable expressions. Simplify accessories into bold shapes while preserving their placement and the outfit color divisions. Flat graphic illustration, no realistic adult proportions or plush fibers."
+  },
+  "sticker": {
+    "shape": "约两头身的圆脸贴纸角色；大块发束、短小四肢，保留角色特有发型、帽子与服装分区。",
+    "surface": "清晰深色描边、干净平涂和单层硬阴影；96–160 像素高度仍能认清五官与饰物。",
+    "canvas": "单个全身透明 PNG，头发、手脚与饰物留足空隙；无白色贴纸底板、背景光晕或棋盘格。",
+    "motion": "先确认同一张贴纸基准，再制作真实动作帧；所有帧沿用相同轮廓粗细、头身比、配色与饰物。",
+    "tool": "Mori 贴纸桌宠工作流",
+    "url": "",
+    "prompt": "A clean flat-color chibi sticker desktop companion, approximately TWO heads tall, round face, compact limbs and large readable eyes. Use confident dark contours of consistent weight, broad clearly separated hair locks, solid color shapes and one hard-edged shadow tone per material. Keep the face and signature accessories legible at 96 to 160 pixels tall. Preserve this SAME character's recognizable hairstyle, costume color divisions, ornaments and anatomical identity; simplify detail without borrowing another character's hat, clothes, symbols or anatomy. No painterly gradients, glossy 3D toy shading, fuzzy plush texture, tiny ornamental noise, white sticker backing, glow, aura or drop shadow. One complete full-body figure with separated hands and feet and generous transparent margins."
+  },
+  "powerpuff": {
+    "shape": "飞天小女警式超大圆头、占据大半张脸的椭圆眼睛、约 1.6 头身的短小身体和圆头四肢；保留角色发型与饰物轮廓。",
+    "surface": "统一粗黑描边与纯色平涂；大块虹膜、黑瞳孔和白色高光，不使用细腻日式眼睛、渐变或材质纹理。",
+    "canvas": "单个全身角色、透明 PNG，头发与裙摆留足动作空间；原角色服装压缩成清晰色块和标志图案。",
+    "motion": "以同一粗线条基准绘制起势、夸张关键姿势与恢复帧；保持黑边粗细和五官比例，用停顿与快速切换表现卡通节奏。",
+    "tool": "Krita 逐帧卡通动画",
+    "url": "https://docs.krita.org/en/user_manual/animation.html",
+    "prompt": "Redesign this SAME character in the unmistakable classic 1998 The Powerpuff Girls cartoon visual style: a giant broad rounded head, two enormous oval eyes covering most of the face with large flat irises, black pupils and crisp white highlights, no drawn nose, a tiny squat dress-shaped torso, stubby rounded limbs, about 1.6 heads tall. Uniform bold BLACK contours and clean flat solid color fills. Preserve the original character's recognizable hair, signature ornaments, costume color divisions and emblem, simplifying them into a few strong geometric shapes. Do not replace the original costume with a generic striped Powerpuff dress or a giant red bow. No anime chibi eye design, fine illustration lines, gradients, painterly textures, photorealism, 3D lighting or pixel blocks. A single full-body character on transparent background."
+  },
+  "pixel": {
+    "shape": "64 × 96 逻辑画布，清晰轮廓；用像素簇表达头发、服装和饰物。",
+    "surface": "最多 32 色，可少量抖色；每个像素都落在同一网格上。",
+    "canvas": "以原始分辨率导出透明 PNG，用最近邻放大，禁止平滑抗锯齿。",
+    "motion": "Aseprite 逐帧绘制、洋葱皮检查，再按动作创建帧标签。",
+    "tool": "Aseprite 动画教程",
+    "url": "https://www.aseprite.org/docs/animation/",
+    "prompt": "An authentic detailed pixel-art game sprite on a 64-by-96 logical pixel grid, at most 32 colors, deliberate connected pixel clusters and readable hair and clothing patterns. Nearest-neighbor enlargement, hard pixel edges, no gradients or anti-aliasing. Preserve identity through silhouette and color placement. Do not render smooth anime art with a pixel filter."
+  },
+  "8bit": {
+    "shape": "48 × 64 逻辑画布、约 3 头身；轮廓、发色和衣服色块优先。",
+    "surface": "最多 16 色，粗像素、简洁明暗；细小饰物压缩为标志像素簇。",
+    "canvas": "原始小尺寸透明 PNG；画面不使用渐变、抗锯齿或细腻笔触。",
+    "motion": "少量清楚的关键姿势配合逐帧时长；眨眼与口型独立编排。",
+    "tool": "Aseprite 图集导出",
+    "url": "https://www.aseprite.org/docs/sprite-sheet/",
+    "prompt": "A coarse retro 8-bit console sprite on a 48-by-64 logical pixel grid, at most 16 colors, three-head-tall game proportions, minimal one-pixel facial marks and broad flat color clusters. Nearest-neighbor enlargement, no gradients, anti-aliasing, smooth outlines or fine anime detailing. Prioritize the reference silhouette, hairstyle, costume blocks and signature accessory."
+  },
+  "3d": {
+    "shape": "可见的几何折面、块状发束和简化服装；鼻子与脸颊具有体积。",
+    "surface": "大面积纯色材质、硬边明暗、方向光与环境遮蔽。",
+    "canvas": "渲染图可用透明 PNG 序列；可旋转交互需要真实 VRM 模型。",
+    "motion": "真实模型用骨骼动画；渲染序列用同一模型、相机和灯光制作全部动作。",
+    "tool": "VRoid 模型与发型材质",
+    "url": "https://vroid.pixiv.help/hc/en-us/sections/900000861886-Hairstyle-Editor",
+    "prompt": "An unmistakable low-poly 3D adventure-game character render with faceted geometric hair locks and clothing, broad flat polygon planes, modeled nose and cheeks, physical directional lighting and ambient occlusion, simple solid-color materials. Preserve the original character design. No painted outlines, fine illustration texture, smooth high-poly resin finish or photographic person. Output is a render image, not a 3D model file."
+  }
+}

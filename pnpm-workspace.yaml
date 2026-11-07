@@ -1,0 +1,4 @@
+storeDir: .local/pnpm-store
+allowBuilds:
+  electron: true
+  esbuild: true

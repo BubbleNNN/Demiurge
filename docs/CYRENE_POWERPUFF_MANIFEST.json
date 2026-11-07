@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-04",
+  "style": "powerpuff",
+  "name": "飞天的记忆 · 飞天小女警",
+  "file": "public/art/cyrene-powerpuff-v1.png",
+  "generator": "built-in image_gen",
+  "builtinImageAttempts": 2,
+  "successfulOutputs": 1,
+  "firstAttempt": "Wait terminated after approximately 18 minutes without a result; retried with a shorter prompt and two direct original references.",
+  "usesConfiguredImageApi": false,
+  "animated": false,
+  "reviewStatus": "Newly drawn cartoon-style illustration; visual fidelity awaits user review.",
+  "method": "Character identity from original standing and face images; huge oval eyes, stubby proportions, bold black contours and simplified costume.",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "sha256": "eded85210be4a6292521c32cb76aa33969a6bd61c13fe67d559f78fd3a1d9d0d",
+  "promptFiles": [
+    "docs/art/cyrene-powerpuff-v1-prompt.txt",
+    "docs/art/cyrene-powerpuff-v1-retry-prompt.txt"
+  ],
+  "references": [
+    {
+      "file": "artifacts/chatgpt-image/cyrene-first-pass/references/01-original-standing.png",
+      "label": "昔涟 · 游戏站姿",
+      "sourceUrl": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+      "sha256": "0ef1ebdc5463715e105f7a2c5cb7cefe406070b744cb8df31388ead1d2fee10b",
+      "bytes": 204281
+    },
+    {
+      "file": "artifacts/chatgpt-image/cyrene-first-pass/references/03-original-face.png",
+      "label": "昔涟 · 面部",
+      "sourceUrl": "https://wiki.hoyolab.com/pc/hsr/entry/4003?lang=zh-cn",
+      "sha256": "699ccd2f8d2528d0ad1bb0c70320c1146ccab9853a62de0a6c8d426481c51a67",
+      "bytes": 74174
+    }
+  ]
+}

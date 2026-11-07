@@ -1,0 +1,212 @@
+[
+  {
+    "id": "blink",
+    "name": "眨眼",
+    "description": "眼睑闭合再睁开，身体保持安静",
+    "poses": [
+      "neutral resting pose, eyes open",
+      "eyelids half closed",
+      "eyelids fully closed",
+      "eyelids opening again"
+    ],
+    "poses8": [
+      "neutral resting pose, eyes open",
+      "upper eyelids lower a little",
+      "eyelids halfway closed",
+      "eyelids nearly closed",
+      "eyes fully closed",
+      "eyelids begin reopening",
+      "eyes mostly open",
+      "exact original open-eye resting pose"
+    ]
+  },
+  {
+    "id": "talk",
+    "name": "说话",
+    "description": "闭嘴与两种口型，随对白播放",
+    "poses": [
+      "neutral resting pose, mouth closed",
+      "small open A-shaped speaking mouth",
+      "wider rounded O-shaped speaking mouth, visibly more open than the preceding small mouth",
+      "soft speaking smile with slightly open mouth"
+    ],
+    "poses8": [
+      "neutral resting pose, mouth closed",
+      "small open speaking mouth",
+      "medium open A-shaped mouth",
+      "wide rounded O-shaped mouth",
+      "medium open mouth relaxing",
+      "small rounded speaking mouth",
+      "soft slightly open speaking smile",
+      "exact resting pose with mouth closed"
+    ]
+  },
+  {
+    "id": "wave",
+    "name": "招手",
+    "description": "抬手、挥手、放下手臂",
+    "poses": [
+      "neutral resting pose, arms relaxed",
+      "bend one elbow and lift the hand near the shoulder",
+      "wave the raised hand outward gently",
+      "lower the hand halfway toward the resting pose"
+    ],
+    "poses8": [
+      "neutral resting pose, arms relaxed",
+      "one elbow bends, hand starts to lift",
+      "same hand lifts to shoulder level",
+      "same hand moves outward in a friendly wave",
+      "same hand moves inward, elbow stable",
+      "same hand lowers below shoulder",
+      "same arm almost back to rest",
+      "exact original resting pose, arms relaxed"
+    ]
+  },
+  {
+    "id": "nod",
+    "name": "点头",
+    "description": "头颈关节轻轻点头，用于回应与摸头",
+    "poses": [
+      "neutral resting pose, head upright",
+      "chin lowering slightly with neck articulation",
+      "chin lowered a little further, gentle appreciative eyes",
+      "head returning halfway to upright"
+    ],
+    "poses8": [
+      "neutral resting pose, head upright",
+      "chin begins to lower",
+      "chin lowered slightly",
+      "lowest gentle nod, shoulders still",
+      "hold appreciative nod with a soft smile",
+      "chin halfway back up",
+      "head nearly upright",
+      "exact original upright resting pose"
+    ]
+  },
+  {
+    "id": "shake",
+    "name": "摇头",
+    "description": "头转向两侧，身体不跟着摇晃",
+    "poses": [
+      "neutral resting pose, head facing forward",
+      "head turning slightly to the left, shoulders still",
+      "head turning slightly to the right, shoulders still",
+      "head returning toward the front"
+    ],
+    "poses8": [
+      "neutral resting pose, head forward",
+      "head turns slightly left",
+      "head at leftmost comfortable angle",
+      "head passes through front",
+      "head turns slightly right",
+      "head at rightmost comfortable angle",
+      "head returns toward front",
+      "exact original front-facing resting pose"
+    ]
+  },
+  {
+    "id": "bounce",
+    "name": "小跳",
+    "description": "屈膝、起跳和落地，保留完整肢体",
+    "poses": [
+      "neutral resting pose with feet on the ground",
+      "knees bend subtly in anticipation, feet stay grounded",
+      "a small jump with knees and ankles articulated, feet lifted above the original ground line",
+      "soft landing with knees slightly bent"
+    ],
+    "poses8": [
+      "neutral resting pose, feet grounded",
+      "knees begin bending in anticipation",
+      "deepest small crouch, feet grounded",
+      "push off with both feet leaving baseline",
+      "apex of small jump, feet above original baseline",
+      "descend with feet approaching baseline",
+      "soft landing, knees bent and feet grounded",
+      "exact original standing resting pose"
+    ]
+  },
+  {
+    "id": "sleep",
+    "name": "休息",
+    "description": "放松、闭眼和安静休息",
+    "poses": [
+      "neutral resting pose, eyes open",
+      "head tilts gently and eyelids become heavy",
+      "eyes fully closed, relaxed shoulders and slightly tilted head",
+      "same sleeping pose with a very subtle authored breathing change"
+    ],
+    "poses8": [
+      "neutral resting pose, eyes open",
+      "eyelids begin to relax",
+      "head tilts gently, eyes half closed",
+      "eyes nearly closed, shoulders relaxed",
+      "settled sleeping pose with fully closed eyes",
+      "same sleeping pose at gentle inhale",
+      "same sleeping pose at gentle exhale",
+      "same sleeping pose returning to breathing rest"
+    ]
+  },
+  {
+    "id": "emotions",
+    "name": "四种表情",
+    "description": "开心、思考、低落和惊讶",
+    "poses": [
+      "happy warm smile with bright eyes",
+      "thoughtful curious expression",
+      "mildly sad gentle expression",
+      "surprised wide eyes with a small open mouth"
+    ]
+  },
+  {
+    "id": "read",
+    "name": "读书",
+    "description": "拿出书本、安静翻页，再合书收好；八帧含进入与退出",
+    "activity": true,
+    "poses": [
+      "exact neutral standing master pose, empty hands and no book visible",
+      "same standing body scale, reach to take out one small closed book, hands connected to their original arms",
+      "hold the same book at chest height and open its cover",
+      "read the open book quietly, both hands supporting it, eyes on the page",
+      "turn one page of that same open book with a clearly articulated hand movement",
+      "finish the page turn and return to the same open-book reading pose as frame 4",
+      "close the same book with both hands, preparing to put it away",
+      "put the closed book away and return to the exact original neutral empty-handed standing pose"
+    ],
+    "poses8": [
+      "exact neutral standing master pose, empty hands and no book visible",
+      "same standing body scale, reach to take out one small closed book, hands connected to their original arms",
+      "hold the same book at chest height and open its cover",
+      "read the open book quietly, both hands supporting it, eyes on the page",
+      "turn one page of that same open book with a clearly articulated hand movement",
+      "finish the page turn and return to the same open-book reading pose as frame 4",
+      "close the same book with both hands, preparing to put it away",
+      "put the closed book away and return to the exact original neutral empty-handed standing pose"
+    ]
+  },
+  {
+    "id": "gaming",
+    "name": "玩掌机",
+    "description": "拿出掌机、按键游玩，再收好；八帧含进入与退出",
+    "activity": true,
+    "poses": [
+      "exact neutral standing master pose, empty hands and no console visible",
+      "same standing body scale, take out one small handheld game console with both hands",
+      "raise the same handheld console to a comfortable position below the face",
+      "hold the same console steadily with both hands and look at its screen, relaxed thumbs",
+      "press the console controls with visible thumb and wrist articulation and a small delighted expression",
+      "release the buttons and return to the same relaxed gaming pose as frame 4",
+      "lower the same console while keeping both hands connected to their arms",
+      "put the console away and return to the exact original neutral empty-handed standing pose"
+    ],
+    "poses8": [
+      "exact neutral standing master pose, empty hands and no console visible",
+      "same standing body scale, take out one small handheld game console with both hands",
+      "raise the same handheld console to a comfortable position below the face",
+      "hold the same console steadily with both hands and look at its screen, relaxed thumbs",
+      "press the console controls with visible thumb and wrist articulation and a small delighted expression",
+      "release the buttons and return to the same relaxed gaming pose as frame 4",
+      "lower the same console while keeping both hands connected to their arms",
+      "put the console away and return to the exact original neutral empty-handed standing pose"
+    ]
+  }
+]

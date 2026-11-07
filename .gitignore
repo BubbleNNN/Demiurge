@@ -1,0 +1,23 @@
+node_modules/
+dist/
+release/
+.local/
+.local-backups/
+.pnpm-store/
+artifacts/
+output/
+tmp/
+test-results/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.DS_Store
+*.pem
+*.key
+credentials*.json
+secrets*.json
+
+# Downloaded vendor runtime is not part of Mori's MIT-licensed code.
+public/vendor/live2dcubismcore.min.js
