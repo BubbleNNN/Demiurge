@@ -1,4 +1,5 @@
 import { useDesktopLife } from './features/desktop/useDesktopLife';
+import { desktopProfile, pickLine, touchMark } from './characterBehavior';
 import type { UserContext } from './userContext';
 import { isActivity, activityDuration, activities } from './animation/activities';
 import { activityIcons } from './features/companion/activityIcons';
@@ -163,6 +164,7 @@ const actionNames: Record<PetAction, string> = {
   listen: '倾听',
   sit: '坐下',
   lie: '趴着',
+  fly: '飞行',
   office: '办公',
   idle: '待机',
   bounce: '小跳',
@@ -248,6 +250,8 @@ export default function App() {
   const [invitation, setInvitation] = useState<Offer | null>(null);
   // She asked for a pat on the head and is waiting for it (until this time).
   const awaitingPat = useRef(0);
+  // Patting her head with the pointer (see the pet window's pointer handler).
+  const hoverPat = useRef<() => void>(() => {});
   // Since when she has been asleep (resting) or napping on the desktop, to know when waking her
   // up is waking her from real sleep.
   const asleepSince = useRef(0);
@@ -643,6 +647,18 @@ export default function App() {
   }, [resting, action]);
   // What the user is doing, from the desktop pet's view of the desktop (see userContext.ts).
   const contextRef = useRef<UserContext | null>(null);
+  // How this particular character lives on the desktop (characterBehavior.ts).
+  const petProfile = desktopProfile(character);
+  const actionNow = useRef(action);
+  actionNow.current = action;
+  // A small mark she shows for a moment (a blush after a pat, a note while humming).
+  const [flash, setFlash] = useState<{ mark: string; until: number } | null>(null);
+  const showMark = (mark: string, ms = 2400) => {
+    setFlash({ mark, until: Date.now() + ms });
+    setTimeout(() => setFlash((f) => (f && f.until <= Date.now() ? null : f)), ms + 50);
+  };
+  // Vanishing and reappearing, for looks that cannot walk.
+  const [vanished, setVanished] = useState(false);
   const desktop = useDesktopLife({
     petMode,
     characterId: character.id,
@@ -694,6 +710,23 @@ export default function App() {
       return true;
     },
     supports: (a) => supportsAction(skin, a),
+    travel: petProfile.travel,
+    habits: petProfile.habits,
+    // Nobody has been with her for a long while: she goes over to the user to ask for attention.
+    lonely: moodName(moodOf()) === 'lonely' || Date.now() - moodOf().lastContact > 25 * 60000,
+    current: () => actionNow.current,
+    onSeek: () => seekAttention(),
+    onTeleport: (phase) => setVanished(phase === 'out'),
+    onHabit: (habit) => {
+      if (habit !== 'hum') return;
+      showMark('♪', 3200);
+      if (supportsEmotion(skin, 'happy')) setEmotion('happy');
+    },
+    onEnter: () => {
+      // Arrived: a wave, and soon on to something of her own rather than standing there.
+      if (motionEnabled && supportsAction(skin, 'wave')) move('wave', 'happy', true);
+      lifeRef.current.until = Math.min(lifeRef.current.until, Date.now() + 9000);
+    },
     onFall: (cause) => {
       if (cause === 'gone') {
         say('诶？窗口不见了……');
@@ -777,6 +810,7 @@ export default function App() {
           }
         : {}),
       feelings: { lonely: feeling === 'lonely', angry: feeling === 'angry' },
+      hobbies: petProfile.hobbies,
       blocked:
         interactionBusy ||
         talking ||
@@ -934,6 +968,26 @@ export default function App() {
     if (!petMode) return;
     return bridge.onPetRoom?.(setPetRoom);
   }, [petMode]);
+  // Summoned: she runs in from the nearer side of the screen instead of just appearing. Moving to
+  // another Space or full-screen app, she runs in from the side the user moved toward.
+  const enterRef = useRef(desktop.enterFrom);
+  enterRef.current = desktop.enterFrom;
+  const entered = useRef(false);
+  useEffect(() => {
+    if (!petMode || !ready || entered.current || !skin) return;
+    entered.current = true;
+    const timer = setTimeout(() => {
+      const middle = window.screenX + innerWidth / 2;
+      const screenMiddle =
+        ((screen as Screen & { availLeft?: number }).availLeft || 0) + screen.availWidth / 2;
+      void enterRef.current(middle >= screenMiddle ? 'right' : 'left');
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [petMode, ready, skin]);
+  useEffect(() => {
+    if (!petMode) return;
+    return bridge.onSpaceChanged?.(({ direction }) => void enterRef.current(direction, true));
+  }, [petMode]);
   // The message box takes the keyboard when it opens, and folds away when the user goes back to
   // another app without having typed anything.
   useEffect(() => {
@@ -969,6 +1023,32 @@ export default function App() {
     if (!petMode || !isDesktop) return;
     let ignore = false;
     let over = false;
+    // A head pat without clicking: the pointer moving back and forth over her head. Four turns of
+    // at least 5 points within 1.4 seconds count; then a pause before the next one.
+    let strokes: { x: number; at: number; dir: number }[] = [],
+      patAt = 0;
+    const stroke = (e: MouseEvent, onHead: boolean) => {
+      const now = performance.now();
+      if (!onHead || e.buttons || drag.current || now - patAt < 2500) {
+        strokes = [];
+        return;
+      }
+      const last = strokes.at(-1);
+      if (!last) return void strokes.push({ x: e.clientX, at: now, dir: 0 });
+      const dx = e.clientX - last.x;
+      if (Math.abs(dx) < 5) return;
+      const dir = Math.sign(dx);
+      strokes.push({ x: e.clientX, at: now, dir });
+      strokes = strokes.filter((s) => now - s.at < 1400);
+      let turns = 0;
+      for (let i = 1; i < strokes.length; i++)
+        if (strokes[i].dir && strokes[i - 1].dir && strokes[i].dir !== strokes[i - 1].dir) turns++;
+      if (turns >= 4) {
+        patAt = now;
+        strokes = [];
+        hoverPat.current();
+      }
+    };
     const pointer = (e: MouseEvent) => {
       const controls =
         e.target instanceof Element &&
@@ -976,7 +1056,9 @@ export default function App() {
           '.pet-toolbar-zone,.pet-composer-area,.pet-chat-panel,.pet-speech,.pet-invite,.pet-moment-bubble,.star-field .falling-star,.pet-toast',
         );
       const figure = document.querySelector('.pet-draggable');
-      const onFigure = Boolean(figure && hitCharacter(figure, e.clientX, e.clientY));
+      const hit = figure ? hitCharacter(figure, e.clientX, e.clientY) : null;
+      const onFigure = Boolean(hit);
+      stroke(e, hit === 'headpat' && !controls);
       const next = !drag.current && !controls && !onFigure;
       if (next !== ignore) {
         ignore = next;
@@ -1189,8 +1271,47 @@ export default function App() {
     const asked = kind === 'headpat' && awaitingPat.current > Date.now();
     if (asked) awaitingPat.current = 0;
     const line = feelNow(kind === 'headpat' ? 'headpat' : 'poke');
-    say(line || (asked ? '嘿嘿……谢谢你。' : null));
+    // Her own way of taking it: a blush, a tease, a giggle (characterBehavior.ts).
+    showMark(touchMark(petProfile, kind));
+    say(line || (asked ? '嘿嘿……谢谢你。' : Math.random() < 0.6 ? pickLine(petProfile, kind) : null));
   }
+  // She would like some attention: she asks for a chat, a pat or a game, in her own words, unless
+  // the user is busy (typing, in a meeting) or she has asked recently.
+  function seekAttention() {
+    const context = contextRef.current;
+    if (context?.quiet || invitation || moment || interactionBusy || talking || resting) return;
+    if (!mayInvite(attentionRef.current, Date.now(), Math.max(20, userIdleRef.current), character.behavior)) {
+      // Too soon to ask outright: a glance and a word instead.
+      const peek = pickLine(petProfile, 'peek');
+      if (peek && mayRemark(attentionRef.current, Date.now(), userIdleRef.current)) {
+        recordRemark(attentionRef.current, Date.now());
+        persistAttention();
+        say(peek);
+      }
+      return;
+    }
+    const feeling = moodName(moodOf());
+    const offer: Offer =
+      feeling === 'angry'
+        ? 'pat'
+        : feeling === 'lonely'
+          ? Math.random() < 0.5
+            ? 'chat'
+            : 'pat'
+          : (['guess', 'stars', 'read', 'snack', 'chat'] as Offer[])[Math.floor(Math.random() * 5)];
+    recordInvite(attentionRef.current, Date.now());
+    persistAttention();
+    lifeRef.current.pending = { offer, expires: Date.now() + 60000 };
+    lifeRef.current.lastOffer = offer;
+    persistLife();
+    setInvitation(offer);
+    const ask = pickLine(petProfile, 'seek');
+    if (ask) say(ask);
+  }
+  hoverPat.current = () => {
+    if (resting) wakeUp();
+    else touchCharacter('headpat');
+  };
   // Woken up by the user: grumpy after real sleep.
   function wakeUp() {
     const slept = Date.now() - asleepSince.current > 60000;
@@ -1728,7 +1849,7 @@ export default function App() {
     emotion !== 'neutral' || talking || resting || !supportsEmotion(skin, restingFace)
       ? emotion
       : restingFace;
-  const mark = resting || !skin ? '' : moodMark(feeling);
+  const mark = resting || !skin ? '' : flash && flash.until > Date.now() ? flash.mark : moodMark(feeling);
   const feelingLabel = { angry: '有点生气', lonely: '有点寂寞', happy: '心情很好', calm: '' }[feeling];
   const avatar = (
     <>
@@ -1747,7 +1868,11 @@ export default function App() {
         glance={petMode ? desktop.glance : null}
       />
       {mark && (
-        <span className={`mood-mark ${feeling}`} aria-label={feelingLabel} role="img">
+        <span
+          className={`mood-mark ${flash && flash.until > Date.now() ? 'flash' : feeling}`}
+          aria-label={feelingLabel || '表情'}
+          role="img"
+        >
           {mark}
         </span>
       )}
@@ -1884,7 +2009,8 @@ export default function App() {
     // the screen the band above is off screen, so her speech moves below her; near the bottom the
     // controls move above her.
     const speechBelow = petRoom.above < 64 && petRoom.below >= petRoom.above;
-    const controlsAbove = petRoom.below < 64 && petRoom.above > petRoom.below;
+    // The controls always open below her (that band never leaves the screen).
+    const controlsAbove = false;
     const speechText = interactionLine || lastReply?.content || '';
     // Near a screen edge her speech and the controls can share one band.
     const speech = moment ? (
@@ -2196,7 +2322,10 @@ export default function App() {
           }}
         >
           <div className="pet-landing" ref={landRef}>
-            <div className={`pet-body ${desktop.airborne ? 'airborne' : ''}`} ref={bodyRef}>
+            <div
+              className={`pet-body ${desktop.airborne ? 'airborne' : ''} ${vanished ? 'vanished' : ''}`}
+              ref={bodyRef}
+            >
               {avatar}
             </div>
           </div>

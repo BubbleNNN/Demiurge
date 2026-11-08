@@ -332,9 +332,15 @@ app.on('browser-window-created', (_event, created) => {
       const added = await js(
         `[...document.querySelectorAll('.production-add-motions label')].filter(l=>l.querySelector('input').checked).map(l=>l.textContent)`,
       );
-      assert.equal(added.length, 2);
-      assert.ok(added[0].startsWith('坐下') && added[1].startsWith('趴着'), added.join());
-      assert.match(await js(`document.querySelector('[aria-label="补充新动作"]').textContent`), /预计 \d+ 次图像请求，不调用对话模型/);
+      assert.equal(added.length, 3);
+      assert.ok(
+        added[0].startsWith('坐下') && added[1].startsWith('趴着') && added[2].startsWith('飞行'),
+        added.join(),
+      );
+      assert.match(
+        await js(`document.querySelector('[aria-label="补充新动作"]').textContent`),
+        /预计 \d+ 次图像请求，不调用对话模型/,
+      );
       assert.equal(calls.length, 5, 'Offering new motions calls nothing');
       win.setSize(900, 800);
       await new Promise((resolve) => setTimeout(resolve, 100));

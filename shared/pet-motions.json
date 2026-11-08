@@ -526,5 +526,31 @@
       "push up onto hands and knees",
       "neutral standing"
     ]
+  },
+  {
+    "id": "fly",
+    "name": "飞行",
+    "description": "按角色自己的方式在空中移动：翅膀、魔法、坐骑或轻飘飘地浮着",
+    "staged": true,
+    "poses": [
+      "neutral standing",
+      "crouch and push off from the ground line",
+      "airborne, body leaning forward into flight",
+      "flying forward, gliding pose",
+      "flying forward, the other phase of the glide",
+      "flying forward, gliding pose again",
+      "slow down, body upright, feet reaching for the ground line",
+      "neutral standing"
+    ],
+    "poses8": [
+      "neutral standing",
+      "crouch and push off from the ground line",
+      "airborne, body leaning forward into flight",
+      "flying forward, gliding pose",
+      "flying forward, the other phase of the glide",
+      "flying forward, gliding pose again",
+      "slow down, body upright, feet reaching for the ground line",
+      "neutral standing"
+    ]
   }
 ]

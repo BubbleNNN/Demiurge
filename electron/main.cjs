@@ -323,10 +323,17 @@ function reportPetRoom() {
   lastRoom = key;
   pet.webContents.send('mori:pet-room', room);
 }
-function movePetTo(x, y) {
+function movePetTo(x, y, free = false) {
   const bounds = pet.getBounds();
   const area = petArea({ ...bounds, x, y });
-  const position = require('./pet-layout.cjs').clampPetPosition(x, y, bounds, area, petAspect);
+  const position = require('./pet-layout.cjs').clampPetPosition(
+    x,
+    y,
+    bounds,
+    area,
+    petAspect,
+    free ? bounds.width : 0,
+  );
   pet.setPosition(position.x, position.y);
   reportPetRoom();
   rememberPetPlace();
@@ -382,6 +389,14 @@ async function createPet() {
   pet.webContents.on('did-finish-load', () => {
     lastRoom = '';
     reportPetRoom();
+  });
+  // She is on every Space, full-screen apps included; moving to another one, she runs in from
+  // the side the user moved toward (see the desktop helper's Space order).
+  pet.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  require('./desktop-surfaces.cjs').onSpaceChange(({ display, direction }) => {
+    if (!pet || pet.isDestroyed()) return;
+    const shown = screen.getDisplayNearestPoint(require('./pet-layout.cjs').figureCentre(pet.getBounds()));
+    if (shown.id === display) pet.webContents.send('mori:space-changed', { direction });
   });
   pet.on('move', () => {
     reportPetRoom();
@@ -1242,7 +1257,8 @@ app.whenReady().then(async () => {
       bounds,
       area,
       // How far the window may hang past the top and bottom of the work area.
-      margins: { top, bottom },
+      // The band below her stays on screen (her toolbar opens there), so only the top may hang past.
+      margins: { top, bottom: 0 },
       at: Number.isFinite(windows.at) ? windows.at : Date.now(),
       surfaces: windows.surfaces,
       // What the user is doing: the front app, its window, and seconds since typing or pointing.
@@ -1261,9 +1277,13 @@ app.whenReady().then(async () => {
     )
       throw Error('桌宠位置无效');
     const bounds = pet.getBounds();
+    // A free step may take her just past a side of the screen, to run in from there.
+    // A jump goes there at once (vanishing and reappearing, or starting just off screen).
+    if (target.jump === true) return movePetTo(target.x, target.y, target.free === true);
     return movePetTo(
       bounds.x + Math.max(-150, Math.min(150, target.x - bounds.x)),
       bounds.y + Math.max(-150, Math.min(150, target.y - bounds.y)),
+      target.free === true,
     );
   });
   handle('open-pet', () => createPet());

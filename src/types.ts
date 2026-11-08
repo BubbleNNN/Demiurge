@@ -9,7 +9,8 @@ export type DesktopAction =
   | 'drag'
   | 'listen'
   | 'sit'
-  | 'lie';
+  | 'lie'
+  | 'fly';
 export type PetAction = DesktopAction | 'idle' | 'bounce' | 'nod' | 'shake' | 'sleep' | 'wave' | Activity;
 export type CompanionEvent =
   | 'greet'
@@ -561,7 +562,9 @@ export interface MoriBridge {
   speak(text: string): Promise<string>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
   desktopScene(icons?: boolean): Promise<DesktopScene>;
-  stepPet(target: { x: number; y: number }): Promise<DesktopRect>;
+  /** Move the pet window toward a point; `free` lets her figure go past a side of the screen, and
+   *  `jump` moves there at once (both for running in from off screen). */
+  stepPet(target: { x: number; y: number; free?: boolean; jump?: boolean }): Promise<DesktopRect>;
   openPet(): Promise<void>;
   closePet(): Promise<void>;
   movePet(delta: { x: number; y: number }): void;
@@ -580,6 +583,8 @@ export interface MoriBridge {
   onChatStatusChanged(callback: (status: ChatStatus) => void): () => void;
   /** Points of the pet window's bands above and below her figure that are on screen. */
   onPetRoom?(callback: (room: { above: number; below: number }) => void): () => void;
+  /** The user moved to another Space or full-screen app (macOS), toward this side. */
+  onSpaceChanged?(callback: (change: { direction: 'left' | 'right' }) => void): () => void;
   onBeforeClose?(callback: () => Promise<unknown>): () => void;
 }
 declare global {

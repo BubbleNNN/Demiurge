@@ -139,6 +139,8 @@ function motionClip(name, indices, input = {}, rest = 0) {
             ? [1600, 1100, 1400, 1100]
             : name === 'lie'
               ? [700, 700, 900, 700]
+              : name === 'fly'
+                ? [220, 220, 220, 220]
               : [1500, 500, 1100, 500];
     return { frames: indices.slice(4, 8), durations: time(durations), loop: true };
   }

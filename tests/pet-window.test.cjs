@@ -16,24 +16,20 @@ test('the bands come from the shared file the page lays itself out with', () => 
 
 test('a first window has her standing at the bottom right; resizing keeps her feet and centre', () => {
   const first = petBounds('medium', 0.75, area, undefined, 1);
-  assert.equal(
-    first.y + first.height - shared.bottom,
-    area.y + area.height - 8,
-    'figure bottom near the bottom edge',
-  );
+  assert.equal(first.y + first.height, area.y + area.height, 'as low as she goes, her toolbar still on screen');
   assert.ok(first.x + first.width / 2 > area.x + area.width * 0.8);
   const bigger = petBounds('medium', 0.75, area, { ...first, x: 400, y: 300 }, 1.6);
   assert.equal(bigger.y + bigger.height, 300 + first.height, 'feet stay put');
   assert.equal(bigger.x + bigger.width / 2, 400 + first.width / 2, 'centre line stays put');
 });
 
-test('her figure can reach every edge of the work area; only the transparent bands hang past it', () => {
+test('her figure can reach every edge of the work area; only the band above her hangs past it', () => {
   const bounds = petBounds('medium', 0.75, area, undefined, 1);
   const figure = bounds.height - shared.top - shared.bottom;
   const top = clampPetPosition(500, -5000, bounds, area, 0.75);
   assert.equal(top.y + shared.top, area.y, 'her head can touch the menu bar');
   const bottom = clampPetPosition(500, 5000, bounds, area, 0.75);
-  assert.equal(bottom.y + bounds.height - shared.bottom, area.y + area.height, 'her feet can touch the Dock');
+  assert.equal(bottom.y + bounds.height, area.y + area.height, 'the band with her toolbar stays on screen');
   const left = clampPetPosition(-5000, 300, bounds, area, 0.75);
   // Whole points: within one of the edge.
   assert.ok(
@@ -57,5 +53,8 @@ test('the page learns which bands are on screen, to move her speech and the cont
   const high = { ...bounds, ...clampPetPosition(500, -5000, bounds, area, 0.75) };
   assert.deepEqual(petRoom(high, area), { above: 0, below: shared.bottom });
   const low = { ...bounds, ...clampPetPosition(500, 5000, bounds, area, 0.75) };
-  assert.deepEqual(petRoom(low, area), { above: shared.top, below: 0 });
+  assert.deepEqual(petRoom(low, area), { above: shared.top, below: shared.bottom }, 'the toolbar never moves');
+  // Running in from off screen, she may start just past a side.
+  const outside = clampPetPosition(-5000, 300, bounds, area, 0.75, bounds.width);
+  assert.ok(outside.x + bounds.width / 2 < area.x, 'her middle is off the left edge');
 });

@@ -1,9 +1,9 @@
 'use strict';
 // The desktop pet window: her figure in the middle, a band above it for what she says and a band
-// below it for the controls and the message box. The bands are transparent and let clicks through,
-// so they may hang past the screen edges: only her figure has to stay on screen, which lets her
-// stand anywhere, up against the menu bar or down on the Dock. The renderer moves the speech and
-// the controls into whichever band is on screen (see `petRoom`).
+// below it for the controls and the message box. The bands are transparent and let clicks through.
+// The band above may hang past the top of the screen, so her head can reach the menu bar (her
+// speech then moves below her, see `petRoom`). The band below always stays on screen: the toolbar
+// and the message box open in the same place, under her feet, wherever she stands.
 const { top, bottom, side, minWidth } = require('../shared/pet-window.json');
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -22,11 +22,13 @@ function slack(bounds, aspect) {
   const figure = Math.max(0, bounds.height - top - bottom);
   const ratio = Number.isFinite(aspect) ? clamp(aspect, 0.45, 1.6) : 0.75;
   const width = Math.min(bounds.width - 2 * side, figure * ratio);
-  return { x: Math.max(side, (bounds.width - width) / 2), top, bottom };
+  return { x: Math.max(side, (bounds.width - width) / 2), top, bottom: 0 };
 }
 
-function clampPetPosition(x, y, bounds, area, aspect) {
+// `beyond`: points her figure may go past the left and right edges (running in from off screen).
+function clampPetPosition(x, y, bounds, area, aspect, beyond = 0) {
   const s = slack(bounds, aspect);
+  s.x += beyond;
   const range = (value, low, high) => (low > high ? (low + high) / 2 : clamp(value, low, high));
   return {
     x: Math.round(range(x, area.x - s.x, area.x + area.width - bounds.width + s.x)),
@@ -44,7 +46,7 @@ function petBounds(size, aspect, area, previous, scale) {
   const x = previous
     ? previous.x + (previous.width - width) / 2
     : area.x + area.width - width / 2 - (figure * ratio) / 2 - 24;
-  const y = previous ? previous.y + previous.height - height : area.y + area.height - height + bottom - 8;
+  const y = previous ? previous.y + previous.height - height : area.y + area.height - height;
   return { ...clampPetPosition(x, y, { width, height }, area, ratio), width, height };
 }
 

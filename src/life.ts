@@ -128,6 +128,8 @@ function chooseActivity(
   random: () => number,
   // With the user away she plays more; quiet work is for keeping them company.
   away = false,
+  // Her favourite things (characterBehavior.ts), favourite first.
+  hobbies: Activity[] = [],
 ): Activity {
   const fun = away ? 2 : 1;
   const weights: Record<Activity, number> = {
@@ -138,6 +140,12 @@ function chooseActivity(
     music: (1.2 + temperament.affection / 80) * (away ? 1.5 : 1),
     diary: 1 + temperament.curiosity / 60 + (hour >= 21 ? 1.5 : 0),
   };
+  // Her favourites lead whatever the hour and her temperament would otherwise suggest.
+  const strongest = Math.max(...Object.values(weights));
+  hobbies.forEach(
+    (activity, rank) =>
+      (weights[activity] = Math.max(weights[activity], strongest) * ([2, 1.4, 1.1][rank] || 1)),
+  );
   const pool = available.filter((activity) => activity !== previous);
   const choices = pool.length ? pool : available;
   if (!choices.length) return 'read';
@@ -239,6 +247,8 @@ export function advanceLife(
     context = undefined as LifeContext | undefined,
     // How she feels: lonely, she asks for company sooner; cross, only to be comforted.
     feelings = undefined as Feelings | undefined,
+    // What she likes doing most (characterBehavior.ts).
+    hobbies = [] as Activity[],
   } = {},
 ): LifeStep | null {
   const elapsed = Math.max(0, now - s.updatedAt);
@@ -303,6 +313,7 @@ export function advanceLife(
         hour,
         random,
         away,
+        hobbies,
       );
       key = away && random() < 0.5 ? 'alone' : s.activity;
     }

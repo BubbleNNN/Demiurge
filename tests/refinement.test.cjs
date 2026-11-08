@@ -125,9 +125,9 @@ test('her figure stays on negative-coordinate monitors and after display removal
   const bounds = petBounds('large', 1.6, area, { x: 9999, y: -999, width: 340, height: 480 }, undefined);
   // The figure (the window without its bands) is on the monitor; the bands may hang past it.
   assert.ok(bounds.x + bounds.width / 2 > area.x && bounds.x + bounds.width / 2 < 0);
-  assert.ok(bounds.y + bands.top >= 0 && bounds.y + bounds.height - bands.bottom <= 720);
+  assert.ok(bounds.y + bands.top >= 0 && bounds.y + bounds.height <= 720);
   const far = clampPetPosition(-9999, 9999, bounds, area, 1.6);
-  assert.equal(far.y, 720 - bounds.height + bands.bottom, 'her feet rest on the bottom edge');
+  assert.equal(far.y, 720 - bounds.height, 'as low as she goes, her toolbar still on screen');
   assert.ok(far.x < area.x, 'the transparent side of the window may hang past the left edge');
 });
 test('local IPC and pointer interactions choose identical available actions and scene lines', () => {

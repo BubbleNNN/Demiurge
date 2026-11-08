@@ -24,7 +24,12 @@ export function asSpriteCell(value: Drawable): SpriteCell {
 export function prepareSpriteFrame(image: HTMLImageElement, animation: SpriteAnimation, index: number) {
   return paint(image, animation, index, false).image;
 }
-function paint(image: HTMLImageElement, animation: SpriteAnimation, index: number, trim: boolean): SpriteCell {
+function paint(
+  image: HTMLImageElement,
+  animation: SpriteAnimation,
+  index: number,
+  trim: boolean,
+): SpriteCell {
   const frame = animation.frames[index];
   if (!frame) throw new Error('动画帧索引无效');
   const palette = animation.palette?.map((color) =>
@@ -49,7 +54,17 @@ function paint(image: HTMLImageElement, animation: SpriteAnimation, index: numbe
   if (piece) context.drawImage(image, x, y, width, height, 0, 0, width, height);
   else if (frame.cell) {
     // Trimmed frame: the stored pixels go back where they came from, one to one.
-    context.drawImage(image, x, y, width, height, frame.offset?.[0] || 0, frame.offset?.[1] || 0, width, height);
+    context.drawImage(
+      image,
+      x,
+      y,
+      width,
+      height,
+      frame.offset?.[0] || 0,
+      frame.offset?.[1] || 0,
+      width,
+      height,
+    );
   } else {
     const scale = Math.min(canvas.width / width, canvas.height / height);
     context.drawImage(
@@ -89,12 +104,20 @@ function paint(image: HTMLImageElement, animation: SpriteAnimation, index: numbe
     context.putImageData(pixels, 0, 0);
   }
   return piece
-    ? { image: canvas, width: size.width, height: size.height, x: frame.offset?.[0] || 0, y: frame.offset?.[1] || 0 }
+    ? {
+        image: canvas,
+        width: size.width,
+        height: size.height,
+        x: frame.offset?.[0] || 0,
+        y: frame.offset?.[1] || 0,
+      }
     : { image: canvas, width: canvas.width, height: canvas.height, x: 0, y: 0 };
 }
 /** Decode the frames that live on one atlas page, keyed by frame index. */
 export function prepareSpritePage(image: HTMLImageElement, animation: SpriteAnimation, page: number) {
-  const indices = animation.frames.map((frame, index) => ((frame.page || 0) === page ? index : -1)).filter((i) => i >= 0);
+  const indices = animation.frames
+    .map((frame, index) => ((frame.page || 0) === page ? index : -1))
+    .filter((i) => i >= 0);
   const pixels = indices.reduce((sum, index) => {
     const frame = animation.frames[index];
     if (frame.cell) return sum + frame.rect[2] * frame.rect[3];
@@ -118,7 +141,11 @@ export function prepareSpriteFrames(image: HTMLImageElement, animation: SpriteAn
 // but a zoom from a scaled ancestor must, so the drawing stays sharp. Layout size times the
 // rotation-free scale of every transformed ancestor gives exactly that.
 function displaySize(canvas: HTMLCanvasElement) {
-  if (!canvas.offsetWidth || typeof getComputedStyle !== 'function' || typeof DOMMatrixReadOnly !== 'function') {
+  if (
+    !canvas.offsetWidth ||
+    typeof getComputedStyle !== 'function' ||
+    typeof DOMMatrixReadOnly !== 'function'
+  ) {
     const rect = canvas.getBoundingClientRect();
     return { width: rect.width, height: rect.height };
   }
@@ -138,6 +165,8 @@ export function drawSpriteFrame(
   pixelated: boolean,
   zoom = 1,
   figure?: FigureBounds,
+  // Scale for this frame alone, around the bottom centre of its drawing (see heads.ts).
+  adjust = 1,
 ) {
   const cell = asSpriteCell(drawable);
   const context = canvas.getContext('2d');
@@ -167,13 +196,11 @@ export function drawSpriteFrame(
     pixelated,
     zoom,
   );
-  context.drawImage(
-    cell.image,
-    placement.x + (cell.x - (figure?.x || 0) * cell.width) * placement.scale,
-    placement.y + (cell.y - (figure?.y || 0) * cell.height) * placement.scale,
-    cell.image.width * placement.scale,
-    cell.image.height * placement.scale,
-  );
+  const left = placement.x + (cell.x - (figure?.x || 0) * cell.width) * placement.scale,
+    top = placement.y + (cell.y - (figure?.y || 0) * cell.height) * placement.scale,
+    w = cell.image.width * placement.scale,
+    h = cell.image.height * placement.scale;
+  context.drawImage(cell.image, left + (w - w * adjust) / 2, top + (h - h * adjust), w * adjust, h * adjust);
   canvas.dataset.figureBounds = JSON.stringify({
     x: placement.x,
     y: placement.y,

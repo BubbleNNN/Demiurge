@@ -65,6 +65,24 @@ const normalizeSurfaces = (raw, origin, pid) => normalizeScene(raw, origin, pid)
 
 let watcher = null;
 let latest = null;
+// Which Space each display shows (by its position in that display's list), to notice the user
+// moving to another Space or full-screen app, and which way.
+let shownSpaces = new Map();
+let spaceListener = null;
+function onSpaceChange(listener) {
+  spaceListener = listener;
+}
+function noteSpaces(list) {
+  if (!Array.isArray(list)) return;
+  for (const item of list) {
+    if (!Number.isInteger(item?.display) || !Number.isInteger(item?.index) || !Number.isInteger(item?.space))
+      continue;
+    const before = shownSpaces.get(item.display);
+    shownSpaces.set(item.display, item);
+    if (before && before.space !== item.space && spaceListener)
+      spaceListener({ display: item.display, direction: item.index >= before.index ? 'right' : 'left' });
+  }
+}
 function startWatching() {
   if (process.platform !== 'darwin' || watcher) return;
   let buffer = '';
@@ -79,6 +97,7 @@ function startWatching() {
     if (!line) return;
     try {
       latest = { at: Date.now(), raw: JSON.parse(line) };
+      noteSpaces(latest.raw.spaces);
     } catch {
       /* A partial line; the next one replaces it. */
     }
@@ -95,6 +114,7 @@ function stopWatching() {
   const child = watcher;
   watcher = null;
   latest = null;
+  shownSpaces = new Map();
   try {
     child?.stdin.end();
     child?.kill();
@@ -119,4 +139,12 @@ async function desktopSurfaces(origin) {
     return { surfaces: [], supported: false, reason: '暂时无法读取窗口位置，可以使用标记的藏身处。' };
   }
 }
-module.exports = { desktopSurfaces, normalizeSurfaces, normalizeScene, startWatching, stopWatching };
+module.exports = {
+  desktopSurfaces,
+  normalizeSurfaces,
+  normalizeScene,
+  startWatching,
+  stopWatching,
+  onSpaceChange,
+  noteSpaces,
+};

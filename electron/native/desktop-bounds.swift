@@ -7,6 +7,43 @@ import AppKit
 import CoreGraphics
 import Foundation
 
+// The order of each display's Spaces (desktops and full-screen apps) and which one is showing,
+// from the window server, so the app can tell which way the user moved between Spaces.
+@_silgen_name("CGSMainConnectionID") func CGSMainConnectionID() -> Int32
+@_silgen_name("CGSCopyManagedDisplaySpaces") func CGSCopyManagedDisplaySpaces(_ connection: Int32) -> CFArray?
+// Display UUID (as the window server names displays) to the display number apps use.
+func displayNumbers() -> [String: UInt32] {
+  var count: UInt32 = 0
+  CGGetActiveDisplayList(0, nil, &count)
+  var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
+  CGGetActiveDisplayList(count, &ids, &count)
+  var result: [String: UInt32] = [:]
+  for id in ids {
+    if let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue(),
+      let text = CFUUIDCreateString(nil, uuid) as String?
+    {
+      result[text.uppercased()] = id
+    }
+  }
+  return result
+}
+func spaces() -> [[String: Any]] {
+  guard let displays = CGSCopyManagedDisplaySpaces(CGSMainConnectionID()) as? [[String: Any]] else { return [] }
+  let numbers = displayNumbers()
+  let main = CGMainDisplayID()
+  return displays.compactMap { display in
+    guard let current = display["Current Space"] as? [String: Any],
+      let id = current["ManagedSpaceID"] as? Int,
+      let list = display["Spaces"] as? [[String: Any]],
+      let index = list.firstIndex(where: { ($0["ManagedSpaceID"] as? Int) == id })
+    else { return nil }
+    let name = (display["Display Identifier"] as? String ?? "").uppercased()
+    // A single display may be named "Main" instead of by its UUID.
+    let number = numbers[name] ?? (name == "MAIN" ? main : 0)
+    return ["display": number, "space": id, "index": index]
+  }
+}
+
 var bundles: [pid_t: String] = [:]
 func bundle(_ pid: pid_t) -> String {
   if let known = bundles[pid] { return known }
@@ -34,6 +71,7 @@ func snapshot() -> [String: Any] {
   }
   let front = NSWorkspace.shared.frontmostApplication
   return [
+    "spaces": spaces(),
     "windows": windows,
     "front": [
       "pid": front?.processIdentifier ?? 0,

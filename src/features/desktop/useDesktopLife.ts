@@ -24,6 +24,7 @@ import {
   type Temperament,
 } from '../../desktopBehavior';
 import type { DesktopRect, DesktopScene, PetAction } from '../../types';
+import type { Habit, Travel } from '../../characterBehavior';
 import {
   companySpot,
   coverage,
@@ -66,6 +67,22 @@ interface Options {
   /** She fell off a window: yanked away (`flung`) or closed under her (`gone`). Returns true
    *  when she is cross enough to sulk on the floor until comforted. */
   onFall: (cause: 'flung' | 'gone') => boolean;
+  /** How she gets about and her small habits (characterBehavior.ts). */
+  travel?: Travel;
+  habits?: Habit[];
+  /** Left alone too long: she goes over to the user's window to ask for attention. */
+  lonely?: boolean;
+  /** What she shows now, to notice when she has been standing about with nothing to do. */
+  current?: () => PetAction;
+  /** She would like the user's attention (arrived lonely, or now and then while keeping company);
+   *  the app decides whether she asks, and how. */
+  onSeek?: () => void;
+  /** Vanishing and reappearing, for packs that cannot walk ('out' fades her, 'in' brings her back). */
+  onTeleport?: (phase: 'out' | 'in') => void;
+  /** A habit with no motion of its own (humming), shown by the app. */
+  onHabit?: (habit: Habit) => void;
+  /** She has arrived after being summoned or after the user moved to another Space. */
+  onEnter?: () => void;
 }
 type Phase = 'idle' | 'finding' | 'inviting' | 'moving' | 'staying' | 'company' | 'sulking';
 const sameContext = (a: UserContext | null, b: UserContext | null) =>
@@ -164,7 +181,9 @@ export function useDesktopLife(options: Options) {
     company = useRef<{ focus: DesktopRect & { id: string }; spot: Spot } | null>(null),
     // What she is doing at the user's window: a pose, or something of her own.
     pose = useRef<PetAction | 'own'>('listen'),
-    sulkUntil = useRef(0);
+    sulkUntil = useRef(0),
+    // Running in from off screen: steps may take her past a side of it.
+    free = useRef(false);
   phaseRef.current = phase;
   const go = (value: Phase) => {
     phaseRef.current = value;
@@ -196,6 +215,7 @@ export function useDesktopLife(options: Options) {
     const moved = await bridge.stepPet({
       x: Math.round(target.x - body.foot.x),
       y: Math.round(target.y - body.foot.y),
+      ...(free.current ? { free: true } : {}),
     });
     bounds.current = moved;
     return moved;
@@ -203,9 +223,25 @@ export function useDesktopLife(options: Options) {
 
   // Horizontal walk along the ledge she stands on. Her own wandering (yieldable) gives way the
   // moment an activity starts; walking to a spot chosen for an activity does not.
+  const canWalk = () => ref.current.supports('walk_left') || ref.current.supports('walk_right');
   async function walkTo(to: Point, token: number, yieldable = false, pace = 1) {
     const body = measureBody();
     if (!body || !bounds.current) return false;
+    // A pack without walking never slides along: it hops there, or vanishes and reappears.
+    if (!canWalk() && Math.abs(to.x - feetOf(body, bounds.current).x) > 2) {
+      if (!ref.current.supports('bounce')) return teleportTo(to, token);
+      for (let n = 0; n < 40; n++) {
+        if (!alive(token) || lifted.current || (yieldable && ref.current.occupied)) return false;
+        const at = feetOf(body, bounds.current!);
+        const dx = to.x - at.x;
+        if (Math.abs(dx) <= 2) break;
+        if (
+          !(await hopTo({ x: at.x + Math.sign(dx) * Math.min(90, Math.abs(dx)), y: to.y }, token, yieldable))
+        )
+          return false;
+      }
+      return true;
+    }
     const speed = walkSpeed(ref.current.temperament) * pace;
     const started = Date.now();
     let last = performance.now();
@@ -272,10 +308,67 @@ export function useDesktopLife(options: Options) {
     if (landing) ref.current.onLand(Math.max(0, height));
   }
 
+  // Gone in a blink, back somewhere else: for packs that can neither walk nor hop.
+  async function teleportTo(to: Point, token: number) {
+    const body = measureBody();
+    if (!body || !bounds.current) return false;
+    ref.current.onTeleport?.('out');
+    await sleep(280);
+    if (!alive(token) || lifted.current) {
+      ref.current.onTeleport?.('in');
+      return false;
+    }
+    bounds.current = await bridge.stepPet({
+      x: Math.round(to.x - body.foot.x),
+      y: Math.round(to.y - body.foot.y),
+      jump: true,
+      ...(free.current ? { free: true } : {}),
+    });
+    ref.current.onTeleport?.('in');
+    await sleep(280);
+    return alive(token);
+  }
+  // Through the air, in her own way (characterBehavior.ts travel 'fly' with a fly motion).
+  async function flyTo(to: Point, token: number) {
+    const body = measureBody();
+    if (!body || !bounds.current) return false;
+    const from = feetOf(body, bounds.current);
+    const distance = Math.hypot(to.x - from.x, to.y - from.y);
+    const duration = Math.max(0.7, Math.min(4, distance / 320));
+    const lift = Math.min(120, 30 + distance * 0.12);
+    const start = performance.now();
+    ref.current.onAction('fly');
+    setAirborne(true);
+    try {
+      for (;;) {
+        if (!alive(token) || lifted.current) return false;
+        const t = Math.min(1, (performance.now() - start) / 1000 / duration);
+        const ease = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+        await place2(
+          {
+            x: from.x + (to.x - from.x) * ease,
+            y: from.y + (to.y - from.y) * ease - Math.sin(Math.PI * t) * lift,
+          },
+          body,
+        );
+        if (t >= 1) break;
+        await sleep(16);
+      }
+    } finally {
+      setAirborne(false);
+    }
+    ref.current.onAction('idle');
+    ref.current.onLand(0);
+    return true;
+  }
   // Walk (or run, with pace), then jump if the target is higher or lower, to any point on screen.
+  // A character who flies flies there instead.
   async function travelTo(to: Point, token: number, pace = 1) {
     const body = measureBody();
     if (!body || !bounds.current) return false;
+    if (ref.current.travel === 'fly' && ref.current.supports('fly')) return flyTo(to, token);
+    if (ref.current.travel === 'walk') pace = Math.min(pace, 1.3);
+    if (!canWalk() && !ref.current.supports('bounce')) return teleportTo(to, token);
     const feet = feetOf(body, bounds.current);
     if (Math.abs(to.y - feet.y) > 6) {
       const lead = { x: to.x + Math.sign(feet.x - to.x) * Math.min(160, Math.abs(feet.x - to.x)), y: feet.y };
@@ -317,19 +410,24 @@ export function useDesktopLife(options: Options) {
     findLedges(value, body).find((l) => l.kind === 'floor')?.y ?? feetOf(body, value.bounds).y;
   // On the user's window she sits or lies on its top edge (when her pack can), or stands and
   // listens beside it; now and then she does something of her own instead.
+  // Not standing there staring at the user: she sits or lies down (on the window or beside it),
+  // or does her own thing, and her habits fill the rest.
   function settlePose(own: boolean) {
     const o = ref.current;
     if (own && o.onCompany(true)) {
       pose.current = 'own';
       return;
     }
-    const perched = company.current?.spot.perch;
-    const choices = perched ? (['sit', 'lie'] as const).filter((a) => o.supports(a)) : [];
+    const choices = (['sit', 'lie'] as const).filter((a) => o.supports(a));
+    if (!choices.length && o.onCompany(true)) {
+      pose.current = 'own';
+      return;
+    }
     const next: PetAction = choices.length
       ? choices.length > 1 && pose.current === choices[0]
         ? choices[1]
         : choices[Math.floor(Math.random() * choices.length)]
-      : 'listen';
+      : 'idle';
     pose.current = next;
     o.onAction(next);
   }
@@ -350,7 +448,7 @@ export function useDesktopLife(options: Options) {
       : null;
     go('company');
     setStatus(spot.perch ? '在你的窗口上陪着你' : spot.over ? '在你窗口的角落陪着你' : '在你窗口旁边陪着你');
-    if (!ref.current.occupied) settlePose(Math.random() < 0.3);
+    if (!ref.current.occupied) settlePose(Math.random() < 0.5);
     else ref.current.onCompany(false);
   }
   // The window under her is gone: yanked away or closed. She falls to the bottom of the screen;
@@ -376,16 +474,19 @@ export function useDesktopLife(options: Options) {
   }
   // The window she stands on moves slowly: she rides it up and down, and runs to keep her spot
   // on it as it slides sideways. Faster, or off its end, and she falls.
+  // `from`/`seenAt`: the window as the riding check last judged it, so the move it already
+  // measured is not measured again over a few milliseconds (which would look like a fling).
   async function chase(
     held: { ledge: Ledge; window?: DesktopRect & { id: string } },
     body: Body,
     from: number,
+    seenAt?: DesktopRect & { id: string },
   ) {
     const token = ++generation.current;
     const before = phaseRef.current;
     const id = held.window!.id;
     const offset = feetOf(body, bounds.current!).x - held.window!.x;
-    let win = held.window!,
+    let win = seenAt || held.window!,
       stamp = from,
       still = Date.now(),
       last = performance.now(),
@@ -744,7 +845,7 @@ export function useDesktopLife(options: Options) {
         const since = seen && at > seen ? (at - seen) / 1000 : 0.25;
         if (moved > FLING_JUMP || moved / Math.max(0.05, since) > FLING_SPEED)
           return void (await tumble(value, body, 'flung'));
-        await chase(held, body, seen || at);
+        await chase(held, body, at, now);
         seen = 0;
       } catch {
         /* Next look. */
@@ -769,7 +870,39 @@ export function useDesktopLife(options: Options) {
       stableKey = '',
       stableSince = 0,
       nextGlance = 0,
-      nextPose = 0;
+      nextPose = 0,
+      nextSeek = 0,
+      seeking = false,
+      shown: PetAction | undefined,
+      idleSince = Date.now(),
+      habitGap = 12000,
+      habitUntil = 0,
+      habitAction: PetAction | null = null;
+    // One of her small habits, so she never just stands there.
+    const habit = () => {
+      const o = ref.current;
+      const usable = (o.habits || ['lookAround']).filter((h) =>
+        h === 'sit' || h === 'lie'
+          ? o.supports(h)
+          : h === 'lookAround'
+            ? canWalk()
+            : h === 'stretch'
+              ? o.supports('bounce')
+              : true,
+      );
+      const chosen = usable[Math.floor(Math.random() * usable.length)];
+      if (!chosen) return;
+      if (chosen === 'sit' || chosen === 'lie') {
+        habitAction = chosen;
+        habitUntil = Date.now() + 25000 + Math.random() * 30000;
+        o.onAction(chosen);
+      } else if (chosen === 'lookAround') {
+        const first = Math.random() < 0.5 ? 'left' : 'right';
+        setGlance({ side: first, key: Date.now() });
+        setTimeout(() => setGlance({ side: first === 'left' ? 'right' : 'left', key: Date.now() }), 2100);
+      } else if (chosen === 'stretch') o.onAction('bounce');
+      else o.onHabit?.(chosen);
+    };
     const timer = setInterval(async () => {
       if (!live || busy) return;
       busy = true;
@@ -795,6 +928,29 @@ export function useDesktopLife(options: Options) {
           go('idle');
           setStatus('不生气了');
         }
+        // Standing about with nothing to do: after a little while, one of her habits.
+        const now = o.current?.();
+        if (now !== shown) {
+          shown = now;
+          idleSince = Date.now();
+        }
+        if (habitAction && now === habitAction && Date.now() > habitUntil) {
+          habitAction = null;
+          o.onAction('idle');
+        }
+        if (
+          o.enabled &&
+          !o.blocked &&
+          !o.held?.() &&
+          !lifted.current &&
+          (now === 'idle' || (now === 'listen' && phaseRef.current === 'company')) &&
+          ['idle', 'company'].includes(phaseRef.current) &&
+          Date.now() - idleSince > habitGap
+        ) {
+          habitGap = 9000 + Math.random() * 14000;
+          idleSince = Date.now();
+          habit();
+        }
         const area = value.area,
           f = ctx?.focus;
         // A window on another display is out of her reach: she stays on her own screen.
@@ -804,10 +960,20 @@ export function useDesktopLife(options: Options) {
           f.x + f.width > area.x &&
           f.y < area.y + area.height &&
           f.y + f.height > area.y;
-        if (!ctx?.company || !ctx.focus || !reachable || !o.enabled) {
+        // She goes to the user's window when they work in it, or, left alone too long, to ask for
+        // their attention there.
+        const wanted = Boolean(
+          ctx && ctx.focus && reachable && o.enabled && (ctx.company || (o.lonely && ctx.mode !== 'away')),
+        );
+        if (!ctx || !ctx.focus || !wanted) {
           if (phaseRef.current === 'company' && (steady || !ctx || ctx.mode === 'away')) leaveCompany();
           return;
         }
+        if (!ctx.company && !seeking) {
+          seeking = true;
+          nextSeek = Date.now() + 6000;
+        }
+        if (ctx.company) seeking = false;
         if (o.blocked || o.held?.() || lifted.current || Date.now() - placedAt.current < PLACED_COMPANY)
           return;
         if (!['idle', 'company'].includes(phaseRef.current) || !steady) return;
@@ -830,6 +996,12 @@ export function useDesktopLife(options: Options) {
             nextGlance = Date.now() + 6000 + Math.random() * 7000;
             setGlance({ side: held.spot.side === 'left' ? 'right' : 'left', key: Date.now() });
           }
+          // Now and then she asks for a little attention: soon after coming over lonely, otherwise
+          // every ten minutes or so while the user is not typing.
+          if (Date.now() >= nextSeek && ctx.mode !== 'typing') {
+            if (nextSeek) o.onSeek?.();
+            nextSeek = Date.now() + 8 * 60000 + Math.random() * 7 * 60000;
+          }
           // Every minute or so she shifts: sits, lies down, or does something of her own.
           if (Date.now() >= nextPose) {
             if (nextPose && (!o.occupied || pose.current === 'own')) settlePose(Math.random() < 0.3);
@@ -840,6 +1012,7 @@ export function useDesktopLife(options: Options) {
         // On the window's top edge when it leaves her room, otherwise just beside it.
         const spot = perchSpot(value.area, body, focus, feet) || companySpot(value.area, body, focus, feet);
         nextPose = Date.now() + 45000 + Math.random() * 45000;
+        if (!seeking) nextSeek = Date.now() + 8 * 60000 + Math.random() * 7 * 60000;
         if (
           Math.hypot(spot.to.x - feet.x, spot.to.y - feet.y) < 40 ||
           (!spot.perch &&
@@ -913,6 +1086,57 @@ export function useDesktopLife(options: Options) {
       return true;
     },
     /** The user picked her up: everything she was doing stops. */
+    /** Run in from a side of the screen to where she was: when summoned, or when the user moves
+     *  to another Space (she was left behind and catches up). */
+    // `always`: also when she is busy (a Space change leaves her behind whatever she was doing);
+    // otherwise only when she is free (being summoned does not cancel what the user started).
+    async enterFrom(side: 'left' | 'right', always = false) {
+      if (!ref.current.petMode || lifted.current) return;
+      if (!always && phaseRef.current !== 'idle') return;
+      const token = ++generation.current;
+      place.current = null;
+      company.current = null;
+      support.current = null;
+      setMask(null);
+      go('moving');
+      setStatus('跑过来了');
+      try {
+        const value = await scene();
+        const body = measureBody();
+        if (!body || !alive(token)) return;
+        const home = feetOf(body, value.bounds);
+        const flies = ref.current.travel === 'fly' && ref.current.supports('fly');
+        if (!flies && !canWalk() && !ref.current.supports('bounce')) {
+          ref.current.onTeleport?.('out');
+          await sleep(120);
+          ref.current.onTeleport?.('in');
+          await sleep(280);
+          return;
+        }
+        const outside =
+          side === 'right'
+            ? value.area.x + value.area.width + body.width * 0.55
+            : value.area.x - body.width * 0.55;
+        free.current = true;
+        bounds.current = await bridge.stepPet({
+          x: Math.round(outside - body.foot.x),
+          y: Math.round(home.y - body.foot.y),
+          free: true,
+          jump: true,
+        });
+        if (flies) await flyTo(home, token);
+        else await walkTo(home, token, false, RUN);
+      } catch {
+        /* She stays wherever she got to. */
+      } finally {
+        free.current = false;
+        if (alive(token)) {
+          go('idle');
+          setStatus('在桌面上自己待着');
+          ref.current.onEnter?.();
+        }
+      }
+    },
     lift() {
       lifted.current = true;
       company.current = null;

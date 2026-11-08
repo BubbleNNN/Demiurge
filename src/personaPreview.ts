@@ -9,7 +9,7 @@ export interface PreviewTurn {
 }
 export const previewIssues = ['身份设定', '事实依据', '说话语气', '相处关系', '动作表现'] as const;
 export const previewActionNames = {
-  walk_left:'向左跑',walk_right:'向右跑',walk_up:'向后跑',walk_down:'向前跑',drag:'被拎起',listen:'倾听',sit:'坐下',lie:'趴着',
+  walk_left:'向左跑',walk_right:'向右跑',walk_up:'向后跑',walk_down:'向前跑',drag:'被拎起',listen:'倾听',sit:'坐下',lie:'趴着',fly:'飞行',
   office:'办公',
   idle: '待机',
   wave: '招手',

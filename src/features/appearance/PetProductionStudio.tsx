@@ -73,7 +73,7 @@ const baseEditStatusName = {
   uncertain: '请求中断',
 };
 // Motions added in later versions, offered first to finished tasks that lack them.
-const NEWEST_MOTIONS = ['sit', 'lie'];
+const NEWEST_MOTIONS = ['sit', 'lie', 'fly'];
 const motionName = (id: string) => motions.find((motion) => motion.id === id)?.name || id;
 const revisionName = (job: PetJob) =>
   job.extension

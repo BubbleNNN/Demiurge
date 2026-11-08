@@ -267,8 +267,7 @@ app.on('browser-window-created', (_e, win) => {
       // Yanked away: she falls to the bottom of the screen, cross.
       const slow = desk.getBounds();
       desk.setPosition(slow.x - 420, slow.y);
-      const floor = async () =>
-        area.y + area.height - (pet.getBounds().height - bands.bottom - (await body()).footY);
+      const floor = async () => area.y + area.height - (pet.getBounds().height - (await body()).footY);
       await wait(async () => (await status()).includes('等你哄'), 'sulking after the fall', 300);
       const fallen = await feet();
       assert.ok(fallen.y > slow.y + slow.height, 'fell well below the window');
@@ -319,7 +318,7 @@ app.on('browser-window-created', (_e, win) => {
       const placed = await feet();
       await sleep(1800);
       const still = await feet();
-      const floorY = area.y + area.height - (pet.getBounds().height - bands.bottom - (await body()).footY);
+      const floorY = area.y + area.height - (pet.getBounds().height - (await body()).footY);
       assert.ok(near(still.x, placed.x, 1) && near(still.y, placed.y, 1), 'she stays where she was let go');
       assert.ok(floorY - still.y > 200, 'well above the bottom of the screen');
       assert.doesNotMatch(
@@ -397,7 +396,7 @@ app.on('browser-window-created', (_e, win) => {
       // 6. Close the window: it is gone from under her and she falls to the bottom.
       const riding = await feet();
       fixture.destroy();
-      const bottom = area.y + area.height - (pet.getBounds().height - bands.bottom - (await body()).footY);
+      const bottom = area.y + area.height - (pet.getBounds().height - (await body()).footY);
       await wait(async () => near((await feet()).y, bottom), 'fell when the window closed', 200);
       const after = await feet();
       assert.ok(near(after.x, riding.x, 1), 'straight down');
@@ -503,6 +502,50 @@ app.on('browser-window-created', (_e, win) => {
       fs.writeFileSync(path.join(dir, 'pet-game.png'), (await pet.webContents.capturePage()).toPNG());
       await pj('document.querySelector(\'[aria-label="结束这个小活动"]\').click()');
       await wait(() => pj('!document.querySelector(".pet-moment-bubble")'), 'game closed');
+
+      // 9c. Stroking her head with the pointer, without clicking, is a pat.
+      await sleep(3000);
+      const crown = await pj(
+        `(() => { const c = document.querySelector('.pet-draggable canvas'); const f = JSON.parse(c.dataset.figureBounds); let x = 0, y = 0; for (let n = c; n; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } const sx = c.offsetWidth / c.width, sy = c.offsetHeight / c.height; return { x: x + (f.x + f.width / 2) * sx, y: y + (f.y + f.height * 0.12) * sy }; })()`,
+      );
+      await pj('document.querySelectorAll(".touch-feedback").forEach((e) => e.remove()); true');
+      for (let i = 0; i < 8; i++) {
+        input('mouseMove', crown.x + (i % 2 ? 14 : -14), crown.y);
+        await sleep(90);
+      }
+      await wait(() => pj('!!document.querySelector(".touch-feedback.headpat")'), 'pat by stroking', 60);
+      report.hoverPat = true;
+
+      // 9d. At the bottom of the screen her toolbar still opens below her, on screen.
+      await carry(0, 1400);
+      await sleep(800);
+      assert.ok(
+        pet.getBounds().y + pet.getBounds().height <= area.y + area.height,
+        'the band below her stays on screen',
+      );
+      assert.equal(
+        await pj('document.querySelector(".desktop-pet-shell").classList.contains("controls-above")'),
+        false,
+      );
+      assert.ok(
+        await pj('!!document.querySelector(".pet-band.below .pet-toolbar-zone")'),
+        'toolbar below her',
+      );
+      const zoneBox = await rect('.pet-toolbar-zone');
+      assert.ok(zoneBox.bottom <= (await pj('innerHeight')), 'toolbar inside the window');
+
+      // 9e. Another Space: she arrives again (this look cannot walk, so it reappears) and ends up
+      // where she was.
+      pet.setPosition(area.x + 400, area.y + 220);
+      await sleep(400);
+      const home = await feet();
+      pet.webContents.send('mori:space-changed', { direction: 'right' });
+      await wait(async () => (await status()).includes('跑过来了'), 'entering', 60);
+      await wait(async () => !(await status()).includes('跑过来了'), 'arrived', 200);
+      const back = await feet();
+      assert.ok(near(back.x, home.x, 3) && near(back.y, home.y, 3), 'back where she was');
+      assert.equal(await pj('document.querySelector(".pet-body").classList.contains("vanished")'), false);
+      report.space = { home, back };
 
       // 10. She reopens where she was left.
       const left = pet.getBounds();

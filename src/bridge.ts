@@ -112,6 +112,9 @@ export const bridge: MoriBridge = window.mori ?? {
   onPetRoom() {
     return () => {};
   },
+  onSpaceChanged() {
+    return () => {};
+  },
   onStateChanged(callback) {
     listeners.add(callback);
     const listener = (event: StorageEvent) => {
