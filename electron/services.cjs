@@ -114,6 +114,23 @@ const RESULT_SCHEMAS = {
     required: ['sources'],
     additionalProperties: false,
   },
+  chibiPicks: {
+    type: 'object',
+    properties: {
+      sources: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { title: { type: 'string' }, url: { type: 'string' } },
+          required: ['title', 'url'],
+          additionalProperties: false,
+        },
+      },
+      aliases: { type: 'array', items: { type: 'string' } },
+    },
+    required: ['sources', 'aliases'],
+    additionalProperties: false,
+  },
   connection: {
     type: 'object',
     properties: { ok: { type: 'boolean', const: true } },
@@ -797,10 +814,10 @@ function createServices(fetchImpl = globalThis.fetch, options = {}) {
     requireKey,
     completeProfile: (messages, settings, credentials) =>
       completion(messages, settings, credentials, undefined, RESULT_SCHEMAS.profile, { effort: 'medium' }),
-    codexSearch: (prompt, settings) =>
+    codexSearch: (prompt, settings, schema) =>
       codex(settings).run({
         prompt,
-        schema: SOURCE_PICKS_SCHEMA,
+        schema: RESULT_SCHEMAS[schema] || SOURCE_PICKS_SCHEMA,
         search: true,
         effort: 'low',
         model: text(settings?.llmModel, 150),
@@ -1554,6 +1571,7 @@ ${prompt}`,
     synthesizeSpeech,
     discoverReferences,
     discoverChibiReferences,
+    searchChibiSources,
     modelConfiguration,
     createModelTask,
     createRigTask,

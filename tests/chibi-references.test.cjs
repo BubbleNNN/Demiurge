@@ -19,7 +19,8 @@ const character = {
 const settings = {},
   credentials = {};
 const candidatePng = Buffer.concat([fixture.image(), Buffer.from([1])]);
-const furina = fixture.url(fixture.image(false, { opaque: true }));
+const furina_png = fixture.url(fixture.image(false, { opaque: true }));
+const furina = furina_png;
 const page = (images) =>
   Buffer.from(
     `<html><head><title>小森 Q版 表情包</title></head><body>${images
@@ -146,39 +147,47 @@ test('research records reject unknown status, oversized text and credentialed li
 });
 
 test('wiki and community pages are read through their JSON APIs and the character\'s own files come first', async () => {
-  const { mediaWikiPage, communityPost, rank } = require('../electron/chibi-references.cjs');
-  assert.deepEqual(mediaWikiPage('https://honkai-star-rail.fandom.com/wiki/Pom-Pom%20Gallery/No.%2024'), {
-    api: 'https://honkai-star-rail.fandom.com/api.php',
-    title: 'Pom-Pom Gallery/No. 24',
-  });
-  assert.deepEqual(mediaWikiPage('https://honkai-star-rail.fandom.com/zh/wiki/%E6%98%94%E6%B6%9F/%E5%AA%92%E4%BD%93?variant=zh-tw'), {
-    api: 'https://honkai-star-rail.fandom.com/zh/api.php',
-    title: '昔涟/媒体',
-  });
+  const { mediaWikiPage, communityPost, rank, wikiLangNames } = require('../electron/chibi-references.cjs');
+  const gallery = mediaWikiPage('https://genshin-impact.fandom.com/wiki/Paimon%27s%20Paintings/Set%2028');
+  assert.equal(gallery.api, 'https://genshin-impact.fandom.com/api.php');
+  assert.equal(gallery.title, "Paimon's Paintings/Set 28");
+  assert.equal(gallery.category, null);
+  const media = mediaWikiPage('https://honkai-star-rail.fandom.com/zh/wiki/%E6%98%94%E6%B6%9F/%E5%AA%92%E4%BD%93?variant=zh-tw');
+  assert.equal(media.api, 'https://honkai-star-rail.fandom.com/zh/api.php');
+  assert.equal(media.title, '昔涟/媒体');
   assert.equal(mediaWikiPage('https://example.com/blog/wiki-tips'), null);
   assert.equal(communityPost('https://www.hoyolab.com/article/42168240').api, 'https://bbs-api-os.hoyolab.com/community/post/wapi/getPostFull?post_id=42168240');
-  assert.equal(communityPost('https://www.miyoushe.com/sr/article/74703348').api, 'https://bbs-api.miyoushe.com/post/wapi/getPostFull?post_id=74703348');
+  assert.equal(communityPost('https://www.miyoushe.com/ys/article/74703348').api, 'https://bbs-api.miyoushe.com/post/wapi/getPostFull?post_id=74703348');
   assert.equal(communityPost('https://www.hoyolab.com/accountCenter/postList?id=1'), null);
+  assert.deepEqual(wikiLangNames({ query: { pages: [{ title: '芙宁娜', langlinks: [{ lang: 'en', title: 'Furina' }, { lang: 'ja', title: 'フリーナ (原神)' }] }] } }), ['芙宁娜', 'Furina', 'フリーナ']);
 
-  const cyrene = { id: 'c', name: '昔涟', work: '崩坏：星穹铁道', visualReferences: character.visualReferences };
+  // A character with no built-in alias table: the names arrive from the search answer and the wiki.
+  const furina = { id: 'f', name: '芙宁娜', work: '原神', visualReferences: character.visualReferences };
   const requests = [];
-  const wikiFile = (name, width = 256) => ({ title: `File:${name}`, imageinfo: [{ url: `https://static.example/${encodeURIComponent(name)}`, width, height: width, mime: 'image/png' }] });
+  const wikiFile = (name, width = 340) => ({ title: `File:${name}`, imageinfo: [{ url: `https://static.example/${encodeURIComponent(name)}`, width, height: width, mime: 'image/png' }] });
   const references = createChibiReferences({
     search: async () => ({
       sources: [
-        { title: 'Pom-Pom Gallery: No. 24 | Fandom', url: 'https://honkai-star-rail.fandom.com/wiki/Pom-Pom%20Gallery/No.%2024', snippet: '' },
+        { title: "Paimon's Paintings/Set 28 | Genshin Impact Wiki", url: 'https://genshin-impact.fandom.com/wiki/Paimon%27s%20Paintings/Set%2028', snippet: '' },
         { title: 'Stickers Vol.1 | HoYoLAB', url: 'https://www.hoyolab.com/article/42168240', snippet: '' },
+        { title: 'Furina | Genshin Impact Wiki', url: 'https://genshin-impact.fandom.com/wiki/Furina', snippet: '' },
       ],
       warnings: [],
+      aliases: ['Furina'],
     }),
     publicResource: async (url, options) => {
       requests.push(url);
       const json = (value) => ({ url, contentType: 'application/json', bytes: Buffer.from(JSON.stringify(value)) });
+      const params = new URL(url).searchParams;
+      if (params.get('prop') === 'langlinks') {
+        assert.equal(params.get('titles'), 'Furina', "the character's own page, never a gallery");
+        return json({ query: { pages: [{ title: 'Furina', langlinks: [{ lang: 'ja', title: 'フリーナ' }] }] } });
+      }
       if (url.includes('generator=images'))
-        return json({ query: { pages: [wikiFile('Pom-Pom Gallery No. 24.png', 900), wikiFile('Sticker PPG 01 March 7th 08.png'), wikiFile('Icon Fire.png', 64), wikiFile('Sticker PPG 24 Cyrene 02.png')] } });
+        return json({ query: { pages: [wikiFile("Paimon's Paintings Set 28.png", 750), wikiFile("Icon Emoji Paimon's Paintings 28 Neuvillette 1.png"), wikiFile('Icon Fire.png', 64), wikiFile("Icon Emoji Paimon's Paintings 28 Furina 2.png")] } });
       if (url.includes('generator=search')) {
-        assert.equal(new URL(url).searchParams.get('gsrnamespace'), '6');
-        return json({ query: { pages: [wikiFile('Sticker PPG 24 Cyrene 01.png'), wikiFile('Cyrene Splash.jpg', 2048)] } });
+        assert.equal(params.get('gsrnamespace'), '6');
+        return json({ query: { pages: [wikiFile("Icon Emoji Paimon's Paintings 28 Furina 1.png"), wikiFile('Furina Card.jpg', 2048)] } });
       }
       if (url.startsWith('https://bbs-api-os.hoyolab.com/')) {
         assert.equal(options.headers.Referer, 'https://www.hoyolab.com/');
@@ -187,22 +196,69 @@ test('wiki and community pages are read through their JSON APIs and the characte
       assert.ok(url.startsWith('https://static.example/') || url.startsWith('https://upload-os-bbs.example/'), url);
       return { url, contentType: 'image/png', bytes: Buffer.concat([fixture.image(), Buffer.from(url)]) };
     },
-    inspectImage: async () => ({ width: 256, height: 256, mime: 'image/png' }),
-    verify: async (_character, _originals, image) => ({ sameCharacter: /Cyrene/.test(Buffer.from(image.split(',')[1], 'base64').toString('latin1')), chibi: true, usable: true, confidence: 0.9 }),
-    fallbackImage: async () => furina,
+    inspectImage: async () => ({ width: 340, height: 340, mime: 'image/png' }),
+    verify: async (_character, _originals, image) => ({ sameCharacter: /Furina/.test(Buffer.from(image.split(',')[1], 'base64').toString('latin1')), chibi: true, usable: true, confidence: 0.9 }),
+    fallbackImage: async () => furina_png,
   });
-  const result = await references.discover(cyrene, settings, credentials);
+  const result = await references.discover(furina, settings, credentials);
   assert.equal(result.summary.status, 'found');
-  assert.match(result.summary.sources[0].imageUrl, /Sticker%20PPG%2024%20Cyrene/);
-  assert.match(result.summary.reason, /Sticker PPG 24 Cyrene/);
+  assert.match(result.summary.sources[0].imageUrl, /Paintings%2028%20Furina/);
+  assert.match(result.summary.reason, /Paintings 28 Furina/);
+  const searched = requests.filter((url) => url.includes('generator=search')).map((url) => new URL(url).searchParams.get('gsrsearch'));
+  assert.ok(searched.includes('芙宁娜') && searched.includes('furina') && searched.includes('フリーナ'), `file searches use typed, answered and wiki names: ${searched}`);
+  assert.ok(!searched.includes("paimon'spaintings"), 'gallery titles are not treated as names');
   assert.ok(!requests.some((url) => /fandom\.com\/wiki\//.test(url)), 'the blocked HTML page is never fetched');
   assert.ok(!requests.some((url) => url.startsWith('https://www.hoyolab.com/')), 'the script-rendered post is never fetched');
   const downloads = requests.filter((url) => url.startsWith('https://static.example/') || url.startsWith('https://upload-os-bbs.example/'));
   assert.equal(downloads.length, 1, 'the first candidate already passes, so nothing else is downloaded');
   // Ranking: own name plus sticker wording, then sticker wording, then the page's name alone.
-  const aliases = require('../electron/research.cjs').characterAliases(cyrene);
-  const score = (name, title = 'Pom-Pom Gallery') => rank({ name, title, imageUrl: 'https://static.example/x.png' }, aliases);
-  assert.ok(score('Sticker PPG 24 Cyrene 01.png') > score('Sticker PPG 01 March 7th 08.png'));
-  assert.ok(score('Sticker PPG 01 March 7th 08.png') > score('Pom-Pom Gallery No. 24.png'));
-  assert.ok(score('角色 昔涟 遊戲立繪.png', '昔涟/媒体') > score('Pom-Pom Gallery No. 24.png', '昔涟/媒体'));
+  const aliases = require('../electron/research.cjs').characterAliases({ ...furina, aliases: ['Furina'] });
+  const score = (name, title = "Paimon's Paintings") => rank({ name, title, imageUrl: 'https://static.example/x.png' }, aliases);
+  assert.ok(score("Icon Emoji Paimon's Paintings 28 Furina 2.png") > score("Icon Emoji Paimon's Paintings 28 Neuvillette 1.png"));
+  assert.ok(score("Icon Emoji Paimon's Paintings 28 Neuvillette 1.png") > score("Paimon's Paintings Set 28.png"));
+  assert.equal(score('芙宁娜 立绘.png', '芙宁娜/媒体'), -1, 'portraits without sticker wording are not verified');
+  assert.ok(score('芙宁娜 表情 自然状态.png', '芙宁娜/媒体') > score('Icon Emoji Paimon\'s Paintings 28 Neuvillette 1.png'));
+});
+
+test('category pages list their files, Wikipedia-style wikis retry under /w/, and plain art is never verified', async () => {
+  const { mediaWikiPage, rank } = require('../electron/chibi-references.cjs');
+  const category = mediaWikiPage('https://genshin-impact.fandom.com/wiki/Category%3AFurina_Images');
+  assert.equal(category.category, 'Category:Furina Images');
+  const wikipedia = mediaWikiPage('https://zh.wikipedia.org/wiki/%E8%8A%99%E5%AE%81%E5%A8%9C');
+  assert.equal(wikipedia.api, 'https://zh.wikipedia.org/api.php');
+  assert.equal(wikipedia.alternate, 'https://zh.wikipedia.org/w/api.php');
+  const aliases = require('../electron/research.cjs').characterAliases({ name: '星野アイ', aliases: ['Ai Hoshino'] });
+  assert.equal(rank({ name: 'Ai Hoshino main.jpg', title: 'Ai Hoshino/Gallery', imageUrl: 'https://static.example/Ai_Hoshino_main.jpg' }, aliases), -1, 'a portrait with no sticker wording is skipped');
+  assert.ok(rank({ name: '', title: 'Stickers Vol.1', snippet: '', imageUrl: 'https://upload.example/abc.png' }, aliases) >= 0, 'unnamed post images on a sticker post stay');
+
+  const requests = [];
+  const references = createChibiReferences({
+    search: async () => ({ sources: [{ title: 'Category:Furina Images', url: 'https://genshin-impact.fandom.com/wiki/Category%3AFurina_Images', snippet: '' }, { title: '芙宁娜 - 维基百科', url: 'https://zh.wikipedia.org/wiki/%E8%8A%99%E5%AE%81%E5%A8%9C', snippet: '' }], warnings: [], aliases: ['Furina'] }),
+    publicResource: async (url) => {
+      requests.push(url);
+      const json = (value) => ({ url, contentType: 'application/json', bytes: Buffer.from(JSON.stringify(value)) });
+      const params = new URL(url).searchParams;
+      if (url.startsWith('https://zh.wikipedia.org/api.php')) throw new Error('Wiki 多语言名称失败（HTTP 404）。');
+      if (url.startsWith('https://zh.wikipedia.org/w/api.php')) {
+        if (params.get('prop') === 'langlinks') return json({ query: { pages: [{ title: '芙宁娜', langlinks: [{ lang: 'en', title: 'Furina' }, { lang: 'ja', title: 'フリーナ' }] }] } });
+        return json({ query: { pages: [] } });
+      }
+      if (params.get('generator') === 'categorymembers') {
+        assert.equal(params.get('gcmtitle'), 'Category:Furina Images');
+        return json({ query: { pages: [{ title: "File:Icon Emoji Paimon's Paintings 28 Furina 3.png", imageinfo: [{ url: 'https://static.example/emoji.png', width: 340, height: 340, mime: 'image/png' }] }, { title: 'File:Furina Card.png', imageinfo: [{ url: 'https://static.example/card.png', width: 1080, height: 2160, mime: 'image/png' }] }] } });
+      }
+      if (params.get('generator') === 'search' || params.get('generator') === 'images') return json({ query: { pages: [] } });
+      return { url, contentType: 'image/png', bytes: fixture.image() };
+    },
+    inspectImage: async () => ({ width: 340, height: 340, mime: 'image/png' }),
+    verify: async () => ({ sameCharacter: true, chibi: true, usable: true, confidence: 0.9 }),
+    fallbackImage: async () => furina_png,
+  });
+  const result = await references.discover({ id: 'f', name: '芙宁娜', work: '原神', visualReferences: character.visualReferences }, settings, credentials);
+  assert.equal(result.summary.status, 'found');
+  assert.equal(result.summary.sources[0].imageUrl, 'https://static.example/emoji.png');
+  assert.ok(requests.some((url) => url.startsWith('https://zh.wikipedia.org/w/api.php') && url.includes('langlinks')), 'the alternate api location is tried');
+  assert.ok(!requests.includes('https://static.example/card.png'), 'the plain card is never downloaded');
+  const searched = requests.filter((url) => url.includes('generator=search')).map((url) => new URL(url).searchParams.get('gsrsearch'));
+  assert.ok(searched.includes('フリーナ'), `wikipedia interlanguage names feed the file search: ${searched}`);
 });
