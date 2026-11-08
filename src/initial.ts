@@ -1,4 +1,4 @@
-import type { AppState, Character, Skin } from './types';
+import type { AppState, Character, Skin, SpriteAnimation } from './types';
 const createdAt = '2026-09-29T12:00:00.000Z';
 export const cyrene: Character = {
   id: 'mori-cyrene',
@@ -162,7 +162,14 @@ export function migrateState(value: AppState | null): AppState {
   const retired = ['realistic', 'watercolor', 'plush', 'figurine'];
   const selected = value.skins.find((skin) => skin.id === value.activeSkinId);
   const replacesRetired = selected && retired.includes(selected.style);
-  if (!missing.length && !replacesRetired && characters.every((c, i) => c === value.characters[i]))
+  // Generated packs rest on a pose drawn like their motions (see animation/rest.ts).
+  const skins = value.skins.map(restSkinOnMotionSheet);
+  if (
+    !missing.length &&
+    !replacesRetired &&
+    characters.every((c, i) => c === value.characters[i]) &&
+    skins.every((skin, i) => skin === value.skins[i])
+  )
     return value;
   const replacesEarlyCyrene =
     value.activeCharacterId === cyrene.id &&
@@ -179,13 +186,53 @@ export function migrateState(value: AppState | null): AppState {
   return {
     ...value,
     characters,
-    skins: [...structuredClone(missing), ...value.skins],
+    skins: [...structuredClone(missing), ...skins],
     activeSkinId: replacesRetired
-      ? [...missing, ...value.skins].find(
+      ? [...missing, ...skins].find(
           (skin) => skin.characterId === value.activeCharacterId && !retired.includes(skin.style),
         )?.id || ''
       : replacesEarlyCyrene
         ? 'cyrene-anime-v5'
         : value.activeSkinId,
   };
+}
+
+/**
+ * Packs made before 0.3.23 rest on the approved still (frame 0) between gestures. That still is
+ * drawn on its own, and the motions the image model draws after it have slightly different
+ * proportions (a smaller head), so her head jumped every time a gesture ended or an activity
+ * returned to idle. Such packs also hold the blink sheet's own opening pose, a neutral rest drawn
+ * like every motion, unused just before the blink frames. This moves the rest onto that pose. Any
+ * other pack is returned unchanged.
+ */
+export function restOnMotionSheet(animation: SpriteAnimation): SpriteAnimation {
+  const { clips, frames } = animation;
+  const blink = clips.blink;
+  if (clips.idle?.frames.length !== 1 || clips.idle.frames[0] !== 0) return animation;
+  if (!blink || blink.frames.length < 3 || blink.frames[0] !== 0) return animation;
+  const rest = blink.frames[1] - 1;
+  const first = frames[blink.frames[1]];
+  if (rest < 1 || !frames[rest] || (frames[rest].page || 0) !== 0) return animation;
+  if (Object.values(clips).some((clip) => clip?.frames.includes(rest))) return animation;
+  // Drawn on the same sheet as the blink: the same canvas, give or take a few percent.
+  const cell = frames[rest].cell,
+    other = first?.cell;
+  if (!cell || !other || cell.some((value, i) => Math.abs(value - other[i]) > other[i] * 0.04))
+    return animation;
+  const swap = (index: number) => (index === 0 ? rest : index);
+  return {
+    ...animation,
+    clips: Object.fromEntries(
+      Object.entries(clips).map(([name, clip]) => [name, clip && { ...clip, frames: clip.frames.map(swap) }]),
+    ) as SpriteAnimation['clips'],
+    ...(animation.mouthFrames
+      ? { mouthFrames: { ...animation.mouthFrames, closed: swap(animation.mouthFrames.closed) } }
+      : {}),
+  };
+}
+
+export function restSkinOnMotionSheet(skin: Skin): Skin {
+  if (!skin.sprite) return skin;
+  const sprite = restOnMotionSheet(skin.sprite);
+  return sprite === skin.sprite ? skin : { ...skin, sprite };
 }

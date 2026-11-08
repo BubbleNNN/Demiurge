@@ -75,6 +75,7 @@ contextBridge.exposeInMainWorld('mori', {
   onStateChanged: subscribe('state-changed'),
   onKeysChanged: subscribe('keys-changed'),
   onChatStatusChanged: subscribe('chat-status'),
+  onPetRoom: subscribe('pet-room'),
   // The main process asks before closing; the page replies once pending saves are written.
   onBeforeClose: (callback) => {
     const listener = () => {

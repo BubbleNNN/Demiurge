@@ -119,12 +119,16 @@ test('pet sizing keeps the foot anchor while preserving the aspect ratio and wor
   assert.ok(small.height < medium.height);
   assert.equal(small.y + small.height, large.y + large.height);
 });
-test('pet windows stay visible on negative-coordinate monitors and after display removal', () => {
+test('her figure stays on negative-coordinate monitors and after display removal', () => {
+  const { bands } = require('../electron/pet-layout.cjs');
   const area = { x: -1280, y: 0, width: 1280, height: 720 };
-  const bounds = petBounds('large', 1.6, area, { x: 9999, y: -999, width: 340, height: 480 });
-  assert.ok(bounds.x >= area.x && bounds.x + bounds.width <= 0);
-  assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= 720);
-  assert.deepEqual(clampPetPosition(-9999, 9999, bounds, area), { x: -1280, y: 720 - bounds.height });
+  const bounds = petBounds('large', 1.6, area, { x: 9999, y: -999, width: 340, height: 480 }, undefined);
+  // The figure (the window without its bands) is on the monitor; the bands may hang past it.
+  assert.ok(bounds.x + bounds.width / 2 > area.x && bounds.x + bounds.width / 2 < 0);
+  assert.ok(bounds.y + bands.top >= 0 && bounds.y + bounds.height - bands.bottom <= 720);
+  const far = clampPetPosition(-9999, 9999, bounds, area, 1.6);
+  assert.equal(far.y, 720 - bounds.height + bands.bottom, 'her feet rest on the bottom edge');
+  assert.ok(far.x < area.x, 'the transparent side of the window may hang past the left edge');
 });
 test('local IPC and pointer interactions choose identical available actions and scene lines', () => {
   for (const event of Object.keys(require('../shared/companion-events.json'))) {

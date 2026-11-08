@@ -201,10 +201,16 @@ app.on('browser-window-created', (_, created) => {
       assert.equal(clickThrough.at(-1), false);
       input(pet, { x: Math.round(opaque.x), y: Math.round(opaque.y) });
       await wait(`!!document.querySelector('.touch-feedback.headpat')`, petJs);
-      await petJs(`document.querySelector('[aria-label="打开桌宠聊天"]').click()`);
+      await petJs(
+        `(async()=>{document.querySelector('[aria-label="和角色说话"]').click();for(let n=0;n<100&&!document.querySelector('[aria-label="打开桌宠聊天"]');n++)await new Promise(r=>setTimeout(r,20));document.querySelector('[aria-label="打开桌宠聊天"]').click()})()`,
+      );
       await wait(`!!document.querySelector('.pet-chat-panel')`, petJs);
       await petJs(`window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))`);
       await wait(`!document.querySelector('.pet-chat-panel')`, petJs);
+      // Closing the conversation returns to the message box under her; closing that brings the toolbar back.
+      await wait(`!!document.querySelector('[aria-label="收起输入框"]')`, petJs);
+      await petJs(`document.querySelector('[aria-label="收起输入框"]').click()`);
+      await wait(`!!document.querySelector('[aria-label="让角色休息"]')`, petJs);
       await petJs(`document.querySelector('[aria-label="让角色休息"]').click()`);
       await wait(`document.querySelector('.pet-draggable canvas').dataset.clip==='sleep'`, petJs);
       await petJs(`document.querySelector('[aria-label="唤醒角色"]').click()`);

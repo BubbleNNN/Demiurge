@@ -246,7 +246,6 @@ function createWorkshop() {
 function updatePetLayout(state) {
   if (!pet || pet.isDestroyed() || !state) return;
   const current = pet.getBounds();
-  const area = screen.getDisplayMatching(current).workArea;
   const skin = state.skins.find(
     (s) => s.id === state.activeSkinId && s.characterId === state.activeCharacterId,
   );
@@ -266,14 +265,67 @@ function updatePetLayout(state) {
   const next = require('./pet-layout.cjs').petBounds(
     state.settings.petSize,
     petAspect,
-    area,
+    petArea(current),
     current,
     state.settings.petScale,
   );
   if (Object.keys(next).some((key) => next[key] !== current[key])) pet.setBounds(next);
+  reportPetRoom();
 }
 let petAspect = 0.75,
   liveScaleUntil = 0;
+// The work area of the display her figure is on (the window's bands may hang past its edges).
+function petArea(bounds) {
+  return screen.getDisplayNearestPoint(require('./pet-layout.cjs').figureCentre(bounds)).workArea;
+}
+// Where she was left on the desktop, so she reopens there instead of at the bottom right.
+const petPlaceFile = () => path.join(app.getPath('userData'), 'pet-place.json');
+let petPlaceTimer = null,
+  lastRoom = '';
+function rememberPetPlace() {
+  clearTimeout(petPlaceTimer);
+  petPlaceTimer = setTimeout(() => {
+    if (!pet || pet.isDestroyed()) return;
+    const { x, y, width, height } = pet.getBounds();
+    void fs
+      .writeFile(petPlaceFile(), JSON.stringify({ x, y, width, height }), { mode: 0o600 })
+      .catch(() => {});
+  }, 800);
+}
+async function savedPetPlace() {
+  try {
+    const value = JSON.parse(await fs.readFile(petPlaceFile(), 'utf8'));
+    return ['x', 'y', 'width', 'height'].every((key) => Number.isFinite(value?.[key])) &&
+      value.width > 0 &&
+      value.height > 0 &&
+      value.width < 20000 &&
+      value.height < 20000
+      ? { x: value.x, y: value.y, width: value.width, height: value.height }
+      : null;
+  } catch {
+    return null;
+  }
+}
+// Which parts of the bands above and below her are on screen, for the page to place her speech
+// and the controls where they can be seen.
+function reportPetRoom() {
+  if (!pet || pet.isDestroyed()) return;
+  const bounds = pet.getBounds();
+  const room = require('./pet-layout.cjs').petRoom(bounds, petArea(bounds));
+  const key = `${room.above}:${room.below}`;
+  if (key === lastRoom) return;
+  lastRoom = key;
+  pet.webContents.send('mori:pet-room', room);
+}
+function movePetTo(x, y) {
+  const bounds = pet.getBounds();
+  const area = petArea({ ...bounds, x, y });
+  const position = require('./pet-layout.cjs').clampPetPosition(x, y, bounds, area, petAspect);
+  pet.setPosition(position.x, position.y);
+  reportPetRoom();
+  rememberPetPlace();
+  return pet.getBounds();
+}
 async function createPet() {
   const state = await store.loadState();
   const character = state?.characters.find((c) => c.id === state.activeCharacterId);
@@ -287,19 +339,26 @@ async function createPet() {
     pet.show();
     return;
   }
-  const bounds = screen.getPrimaryDisplay().workArea;
+  const saved = await savedPetPlace();
+  const start = require('./pet-layout.cjs').petBounds(
+    state.settings.petSize,
+    petAspect,
+    saved ? petArea(saved) : screen.getPrimaryDisplay().workArea,
+    saved || undefined,
+    state.settings.petScale,
+  );
+  lastRoom = '';
   pet = new BrowserWindow({
     title: 'Mori 桌宠',
-    width: 340,
-    height: 480,
-    x: bounds.x + bounds.width - 370,
-    y: bounds.y + bounds.height - 495,
+    ...start,
     frame: false,
     transparent: true,
     resizable: false,
     hasShadow: false,
     alwaysOnTop: true,
     skipTaskbar: true,
+    // Her bands may hang past the screen edges so that she can stand right at them.
+    enableLargerThanScreen: true,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -314,6 +373,14 @@ async function createPet() {
   updatePetLayout(state);
   pet.setAlwaysOnTop(true, 'floating');
   pet.once('ready-to-show', () => pet?.showInactive());
+  pet.webContents.on('did-finish-load', () => {
+    lastRoom = '';
+    reportPetRoom();
+  });
+  pet.on('move', () => {
+    reportPetRoom();
+    rememberPetPlace();
+  });
   pet.on('closed', () => {
     pet = null;
   });
@@ -356,7 +423,8 @@ app.whenReady().then(async () => {
         throw new Error('角色或参考图刚发生变化，动画结果已留在任务中，请核对后处理。');
       if (base.skins.some((s) => s.id === candidate.id)) return;
       // A repacked result takes the old one's place unless that one was approved or is in use.
-      const old = replaces && base.skins.find((s) => s.id === replaces && s.characterId === candidate.characterId);
+      const old =
+        replaces && base.skins.find((s) => s.id === replaces && s.characterId === candidate.characterId);
       const drop = old && old.review?.status !== 'approved' && base.activeSkinId !== old.id;
       const skins = [...base.skins.filter((s) => !(drop && s.id === old.id)), candidate];
       const saved = await store.saveMergedState({ ...base, skins }, base);
@@ -367,7 +435,9 @@ app.whenReady().then(async () => {
     try {
       // Stored animation atlases (content-addressed) or installed model files.
       const stored = require('./skin-assets.cjs').ASSET.exec(request.url);
-      const file = stored ? path.join(store.assetDir, `${stored[1]}.png`) : resolveAsset(modelsDir, request.url);
+      const file = stored
+        ? path.join(store.assetDir, `${stored[1]}.png`)
+        : resolveAsset(modelsDir, request.url);
       const response = await net.fetch(pathToFileURL(file).href);
       const headers = new Headers(response.headers);
       headers.set('Access-Control-Allow-Origin', '*');
@@ -1116,17 +1186,39 @@ app.whenReady().then(async () => {
     return services.testConnection(settings, credentials);
   });
   handle('desktop-scene', async (event, icons) => {
-    if(!pet || event.sender!==pet.webContents)throw Error('请在桌宠窗口中探索桌面。');
-    const bounds=pet.getBounds(),area=screen.getDisplayMatching(bounds).workArea;
-    const windows=await require('./desktop-surfaces.cjs').desktopSurfaces({x:0,y:0});
-    const targets=icons===true?await require('./desktop-icons.cjs').desktopIcons({x:0,y:0}):{icons:[],supported:true};
-    return {bounds,area,surfaces:windows.surfaces,icons:targets.icons,supported:windows.supported,reason:windows.reason||targets.reason};
+    if (!pet || event.sender !== pet.webContents) throw Error('请在桌宠窗口中探索桌面。');
+    const bounds = pet.getBounds(),
+      area = petArea(bounds);
+    const windows = await require('./desktop-surfaces.cjs').desktopSurfaces({ x: 0, y: 0 });
+    const targets =
+      icons === true
+        ? await require('./desktop-icons.cjs').desktopIcons({ x: 0, y: 0 })
+        : { icons: [], supported: true };
+    const { top, bottom } = require('./pet-layout.cjs').bands;
+    return {
+      bounds,
+      area,
+      // How far the window may hang past the top and bottom of the work area.
+      margins: { top, bottom },
+      surfaces: windows.surfaces,
+      icons: targets.icons,
+      supported: windows.supported,
+      reason: windows.reason || targets.reason,
+    };
   });
-  handle('step-pet',(event,target)=>{
-    if(!pet || event.sender!==pet.webContents || !Number.isFinite(target?.x)||!Number.isFinite(target?.y))throw Error('桌宠位置无效');
-    const bounds=pet.getBounds(),area=screen.getDisplayMatching(bounds).workArea;
-    const x=bounds.x+Math.max(-150,Math.min(150,target.x-bounds.x)),y=bounds.y+Math.max(-150,Math.min(150,target.y-bounds.y));
-    const p=require('./pet-layout.cjs').clampPetPosition(x,y,bounds,area);pet.setPosition(p.x,p.y);return pet.getBounds();
+  handle('step-pet', (event, target) => {
+    if (
+      !pet ||
+      event.sender !== pet.webContents ||
+      !Number.isFinite(target?.x) ||
+      !Number.isFinite(target?.y)
+    )
+      throw Error('桌宠位置无效');
+    const bounds = pet.getBounds();
+    return movePetTo(
+      bounds.x + Math.max(-150, Math.min(150, target.x - bounds.x)),
+      bounds.y + Math.max(-150, Math.min(150, target.y - bounds.y)),
+    );
   });
   handle('open-pet', () => createPet());
   handle('close-pet', () => {
@@ -1181,22 +1273,22 @@ app.whenReady().then(async () => {
     )
       return;
     const [x, y] = pet.getPosition();
-    const target = {
-      x: x + Math.max(-150, Math.min(150, Math.round(delta.x))),
-      y: y + Math.max(-150, Math.min(150, Math.round(delta.y))),
-    };
-    const area = screen.getDisplayNearestPoint(target).workArea;
-    const position = require('./pet-layout.cjs').clampPetPosition(target.x, target.y, pet.getBounds(), area);
-    pet.setPosition(position.x, position.y);
+    movePetTo(
+      x + Math.max(-150, Math.min(150, Math.round(delta.x))),
+      y + Math.max(-150, Math.min(150, Math.round(delta.y))),
+    );
   });
   // Live resizing while the user scrolls or pinches over the pet; the renderer saves the final
   // scale a moment later, and the layout then lands on the same bounds.
   ipcMain.on('mori:scale-pet', (event, scale) => {
     if (!isTrusted(event) || !pet || event.sender !== pet.webContents || !Number.isFinite(scale)) return;
-    const current = pet.getBounds(),
-      area = screen.getDisplayMatching(current).workArea;
+    const current = pet.getBounds();
     liveScaleUntil = Date.now() + 1500;
-    pet.setBounds(require('./pet-layout.cjs').petBounds('medium', petAspect, area, current, scale));
+    pet.setBounds(
+      require('./pet-layout.cjs').petBounds('medium', petAspect, petArea(current), current, scale),
+    );
+    reportPetRoom();
+    rememberPetPlace();
   });
   // Seconds since the last keyboard or mouse input anywhere, so the character asks for attention
   // at a pause rather than in the middle of the user's typing.

@@ -228,7 +228,11 @@
   height: 64px;
   transform: translateX(-50%);
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--ink) 20%, transparent), transparent 70%);
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--ink) 20%, transparent),
+    transparent 70%
+  );
   z-index: 1;
 }
 .room-scene .room-figure {
@@ -982,7 +986,9 @@
 }
 
 /* Studio content: soften the existing cards into the room language. */
-.room-app .page-frame-body :is(
+.room-app
+  .page-frame-body
+  :is(
     .production-entry,
     .creation-tools,
     .saved-appearances,
@@ -1326,7 +1332,11 @@
   height: 280px;
   border-radius: 18px;
   overflow: hidden;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 88%, #1b2a5a), color-mix(in srgb, var(--accent) 35%, #241a3a));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ink) 88%, #1b2a5a),
+    color-mix(in srgb, var(--accent) 35%, #241a3a)
+  );
 }
 .falling-star {
   position: absolute;
@@ -1399,7 +1409,10 @@
   background: color-mix(in srgb, var(--paper, #fff) 92%, transparent);
   color: var(--muted);
   opacity: 0;
-  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
 .wardrobe-item:hover .wardrobe-delete,
 .wardrobe-delete:focus-visible {
@@ -1447,7 +1460,7 @@
 }
 .pet-size-note {
   position: absolute;
-  bottom: 44px;
+  bottom: calc(var(--band-bottom) + 8px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 12;

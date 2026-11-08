@@ -81,7 +81,7 @@ app.on('browser-window-created', (_e, win) => {
       });
       await pj('document.querySelector("[aria-label=探索桌面]").click()');
       await wait(
-        () => pj('document.querySelector(".pet-name-tag")?.title.includes("在窗口边缘")'),
+        () => pj('document.querySelector(".desktop-pet-shell")?.dataset.status.includes("在窗口边缘")'),
         'arrival',
       );
       await pj('document.querySelector("[aria-label=结束桌面活动]").click()');

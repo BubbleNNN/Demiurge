@@ -127,11 +127,19 @@ test('packing supplies only generated gestures, grounded rest and finite authore
   assert.equal(packed.sprite.width, 384);
   assert.equal(packed.sprite.height, 512);
   assert.equal(packed.sprite.frames.length, 21);
+  // She rests on the blink sheet's opening pose, drawn like the motions, not on the separately
+  // drawn still (frame 0) whose proportions differ: gestures start and end on that rest.
+  const rest = packed.sprite.clips.idle.frames[0];
+  assert.notEqual(rest, 0);
+  assert.equal(rest, packed.sprite.clips.blink.frames[1] - 1);
+  assert.deepEqual(packed.sprite.clips.neutral.frames, [rest]);
   assert.equal(packed.sprite.clips.wave.loop, false);
-  assert.equal(packed.sprite.clips.wave.frames.at(-1), 0);
+  assert.equal(packed.sprite.clips.wave.frames[0], rest);
+  assert.equal(packed.sprite.clips.wave.frames.at(-1), rest);
+  assert.ok(!Object.values(packed.sprite.clips).some((clip) => clip.frames.includes(0)));
   assert.equal(packed.sprite.clips.talk.loop, true);
   assert.deepEqual(packed.sprite.mouthFrames, {
-    closed: 0,
+    closed: rest,
     small: packed.sprite.clips.talk.frames[1],
     wide: packed.sprite.clips.talk.frames[2],
   });
@@ -188,7 +196,10 @@ test('packing shrinks frames uniformly, with an explicit warning, only when the 
   assert.equal(encodes, 2);
   assert.ok(packed.warnings.some((warning) => /按原始采样的 90% 保存/.test(warning)));
   const native = packFrames(image, { wave: sheet }, 'original', fixture.codec);
-  assert.ok(!native.warnings.some((warning) => /按原始采样/.test(warning)), 'fitting atlases keep native density');
+  assert.ok(
+    !native.warnings.some((warning) => /按原始采样/.test(warning)),
+    'fitting atlases keep native density',
+  );
   let attempts = 0;
   const never = {
     ...fixture.codec,
@@ -203,12 +214,7 @@ test('packing shrinks frames uniformly, with an explicit warning, only when the 
 test('two styles run with direct reference provenance, separate masters and automatic pending candidate installation', async (t) => {
   const context = await setup(t),
     p = context.pipeline;
-  let job = await p.start(
-    character,
-    { styles: ['3d', 'original'], motions: ['wave', 'talk'] },
-    settings,
-    {},
-  );
+  let job = await p.start(character, { styles: ['3d', 'original'], motions: ['wave', 'talk'] }, settings, {});
   assert.equal(context.calls(), 0);
   for (let n = 0; n < job.steps.length; n++) job = await p.advance(job.id, character, settings, {});
   assert.equal(job.status, 'ready');
@@ -350,12 +356,23 @@ test('a rejected pose sheet is regenerated automatically with the reason fed bac
   assert.match(job.steps[1].error, /已自动重做 3 次/);
   assert.equal(requests.length, 4);
   assert.equal(requests[0], undefined, 'the first request carries no feedback');
-  assert.ok(requests.slice(1).every((feedback) => /repeated the same pose/.test(feedback)), 'retries carry the reason');
+  assert.ok(
+    requests.slice(1).every((feedback) => /repeated the same pose/.test(feedback)),
+    'retries carry the reason',
+  );
   await assert.rejects(context.pipeline.advance(job.id, character, settings, {}), /完全相同/);
-  assert.equal((await fs.readdir(context.root)).filter((name) => name.includes('.rejected-')).length, 3, 'automatic rounds keep each rejected sheet; the last stays as the step output');
+  assert.equal(
+    (await fs.readdir(context.root)).filter((name) => name.includes('.rejected-')).length,
+    3,
+    'automatic rounds keep each rejected sheet; the last stays as the step output',
+  );
   bad = false;
   job = await context.pipeline.retry(job.id, 1);
-  assert.equal((await fs.readdir(context.root)).filter((name) => name.includes('.rejected-')).length, 4, 'a manual retry sets the last one aside too');
+  assert.equal(
+    (await fs.readdir(context.root)).filter((name) => name.includes('.rejected-')).length,
+    4,
+    'a manual retry sets the last one aside too',
+  );
   assert.equal(job.steps[1].attempts, undefined, 'a manual retry starts a fresh round');
   job = await context.pipeline.advance(job.id, character, settings, {});
   job = await context.pipeline.advance(job.id, character, settings, {});
@@ -518,7 +535,12 @@ test('sticker job repairs a slightly rectangular output locally, keeps raw artif
       },
     },
   });
-  let job = await context.pipeline.start(character, { styles: ['chibi-pet'], motions: ['wave'] }, settings, {});
+  let job = await context.pipeline.start(
+    character,
+    { styles: ['chibi-pet'], motions: ['wave'] },
+    settings,
+    {},
+  );
   for (let i = 0; i < 3; i++) job = await context.pipeline.advance(job.id, character, settings, {});
   assert.equal(job.status, 'ready');
   assert.equal(sheetCalls, 1, 'Padding must never cause a new request');
@@ -539,11 +561,24 @@ test('sticker job repairs a slightly rectangular output locally, keeps raw artif
 
 test('activity jobs resume with eight-pose assets and retain transition clips in exported bundles', async (t) => {
   const sheetCalls = [];
-  const context = await setup(t, { services: { async generatePetSheet(input) {
-    sheetCalls.push(input.motion);
-    return { image: fixture.url(fixture.image(true, { frames: 8 })), prompt: 'activity poses', model: 'test-images' };
-  } } });
-  let job = await context.pipeline.start(character, { styles: ['chibi-pet'], motions: ['read', 'gaming'], frameCount: 4 }, settings, {});
+  const context = await setup(t, {
+    services: {
+      async generatePetSheet(input) {
+        sheetCalls.push(input.motion);
+        return {
+          image: fixture.url(fixture.image(true, { frames: 8 })),
+          prompt: 'activity poses',
+          model: 'test-images',
+        };
+      },
+    },
+  });
+  let job = await context.pipeline.start(
+    character,
+    { styles: ['chibi-pet'], motions: ['read', 'gaming'], frameCount: 4 },
+    settings,
+    {},
+  );
   job = await context.pipeline.advance(job.id, character, settings, {});
   job = await context.pipeline.advance(job.id, character, settings, {});
   const restarted = createPetPipeline(context.options);
@@ -560,29 +595,38 @@ test('activity jobs resume with eight-pose assets and retain transition clips in
 });
 
 test('aligned jobs persist layout and continuity references across resume without regenerating completed sheets', async (t) => {
-  const {stageSheet}=require('./fixtures/pet-stages.cjs');
-  const png=fixture.url(stageSheet());
-  const requests=[];
-  const context=await setup(t,{services:{async generatePetSheet(input){
-    requests.push(input);
-    return {image:png,prompt:'twelve authored frames',model:'test-images'};
-  }}});
-  let job=await context.pipeline.start(character,{styles:['chibi-pet'],motions:['read','walk_left'],transitionVersion:3},settings,{});
-  job=await context.pipeline.advance(job.id,character,settings,{});
-  job=await context.pipeline.advance(job.id,character,settings,{});
-  assert.deepEqual(requests[0].continuityReferences,[]);
-  const restarted=createPetPipeline(context.options);
-  job=await restarted.advance(job.id,character,settings,{});
-  assert.deepEqual(requests[1].continuityReferences,[{motion:'read',image:png}]);
-  assert.equal(requests[1].transitionVersion,3);
-  job=await restarted.advance(job.id,character,settings,{});
-  assert.equal(job.status,'ready');
-  const [skin]=await restarted.results(job.id);
-  assert.equal(skin.sprite.frames.length,25);
-  assert.deepEqual(skin.sprite.clips.walk_left.frames,[17,18,19,20]);
-  assert.equal(skin.review.status,'pending');
-  await restarted.advance(job.id,character,settings,{});
-  assert.equal(requests.length,2);
+  const { stageSheet } = require('./fixtures/pet-stages.cjs');
+  const png = fixture.url(stageSheet());
+  const requests = [];
+  const context = await setup(t, {
+    services: {
+      async generatePetSheet(input) {
+        requests.push(input);
+        return { image: png, prompt: 'twelve authored frames', model: 'test-images' };
+      },
+    },
+  });
+  let job = await context.pipeline.start(
+    character,
+    { styles: ['chibi-pet'], motions: ['read', 'walk_left'], transitionVersion: 3 },
+    settings,
+    {},
+  );
+  job = await context.pipeline.advance(job.id, character, settings, {});
+  job = await context.pipeline.advance(job.id, character, settings, {});
+  assert.deepEqual(requests[0].continuityReferences, []);
+  const restarted = createPetPipeline(context.options);
+  job = await restarted.advance(job.id, character, settings, {});
+  assert.deepEqual(requests[1].continuityReferences, [{ motion: 'read', image: png }]);
+  assert.equal(requests[1].transitionVersion, 3);
+  job = await restarted.advance(job.id, character, settings, {});
+  assert.equal(job.status, 'ready');
+  const [skin] = await restarted.results(job.id);
+  assert.equal(skin.sprite.frames.length, 25);
+  assert.deepEqual(skin.sprite.clips.walk_left.frames, [17, 18, 19, 20]);
+  assert.equal(skin.review.status, 'pending');
+  await restarted.advance(job.id, character, settings, {});
+  assert.equal(requests.length, 2);
 });
 
 test('the chibi look searches once per task, persists the result and reuses it on retry; other looks never search', async (t) => {
@@ -602,7 +646,13 @@ test('the chibi look searches once per task, persists the result and reuses it o
             status: 'found',
             checkedAt: character.createdAt,
             reason: 'fixture: verified existing chibi',
-            sources: [{ title: '画廊', url: 'https://gallery.example/chibi', imageUrl: 'https://gallery.example/a.png' }],
+            sources: [
+              {
+                title: '画廊',
+                url: 'https://gallery.example/chibi',
+                imageUrl: 'https://gallery.example/a.png',
+              },
+            ],
             warnings: [],
           },
         };
@@ -633,7 +683,9 @@ test('the chibi look searches once per task, persists the result and reuses it o
   job = await context.pipeline.advance(job.id, character, settings, {});
   assert.equal(job.steps[0].status, 'uncertain', 'a provider error is an interrupted step');
   assert.equal(searches, 1);
-  const saved = JSON.parse(await fs.readFile(path.join(context.root, `${job.id}.chibi-reference.json`), 'utf8'));
+  const saved = JSON.parse(
+    await fs.readFile(path.join(context.root, `${job.id}.chibi-reference.json`), 'utf8'),
+  );
   assert.equal(saved.summary.status, 'found');
   await context.pipeline.retry(job.id, 0);
   job = await context.pipeline.advance(job.id, character, settings, {});
@@ -645,7 +697,10 @@ test('the chibi look searches once per task, persists the result and reuses it o
   assert.equal(received.filter((input) => input.style === 'original')[0].chibiContext, undefined);
   const [chibi] = (await context.pipeline.results(job.id)).filter((skin) => skin.style === 'chibi-pet');
   assert.equal(chibi.generation.chibiResearch.status, 'found');
-  assert.equal(createBundle(character, [chibi]).skins[0].generation.chibiResearch.sources[0].url, 'https://gallery.example/chibi');
+  assert.equal(
+    createBundle(character, [chibi]).skins[0].generation.chibiResearch.sources[0].url,
+    'https://gallery.example/chibi',
+  );
 });
 
 test('new tasks accept only the four offered looks; an approved earlier look can still receive motions', async (t) => {
@@ -667,21 +722,26 @@ test('new tasks accept only the four offered looks; an approved earlier look can
   assert.deepEqual(job.styles, ['pastel']);
 });
 
-
 test('a hair tip or shoe grazing a cell edge is kept and reported; a body crossing the border is still rejected', () => {
   const decoded = fixture.decode(fixture.image(true));
   const graze = (rows, x0, w) => {
     const copy = { ...decoded, bitmap: Buffer.from(decoded.bitmap) };
     // Solid pixels on the top edge of the first cell, `w` columns wide.
     for (let y = 0; y < rows; y++)
-      for (let x = x0; x < x0 + w; x++) copy.bitmap.fill(255, (y * copy.width + x) * 4, (y * copy.width + x) * 4 + 4);
+      for (let x = x0; x < x0 + w; x++)
+        copy.bitmap.fill(255, (y * copy.width + x) * 4, (y * copy.width + x) * 4 + 4);
     return fixture.url(fixture.encode(copy.bitmap, copy.width, copy.height));
   };
   const cell = decoded.width / 2;
   const report = inspectSheet(graze(2, 40, Math.floor(cell * 0.06)), fixture.codec, 'wave');
   assert.deepEqual(report.edgeContacts, [{ frame: 1, side: 'top', span: Math.floor(cell * 0.06) }]);
   assert.throws(() => inspectSheet(graze(2, 20, Math.floor(cell * 0.3)), fixture.codec, 'wave'), /裁切/);
-  const packed = packFrames(image, { wave: graze(2, 40, Math.floor(cell * 0.06)) }, 'original', fixture.codec);
+  const packed = packFrames(
+    image,
+    { wave: graze(2, 40, Math.floor(cell * 0.06)) },
+    'original',
+    fixture.codec,
+  );
   assert.ok(packed.warnings.some((w) => /第 1 帧.*贴到分格边缘/.test(w)));
 });
 
@@ -718,7 +778,11 @@ test('a finished task can be repacked from its saved sheets without any image re
   assert.equal(job.status, 'queued');
   assert.equal(job.steps.at(-1).status, 'queued');
   assert.equal(job.steps.at(-1).replaces, first);
-  assert.deepEqual(job.steps.slice(0, -1).map((s) => s.status), ['done', 'done'], 'saved sheets are reused');
+  assert.deepEqual(
+    job.steps.slice(0, -1).map((s) => s.status),
+    ['done', 'done'],
+    'saved sheets are reused',
+  );
   job = await createPetPipeline(context.options).advance(job.id, character, settings, {});
   assert.equal(job.status, 'ready');
   assert.equal(context.calls(), calls, 'no image request');
@@ -726,7 +790,10 @@ test('a finished task can be repacked from its saved sheets without any image re
   assert.notEqual(job.results[0].skinId, first);
   assert.equal(installs.at(-1).replaces, first, 'the earlier result is named for replacement');
   assert.equal(job.steps.at(-1).replaces, undefined);
-  assert.ok((await fs.readdir(context.root)).some((name) => name.includes('.superseded-')), 'the earlier atlas is kept on disk');
+  assert.ok(
+    (await fs.readdir(context.root)).some((name) => name.includes('.superseded-')),
+    'the earlier atlas is kept on disk',
+  );
   await assert.rejects(
     (async () => {
       const busy = await context.pipeline.repack(job.id);

@@ -63,7 +63,7 @@ export interface ChibiResearch {
   status: 'found' | 'fallback';
   checkedAt: string;
   reason: string;
-  sources: {title: string; url: string; imageUrl?: string}[];
+  sources: { title: string; url: string; imageUrl?: string }[];
   warnings: string[];
 }
 export interface ImageProvenance {
@@ -206,10 +206,7 @@ export interface SpriteAnimation {
   height: number;
   frames: SpriteFrame[];
   clips: Partial<
-    Record<
-      PetAction | `enter_${PetAction}` | `exit_${PetAction}` | 'blink' | 'talk' | Emotion,
-      SpriteClip
-    >
+    Record<PetAction | `enter_${PetAction}` | `exit_${PetAction}` | 'blink' | 'talk' | Emotion, SpriteClip>
   > & { idle: SpriteClip };
   pixelated?: boolean;
   palette?: string[];
@@ -360,7 +357,9 @@ export interface ModelJob {
   error?: string;
   skin?: Skin;
 }
-export type PetMotion = DesktopAction | 'office'
+export type PetMotion =
+  | DesktopAction
+  | 'office'
   | 'blink'
   | 'talk'
   | 'wave'
@@ -550,7 +549,7 @@ export interface MoriBridge {
   speak(text: string): Promise<string>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
   desktopScene(icons?: boolean): Promise<DesktopScene>;
-  stepPet(target: {x:number;y:number}): Promise<DesktopRect>;
+  stepPet(target: { x: number; y: number }): Promise<DesktopRect>;
   openPet(): Promise<void>;
   closePet(): Promise<void>;
   movePet(delta: { x: number; y: number }): void;
@@ -567,6 +566,8 @@ export interface MoriBridge {
   onStateChanged(callback: (state: AppState) => void): () => void;
   onKeysChanged(callback: (keys: KeyStatus) => void): () => void;
   onChatStatusChanged(callback: (status: ChatStatus) => void): () => void;
+  /** Points of the pet window's bands above and below her figure that are on screen. */
+  onPetRoom?(callback: (room: { above: number; below: number }) => void): () => void;
   onBeforeClose?(callback: () => Promise<unknown>): () => void;
 }
 declare global {
@@ -575,5 +576,19 @@ declare global {
   }
 }
 
-export interface DesktopRect {x:number;y:number;width:number;height:number}
-export interface DesktopScene {bounds:DesktopRect;area:DesktopRect;surfaces:(DesktopRect & {id:string})[];icons:(DesktopRect & {id:string})[];supported:boolean;reason?:string}
+export interface DesktopRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+export interface DesktopScene {
+  bounds: DesktopRect;
+  area: DesktopRect;
+  /** How far the pet window may hang past the top and bottom of the work area. */
+  margins?: { top: number; bottom: number };
+  surfaces: (DesktopRect & { id: string })[];
+  icons: (DesktopRect & { id: string })[];
+  supported: boolean;
+  reason?: string;
+}

@@ -191,3 +191,59 @@ test('explicit authored mouth poses follow audio opening, close on silence and k
   );
   assert.equal(selectSpriteFrame(animation, { ...input, talking: true, time: 130 }).frame, 2);
 });
+
+test('packs that rested on the separately drawn still move their rest onto the blink sheet pose', () => {
+  const { restOnMotionSheet } = load('src/initial.ts');
+  const frame = (cell, page) => ({
+    rect: [0, 0, 10, 10],
+    duration: 140,
+    offset: [0, 0],
+    cell,
+    ...(page ? { page } : {}),
+  });
+  // Frame 0: the approved still (a larger canvas); 1–3: blink sheet; 4–6: wave sheet.
+  const pack = {
+    width: 384,
+    height: 512,
+    frames: [
+      frame([1063, 1417]),
+      frame([400, 534]),
+      frame([400, 534]),
+      frame([400, 534]),
+      frame([420, 559]),
+      frame([420, 559]),
+      frame([420, 559]),
+    ],
+    clips: {
+      idle: { frames: [0], loop: true },
+      neutral: { frames: [0], loop: true },
+      blink: { frames: [0, 2, 3, 0], loop: false },
+      wave: { frames: [0, 5, 6, 0], loop: false },
+      talk: { frames: [0, 5, 6], loop: true },
+    },
+    mouthFrames: { closed: 0, small: 5, wide: 6 },
+  };
+  const moved = restOnMotionSheet(pack);
+  assert.deepEqual(moved.clips.idle.frames, [1]);
+  assert.deepEqual(moved.clips.neutral.frames, [1]);
+  assert.deepEqual(moved.clips.blink.frames, [1, 2, 3, 1]);
+  assert.deepEqual(moved.clips.wave.frames, [1, 5, 6, 1]);
+  assert.deepEqual(moved.clips.talk.frames, [1, 5, 6]);
+  assert.equal(moved.mouthFrames.closed, 1);
+  assert.equal(moved.frames, pack.frames, 'the atlas is untouched');
+  // Already moved, imported frame folders, a used or mismatched frame: left alone.
+  assert.equal(restOnMotionSheet(moved), moved);
+  for (const other of [
+    { ...pack, clips: { ...pack.clips, blink: { frames: [1, 2, 3], loop: false } } },
+    { ...pack, clips: { ...pack.clips, wave: { frames: [1, 5, 6, 0], loop: false } } },
+    { ...pack, frames: pack.frames.map((f, i) => (i === 1 ? frame([700, 900]) : f)) },
+    { ...pack, frames: pack.frames.map((f, i) => (i === 1 ? frame([400, 534], 1) : f)) },
+  ])
+    assert.equal(restOnMotionSheet(other), other);
+  // Saved workspaces are moved once when loaded.
+  const state = initialState();
+  const skin = { ...state.skins[0], id: 'generated-rest', sprite: pack };
+  const migrated = migrateState({ ...state, skins: [...state.skins, skin] });
+  assert.deepEqual(migrated.skins.find((s) => s.id === 'generated-rest').sprite.clips.idle.frames, [1]);
+  assert.equal(migrateState(migrated), migrated);
+});

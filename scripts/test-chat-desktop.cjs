@@ -133,7 +133,9 @@ app.on('browser-window-created', (_, win) => {
         if (!pet.webContents.isLoading() && (await petJS(`!!document.querySelector('.pet-toolbar')`))) break;
         await delay(40);
       }
-      await petJS(`document.querySelector('[aria-label="打开桌宠聊天"]').click()`);
+      await petJS(
+        `(async()=>{document.querySelector('[aria-label="和角色说话"]').click();for(let n=0;n<100&&!document.querySelector('[aria-label="打开桌宠聊天"]');n++)await new Promise(r=>setTimeout(r,20));document.querySelector('[aria-label="打开桌宠聊天"]').click()})()`,
+      );
       await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
       const address = `http://127.0.0.1:${server.address().port}/v1`;
       await js(
@@ -169,7 +171,9 @@ app.on('browser-window-created', (_, win) => {
         pet.webContents.reload();
       });
       await waitPet(`!!document.querySelector('.pet-toolbar')`);
-      await petJS(`document.querySelector('[aria-label="打开桌宠聊天"]').click()`);
+      await petJS(
+        `(async()=>{document.querySelector('[aria-label="和角色说话"]').click();for(let n=0;n<100&&!document.querySelector('[aria-label="打开桌宠聊天"]');n++)await new Promise(r=>setTimeout(r,20));document.querySelector('[aria-label="打开桌宠聊天"]').click()})()`,
+      );
       await waitPet(`document.querySelector('.connection-text')?.textContent.includes('另一窗口')`);
       await petJS(
         `(()=>{const input=document.querySelector('[aria-label="聊天消息"]');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'桌宠等待时保留的草稿');input.dispatchEvent(new Event('input',{bubbles:true}))})()`,
@@ -416,8 +420,10 @@ app.on('browser-window-created', (_, win) => {
       );
       await js(`window.mori.openPet()`);
       pet = BrowserWindow.getAllWindows().find((w) => w !== win);
-      await waitPet(`!!document.querySelector('[aria-label="打开桌宠聊天"]')`);
-      await petJS(`document.querySelector('[aria-label="打开桌宠聊天"]').click()`);
+      await waitPet(`!!document.querySelector('[aria-label="和角色说话"]')`);
+      await petJS(
+        `(async()=>{document.querySelector('[aria-label="和角色说话"]').click();for(let n=0;n<100&&!document.querySelector('[aria-label="打开桌宠聊天"]');n++)await new Promise(r=>setTimeout(r,20));document.querySelector('[aria-label="打开桌宠聊天"]').click()})()`,
+      );
       await waitPet(`!!document.querySelector('.compose-bottom [aria-label="开启新话题"]')`);
       await petJS(`document.querySelector('.compose-bottom [aria-label="开启新话题"]').click()`);
       await waitPet(`!!document.querySelector('.topic-notice')`);

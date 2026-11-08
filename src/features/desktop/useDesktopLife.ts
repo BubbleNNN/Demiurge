@@ -1,7 +1,9 @@
-// The desktop character's body: she stands on the floor, on window tops or on desktop icons,
-// walks and climbs between them according to her temperament, rides a window when it moves and
-// falls when what she stands on goes away. Adapted in part from Anime Codex (MIT): visible places,
-// bounded travel and revalidation before every stay.
+// The desktop character's body: she stays wherever the user puts her down, anywhere on the
+// screen. Let go just above a window top, an icon or the bottom of the screen, she steps onto it;
+// on such a ledge she walks and climbs according to her temperament and rides a window when it
+// moves. When what she stands on goes away she simply stays where she is: there is no gravity.
+// Adapted in part from Anime Codex (MIT): visible places, bounded travel and revalidation before
+// every stay.
 import { useEffect, useRef, useState } from 'react';
 import { bridge } from '../../bridge';
 import { choosePlace, placeVisible, type Place } from '../../desktopLife';
@@ -43,6 +45,10 @@ interface Options {
   onPerch: () => void;
 }
 type Phase = 'idle' | 'finding' | 'inviting' | 'moving' | 'staying';
+// Let go this close above a ledge (in points), she steps down onto it.
+const SNAP = 36;
+// After the user puts her somewhere she stays there a while before setting off on her own.
+const PLACED_STAY = 3 * 60000;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Position of an element inside the window from layout alone: the swing and the landing squash
@@ -97,9 +103,14 @@ export function useDesktopLife(options: Options) {
     support = useRef<{ ledge: Ledge; window?: DesktopRect & { id: string } } | null>(null),
     lastFront = useRef(''),
     focusChanged = useRef(false),
-    icons = useRef<{ at: number; list: DesktopScene['icons']; denied: boolean }>({ at: 0, list: [], denied: false }),
+    icons = useRef<{ at: number; list: DesktopScene['icons']; denied: boolean }>({
+      at: 0,
+      list: [],
+      denied: false,
+    }),
     nextDecision = useRef(Date.now() + 15000),
-    nextHide = useRef(Date.now() + 30000);
+    nextHide = useRef(Date.now() + 30000),
+    placedAt = useRef(0);
   phaseRef.current = phase;
   const go = (value: Phase) => {
     phaseRef.current = value;
@@ -112,7 +123,11 @@ export function useDesktopLife(options: Options) {
     const value = await bridge.desktopScene(fresh);
     if (fresh) {
       // No icons with a reason means Finder access is off or icons are hidden: ask again much later.
-      icons.current = { at: Date.now(), list: value.icons, denied: value.icons.length === 0 && Boolean(value.reason) };
+      icons.current = {
+        at: Date.now(),
+        list: value.icons,
+        denied: value.icons.length === 0 && Boolean(value.reason),
+      };
       if (icons.current.denied) icons.current.at = Date.now() + 30 * 60000;
     }
     bounds.current = value.bounds;
@@ -123,7 +138,10 @@ export function useDesktopLife(options: Options) {
   }
   const feetOf = (body: Body, at: DesktopRect) => ({ x: at.x + body.foot.x, y: at.y + body.foot.y });
   async function place2(target: Point, body: Body) {
-    const moved = await bridge.stepPet({ x: Math.round(target.x - body.foot.x), y: Math.round(target.y - body.foot.y) });
+    const moved = await bridge.stepPet({
+      x: Math.round(target.x - body.foot.x),
+      y: Math.round(target.y - body.foot.y),
+    });
     bounds.current = moved;
     return moved;
   }
@@ -178,37 +196,9 @@ export function useDesktopLife(options: Options) {
     ref.current.onLand(Math.max(0, to.y - Math.min(from.y, to.y)));
     return true;
   }
-  // Gravity: down to the ledge below.
-  async function fallTo(ledge: Ledge, token: number) {
-    const body = measureBody();
-    if (!body || !bounds.current) return false;
-    const from = feetOf(body, bounds.current);
-    if (ledge.y - from.y <= 3) return true;
-    let y = from.y,
-      v = 0,
-      last = performance.now();
-    ref.current.onAction('drag');
-    setAirborne(true);
-    try {
-      while (y < ledge.y) {
-        if (!alive(token) || lifted.current) return false;
-        const now = performance.now(),
-          dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
-        v = Math.min(2200, v + 2600 * dt);
-        y = Math.min(ledge.y, y + v * dt);
-        await place2({ x: from.x, y }, body);
-        await sleep(16);
-      }
-    } finally {
-      setAirborne(false);
-    }
-    ref.current.onAction('idle');
-    ref.current.onLand(ledge.y - from.y);
-    return true;
-  }
-  // Find what is under her now; fall onto it if she is not standing on it.
-  async function settle(token: number, announce: boolean) {
+  // What is she standing on? Only a ledge right under her feet counts; she steps onto it when
+  // she is a little above it. Anywhere else she stays exactly where she is.
+  async function settle(token: number, landing: boolean) {
     const body = measureBody();
     if (!body) return;
     const value = await scene();
@@ -216,22 +206,15 @@ export function useDesktopLife(options: Options) {
     const all = findLedges(value, body),
       feet = feetOf(body, value.bounds),
       below = supportBelow(all, feet);
-    if (!below) return;
-    const height = below.y - feet.y;
-    // A few points (a resize, the first placement) is a quiet adjustment, not a fall that would
-    // interrupt whatever she is doing.
-    if (height > 24) await fallTo(below, token);
-    else if (height > 1) await place2({ x: feet.x, y: below.y }, body);
+    const height = below ? below.y - feet.y : Infinity;
+    if (!below || height > SNAP) {
+      support.current = null;
+      return;
+    }
+    if (height > 1) await place2({ x: feet.x, y: below.y }, body);
     if (!alive(token)) return;
     support.current = { ledge: below, window: value.surfaces.find((w) => w.id === below.owner) };
-    if (announce && height > 140)
-      ref.current.onLine(
-        below.kind === 'window'
-          ? '稳稳落在窗口上了。'
-          : height > 400
-            ? '呜哇——从那么高的地方！下次轻一点放我下来嘛。'
-            : '哎呀，落地了。',
-      );
+    if (landing) ref.current.onLand(Math.max(0, height));
   }
 
   function stop(found = false) {
@@ -267,7 +250,15 @@ export function useDesktopLife(options: Options) {
       const feet = feetOf(body, bounds.current);
       const destination = { x: target.destination.x + body.foot.x, y: target.destination.y + body.foot.y };
       if (Math.abs(destination.y - feet.y) > 6) {
-        await walkTo({ x: destination.x + Math.sign(feet.x - destination.x) * Math.min(160, Math.abs(feet.x - destination.x)), y: feet.y }, token);
+        await walkTo(
+          {
+            x:
+              destination.x +
+              Math.sign(feet.x - destination.x) * Math.min(160, Math.abs(feet.x - destination.x)),
+            y: feet.y,
+          },
+          token,
+        );
         if (!alive(token)) return;
         if (!(await hopTo(destination, token))) return;
       } else if (!(await walkTo(destination, token))) return;
@@ -289,7 +280,14 @@ export function useDesktopLife(options: Options) {
         setStatus('正在捉迷藏');
       } else {
         support.current = {
-          ledge: { id: `window:${target.id}`, kind: 'window', owner: target.id, x: valid.x, y: valid.y, width: valid.width },
+          ledge: {
+            id: `window:${target.id}`,
+            kind: 'window',
+            owner: target.id,
+            x: valid.x,
+            y: valid.y,
+            width: valid.width,
+          },
           window: { ...valid, id: target.id },
         };
         ref.current.onPerch();
@@ -303,6 +301,7 @@ export function useDesktopLife(options: Options) {
     const o = ref.current;
     if (!o.petMode || !o.enabled || o.blocked || lifted.current || phaseRef.current !== 'idle') return false;
     if (automatic && kind === 'hide' && Date.now() < nextHide.current) return false;
+    if (automatic && Date.now() - placedAt.current < PLACED_STAY) return false;
     const token = ++generation.current;
     go('finding');
     try {
@@ -312,7 +311,8 @@ export function useDesktopLife(options: Options) {
       const foot = body?.foot || { x: value.bounds.width / 2, y: value.bounds.height - 40 };
       const target = value.supported ? choosePlace(value, foot, kind) : null;
       if (!target) {
-        const line = value.reason || '没有找到露出的图标或合适的窗口上沿。可以把一个窗口往下移，或露出桌面后再试。';
+        const line =
+          value.reason || '没有找到露出的图标或合适的窗口上沿。可以把一个窗口往下移，或露出桌面后再试。';
         setStatus(line);
         if (!automatic) o.onLine(line);
         go('idle');
@@ -349,11 +349,19 @@ export function useDesktopLife(options: Options) {
       if (plan.kind === 'climb') {
         if (walkFirst && !(await walkTo(walkFirst, token, true))) return;
         if (!(await hopTo(plan.to, token, true))) return;
-        setStatus(plan.ledge.kind === 'window' ? '爬到窗口上看看' : plan.ledge.kind === 'icon' ? '站到图标上' : '回到地面');
+        setStatus(
+          plan.ledge.kind === 'window'
+            ? '爬到窗口上看看'
+            : plan.ledge.kind === 'icon'
+              ? '站到图标上'
+              : '回到地面',
+        );
         if (plan.ledge.kind !== 'floor' && Math.random() < 0.35)
-          ref.current.onRemark(plan.ledge.kind === 'icon' ? '这个图标站起来软软的。' : '从这里看，你的屏幕好热闹。');
+          ref.current.onRemark(
+            plan.ledge.kind === 'icon' ? '这个图标站起来软软的。' : '从这里看，你的屏幕好热闹。',
+          );
       } else {
-        if (walkFirst) {
+        if (walkFirst && plan.ledge) {
           if (!(await walkTo(walkFirst, token, true))) return;
           if (!(await hopTo({ x: walkFirst.x, y: plan.ledge.y }, token, true))) return;
         }
@@ -366,12 +374,18 @@ export function useDesktopLife(options: Options) {
       if (body) {
         const all = findLedges(value, body);
         const under = supportBelow(all, feetOf(body, value.bounds));
-        if (under) support.current = { ledge: under, window: value.surfaces.find((w) => w.id === under.owner) };
+        if (under)
+          support.current = { ledge: under, window: value.surfaces.find((w) => w.id === under.owner) };
       }
       if (plan.kind === 'peek') {
         const cover = value.surfaces.find((w) => w.id === (plan.cover as DesktopRect & { id: string }).id);
         if (cover) {
-          setMask({ x: cover.x - value.bounds.x, y: cover.y - value.bounds.y, width: cover.width, height: cover.height });
+          setMask({
+            x: cover.x - value.bounds.x,
+            y: cover.y - value.bounds.y,
+            width: cover.width,
+            height: cover.height,
+          });
           go('staying');
           ref.current.onAction('listen');
           setStatus('躲在窗口后面偷看你');
@@ -438,7 +452,7 @@ export function useDesktopLife(options: Options) {
       const o = ref.current;
       if (!live || !o.enabled || o.blocked || lifted.current || phaseRef.current !== 'idle') return;
       if (o.occupied && !o.tired) return;
-      if (Date.now() < nextDecision.current) return;
+      if (Date.now() < nextDecision.current || Date.now() - placedAt.current < PLACED_STAY) return;
       nextDecision.current = Date.now() + restBetween(o.temperament) * 1000;
       const token = ++generation.current;
       try {
@@ -448,8 +462,9 @@ export function useDesktopLife(options: Options) {
         if (!live || !alive(token) || !body) return;
         const all = findLedges(value, body),
           feet = feetOf(body, value.bounds),
-          current = supportBelow(all, feet);
-        if (!standingOn(current, feet)) return void settle(token, false);
+          below = supportBelow(all, feet),
+          // Off any ledge she is where the user put her, and plans from there.
+          current = standingOn(below, feet) ? below : null;
         const userIdle = await bridge.userIdle().catch(() => 0);
         const plan = nextPlan({
           scene: value,
@@ -481,7 +496,8 @@ export function useDesktopLife(options: Options) {
       busy = false;
     const timer = setInterval(async () => {
       const held = support.current;
-      if (!live || busy || lifted.current || !held?.window || !['idle', 'staying'].includes(phaseRef.current)) return;
+      if (!live || busy || lifted.current || !held?.window || !['idle', 'staying'].includes(phaseRef.current))
+        return;
       if (place.current?.kind === 'hide') return;
       busy = true;
       const token = generation.current;
@@ -504,13 +520,11 @@ export function useDesktopLife(options: Options) {
         const all = findLedges(value, body),
           after = feetOf(body, bounds.current || value.bounds),
           under = supportBelow(all, after);
-        // The window closed, shrank away or something now covers her spot: she falls.
+        // The window closed, shrank away or something now covers her spot: she stays where
+        // she is, standing on nothing in particular.
         if (!standingOn(under, after) || under?.owner !== held.window.id) {
-          if (phaseRef.current === 'staying') stop();
-          const fall = ++generation.current;
           support.current = null;
-          await settle(fall, true);
-          if (alive(fall)) ref.current.onAction('idle');
+          if (phaseRef.current === 'staying') stop();
         }
       } catch {
         /* Next tick. */
@@ -559,9 +573,10 @@ export function useDesktopLife(options: Options) {
       setMask(null);
       go('idle');
     },
-    /** The user let go: she falls onto whatever is below. */
+    /** The user let go: she stays there, or steps onto a ledge just below her feet. */
     async drop() {
       lifted.current = false;
+      placedAt.current = Date.now();
       support.current = null;
       const token = ++generation.current;
       try {
@@ -569,6 +584,7 @@ export function useDesktopLife(options: Options) {
       } catch {
         /* She stays where she was put. */
       }
+      // Wherever she was put, she spends a while there before deciding anything herself.
       nextDecision.current = Date.now() + restBetween(ref.current.temperament) * 1000;
     },
   };

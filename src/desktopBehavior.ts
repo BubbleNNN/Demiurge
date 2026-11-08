@@ -1,9 +1,10 @@
 // Where the desktop character can stand and what she does next. Pure functions over a snapshot of
 // the desktop (screen coordinates, y down); the hook in features/desktop moves the window.
 //
-// The desktop is treated as a small world with gravity: the bottom of the work area is the floor,
-// and the top edge of every visible window and desktop icon is a ledge she can stand on. A ledge
-// partly covered by a window in front only exists where it is uncovered.
+// The desktop is a small world she can stand anywhere in: the bottom of the work area is the
+// floor, and the top edge of every visible window and desktop icon is a ledge. A ledge partly
+// covered by a window in front only exists where it is uncovered. Where the user puts her down
+// off any ledge, she stays (there is no gravity); on a ledge she walks, climbs and peeks.
 import type { DesktopRect, DesktopScene } from './types';
 
 export interface Temperament {
@@ -35,8 +36,8 @@ export type Plan =
   | { kind: 'stroll'; to: Point; ledge: Ledge }
   | { kind: 'climb'; to: Point; ledge: Ledge; takeoff: Point }
   | { kind: 'peek'; to: Point; ledge: Ledge; cover: DesktopRect; takeoff?: Point }
-  | { kind: 'watch'; to: Point; ledge: Ledge; takeoff?: Point }
-  | { kind: 'nap'; to: Point; ledge: Ledge; takeoff?: Point };
+  | { kind: 'watch'; to: Point; ledge?: Ledge; takeoff?: Point }
+  | { kind: 'nap'; to: Point; ledge?: Ledge; takeoff?: Point };
 
 const MIN_LEDGE = 70;
 
@@ -61,10 +62,13 @@ function uncovered(x0: number, x1: number, y: number, front: DesktopRect[]) {
 /** Every place she could stand, with room above it for her whole body inside the work area. */
 export function ledges(scene: DesktopScene, body: Body): Ledge[] {
   const { area } = scene;
-  const headroom = body.foot.y; // pet window space above the feet
-  // The floor is as low as her feet can get: the pet window cannot leave the work area, so it
-  // sits where the window's bottom edge meets the bottom of the work area.
-  const floorY = area.y + area.height - Math.max(0, scene.bounds.height - body.foot.y);
+  const margins = scene.margins || { top: 0, bottom: 0 };
+  // Window space above her feet that has to stay on screen: the band above her may hang past
+  // the top of the work area.
+  const headroom = body.foot.y - margins.top;
+  // The floor is as low as her feet can get: the window may hang past the bottom of the work
+  // area by its lower band.
+  const floorY = area.y + area.height - Math.max(0, scene.bounds.height - margins.bottom - body.foot.y);
   const result: Ledge[] = [{ id: 'floor', kind: 'floor', x: area.x, y: floorY, width: area.width }];
   const fits = (y: number) => y - headroom >= area.y && y < area.y + area.height - 8;
   scene.surfaces.forEach((w, index) => {
@@ -78,9 +82,24 @@ export function ledges(scene: DesktopScene, body: Body): Ledge[] {
   for (const icon of scene.icons) {
     if (!fits(icon.y)) continue;
     // An icon is only a ledge when no window lies over it.
-    if (scene.surfaces.some((w) => w.x < icon.x + icon.width && w.x + w.width > icon.x && w.y < icon.y + icon.height && w.y + w.height > icon.y))
+    if (
+      scene.surfaces.some(
+        (w) =>
+          w.x < icon.x + icon.width &&
+          w.x + w.width > icon.x &&
+          w.y < icon.y + icon.height &&
+          w.y + w.height > icon.y,
+      )
+    )
       continue;
-    result.push({ id: `icon:${icon.id}`, kind: 'icon', owner: icon.id, x: icon.x, y: icon.y, width: icon.width });
+    result.push({
+      id: `icon:${icon.id}`,
+      kind: 'icon',
+      owner: icon.id,
+      x: icon.x,
+      y: icon.y,
+      width: icon.width,
+    });
   }
   return result;
 }
@@ -89,13 +108,16 @@ export function ledges(scene: DesktopScene, body: Body): Ledge[] {
 export function supportBelow(all: Ledge[], foot: Point, tolerance = 6): Ledge | null {
   let best: Ledge | null = null;
   for (const l of all)
-    if (foot.x >= l.x && foot.x <= l.x + l.width && l.y >= foot.y - tolerance && (!best || l.y < best.y)) best = l;
+    if (foot.x >= l.x && foot.x <= l.x + l.width && l.y >= foot.y - tolerance && (!best || l.y < best.y))
+      best = l;
   return best;
 }
 
 /** Whether the feet rest on that ledge now. */
 export const standingOn = (ledge: Ledge | null, foot: Point, tolerance = 6) =>
-  Boolean(ledge && Math.abs(ledge.y - foot.y) <= tolerance && foot.x >= ledge.x && foot.x <= ledge.x + ledge.width);
+  Boolean(
+    ledge && Math.abs(ledge.y - foot.y) <= tolerance && foot.x >= ledge.x && foot.x <= ledge.x + ledge.width,
+  );
 
 // Feet x kept far enough from a ledge's ends that the whole body stays on it.
 function spotOn(ledge: Ledge, body: Body, fraction: number) {
@@ -148,7 +170,13 @@ export function nextPlan(input: PlanInput): Plan {
     warm = temperament.affection / 100;
   const night = input.hour >= 23 || input.hour < 6;
   const stay: Plan = { kind: 'stay', seconds: Math.round(25 + calm * 70 + random() * 30) };
-  if (!current) return stay;
+  // Put down off any ledge (in the middle of the screen, say): she stays where the user wants
+  // her. She naps there when tired and turns to watch when the user switches windows.
+  if (!current) {
+    if (input.tired) return { kind: 'nap', to: feet };
+    if (input.focusChanged && random() < 0.3 + warm * 0.5) return { kind: 'watch', to: feet };
+    return stay;
+  }
   const floor = input.ledges.find((l) => l.kind === 'floor')!;
   const options: [() => Plan | null, number][] = [];
   options.push([() => stay, 1.4 + calm * 2.2 + (night ? 2 : 0)]);
@@ -162,7 +190,9 @@ export function nextPlan(input: PlanInput): Plan {
     0.8 + lively * 2,
   ]);
   // Climbing onto a window's top edge or a desktop icon: the curious explore.
-  const higher = input.ledges.filter((l) => l !== current && l.kind !== 'floor' && l.width >= body.width * 0.5);
+  const higher = input.ledges.filter(
+    (l) => l !== current && l.kind !== 'floor' && l.width >= body.width * 0.5,
+  );
   options.push([
     () => {
       const ledge = higher[Math.floor(random() * higher.length)];
@@ -172,36 +202,48 @@ export function nextPlan(input: PlanInput): Plan {
     },
     higher.length ? 0.4 + curious * 2.2 : 0,
   ]);
-  // Back down to the floor after a while up high.
+  // Now and then back down to the floor after a while up high; she is not drawn there.
   options.push([
     () => {
-      const to = { x: Math.round(Math.max(floor.x + body.width, Math.min(floor.x + floor.width - body.width, feet.x + (random() - 0.5) * 300))), y: floor.y };
+      const to = {
+        x: Math.round(
+          Math.max(
+            floor.x + body.width,
+            Math.min(floor.x + floor.width - body.width, feet.x + (random() - 0.5) * 300),
+          ),
+        ),
+        y: floor.y,
+      };
       return { kind: 'climb', to, ledge: floor, takeoff: feet };
     },
-    current.kind === 'floor' ? 0 : 1.2 + calm,
+    current.kind === 'floor' ? 0 : 0.4 + calm * 0.5,
   ]);
-  // Peeking out from behind the side of a window: playful, curious and fond of the user.
-  options.push([() => peekPlan(input, current), (curious * 1.2 + warm) * (input.scene.surfaces.length ? 1 : 0)]);
-  // When the user switches to another window she wanders over to see what they are doing.
+  // Peeking out from behind the side of a window: playful, curious and fond of the user. Only
+  // from the floor, where window sides stand.
+  options.push([
+    () => peekPlan(input, current),
+    (curious * 1.2 + warm) * (input.scene.surfaces.length && current.kind === 'floor' ? 1 : 0),
+  ]);
+  // When the user switches to another window she turns to see what they are doing: on the floor
+  // she walks over below it, anywhere else she watches from where she is.
   options.push([
     () => {
       const front = input.scene.surfaces[0];
       if (!front) return null;
-      const target = current.kind === 'floor' ? current : floor;
-      const x = Math.round(Math.max(target.x + body.width, Math.min(target.x + target.width - body.width, front.x + front.width / 2)));
+      if (current.kind !== 'floor') return { kind: 'watch', to: feet, ledge: current };
+      const x = Math.round(
+        Math.max(
+          current.x + body.width,
+          Math.min(current.x + current.width - body.width, front.x + front.width / 2),
+        ),
+      );
       if (Math.abs(x - feet.x) < 60) return null;
-      return { kind: 'watch', to: { x, y: target.y }, ledge: target, takeoff: target === current ? undefined : feet };
+      return { kind: 'watch', to: { x, y: current.y }, ledge: current };
     },
     input.focusChanged ? 1 + warm * 3 : 0,
   ]);
-  // Tired or late: curl up in a quiet corner of the floor.
-  options.push([
-    () => {
-      const x = feet.x < floor.x + floor.width / 2 ? floor.x + body.width : floor.x + floor.width - body.width;
-      return { kind: 'nap', to: { x: Math.round(x), y: floor.y }, ledge: floor, takeoff: current === floor ? undefined : feet };
-    },
-    input.tired ? 4 : 0,
-  ]);
+  // Tired or late: she curls up where she is.
+  options.push([() => ({ kind: 'nap', to: feet, ledge: current }), input.tired ? 4 : 0]);
   for (let attempt = 0; attempt < 4; attempt++) {
     const builder = pick(options, random);
     const plan = builder?.();
@@ -243,7 +285,8 @@ export function hopPath(from: Point, to: Point) {
       const s = Math.max(0, Math.min(1, t / duration));
       const peak = Math.min(from.y, to.y) - (rise - Math.max(0, from.y - to.y));
       // Quadratic through from (s=0), peak (s=.5 approx) and to (s=1).
-      const y = (1 - s) * (1 - s) * from.y + 2 * (1 - s) * s * (2 * peak - (from.y + to.y) / 2) + s * s * to.y;
+      const y =
+        (1 - s) * (1 - s) * from.y + 2 * (1 - s) * s * (2 * peak - (from.y + to.y) / 2) + s * s * to.y;
       return { x: from.x + (to.x - from.x) * s, y };
     },
   };

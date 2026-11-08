@@ -1,7 +1,10 @@
 'use strict';
-// Real Electron pet window and real input events: scroll to resize, carry her (she swings),
-// drop her from a height (she falls and lands), drop her above a window (she lands on its top),
-// move that window (she rides along) and close it (she falls to the floor). No network.
+// Real Electron pet window and real input events: scroll to resize, carry her (she swings), let
+// go in the middle of the screen (she stays there), carry her up to the menu bar (her speech moves
+// below her), let go just above a window (she steps onto it), move that window (she rides along)
+// and close it (she stays where she is). The toolbar shows only under the pointer; the slider
+// resizes her; a message typed under her gets a reply above her head; she reopens where she was
+// left. No network.
 const { app, BrowserWindow, safeStorage, screen } = require('electron');
 const fs = require('node:fs'),
   path = require('node:path'),
@@ -61,7 +64,7 @@ app.on('browser-window-created', (_e, win) => {
       const js = (s) => win.webContents.executeJavaScript(s, true);
       await wait(() => js('!!document.querySelector(".room-rail")'), 'home');
       await js(
-        'window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,proactiveEnabled:false,motionEnabled:true,desktopLifeEnabled:true},{}))',
+        'window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,chatMode:"local",proactiveEnabled:false,motionEnabled:true,desktopLifeEnabled:true},{}))',
       );
       await js('window.mori.openPet()');
       let pet;
@@ -105,10 +108,17 @@ app.on('browser-window-created', (_e, win) => {
         const b = await body();
         input('mouseMove', b.cx, b.cy);
         input('mouseDown', b.cx, b.cy, { button: 'left', clickCount: 1 });
+        let last = pet.getBounds();
         for (let i = 1; i <= 8; i++) {
-          await sleep(30);
-          // The window follows the pointer, so the pointer stays at the same spot inside it.
+          // The window follows the pointer, so the pointer stays at the same spot inside it. Wait
+          // for it to follow the previous step (or to stop at a screen edge), as a hand would.
+          for (let n = 0; n < 10; n++) {
+            await sleep(20);
+            const now = pet.getBounds();
+            if (i === 1 || now.x !== last.x || now.y !== last.y) break;
+          }
           const w = pet.getBounds();
+          last = w;
           pet.webContents.sendInputEvent({
             type: 'mouseMove',
             x: Math.round(b.cx),
@@ -152,8 +162,18 @@ app.on('browser-window-created', (_e, win) => {
       report.resize.shrunk = pet.getBounds().height;
       await sleep(1700);
 
-      // 2. Lift her high and drop her: she swings while carried, falls, and lands on the floor.
-      pet.setPosition(pet.getBounds().x - 200, pet.getBounds().y - 320);
+      const bands = require('../shared/pet-window.json');
+      const near = (a, b, tolerance = 3) => Math.abs(a - b) <= tolerance;
+      const rect = (selector) =>
+        pj(
+          `(() => { const r = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect(); return r && { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; })()`,
+        );
+      const opacity = (selector) =>
+        pj(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).opacity`).then(Number);
+
+      // 2. Lift her and let go in the middle of the screen: she swings while carried and then
+      // stays exactly where she was put. There is no gravity.
+      pet.setPosition(area.x + 300, area.y + 160);
       await sleep(200);
       let swung = '';
       await carry(160, 0, async () => {
@@ -172,38 +192,49 @@ app.on('browser-window-created', (_e, win) => {
         );
       });
       assert.match(swung, /rotate\(-?[0-9.]+deg\)/, 'she swings while carried');
-      const floorY = area.y + area.height - (pet.getBounds().height - (await body()).footY);
-      const trace = [];
-      try {
-        await wait(
-          async () => {
-            const f = await feet();
-            trace.push([
-              Math.round(f.y),
-              pet.getBounds().y,
-              await pj('document.querySelector(".pet-name-tag")?.title||""'),
-            ]);
-            return Math.abs(f.y - floorY) <= 3;
-          },
-          'fell to the floor',
-          120,
-        );
-      } catch (e) {
-        report.trace = {
-          floorY,
-          area,
-          bounds: pet.getBounds(),
-          samples: trace.filter((_, i) => i % 10 === 0),
-        };
-        throw e;
+      await sleep(400);
+      const placed = await feet();
+      await sleep(1800);
+      const still = await feet();
+      const floorY = area.y + area.height - (pet.getBounds().height - bands.bottom - (await body()).footY);
+      assert.ok(near(still.x, placed.x, 1) && near(still.y, placed.y, 1), 'she stays where she was let go');
+      assert.ok(floorY - still.y > 200, 'well above the bottom of the screen');
+      assert.doesNotMatch(
+        await pj('document.querySelector(".pet-speech")?.textContent || ""'),
+        /那么高|落地/,
+      );
+      report.drop = { floorY, feet: still };
+
+      // 3. Carry her up to the top of the screen: her head reaches the menu bar, the band above her
+      // hangs past the screen edge, and what she says moves below her.
+      await carry(0, -1400);
+      await wait(async () => pet.getBounds().y + bands.top === area.y, 'figure up against the top edge', 80);
+      await wait(
+        () => pj('document.querySelector(".desktop-pet-shell").classList.contains("speech-below")'),
+        'speech moves below her',
+      );
+      // Her reaction to the ride, or (if that has passed) her answer to a touch, shows below her.
+      if (!(await pj('!!document.querySelector(".pet-band.below .pet-speech")'))) {
+        await sleep(4500);
+        const bt = await body();
+        input('mouseMove', bt.cx, bt.cy);
+        input('mouseDown', bt.cx, bt.cy, { button: 'left', clickCount: 1 });
+        input('mouseUp', bt.cx, bt.cy, { button: 'left', clickCount: 1 });
       }
       await wait(
-        () => pj('document.querySelector(".pet-landing").classList.contains("landing")'),
-        'landing squash',
+        () => pj('!!document.querySelector(".pet-band.below .pet-speech")'),
+        'her speech, below her',
       );
-      report.drop = { floorY, feet: await feet() };
+      const below = await rect('.pet-band.below .pet-speech');
+      assert.ok(
+        below.top >= bands.top + (pet.getBounds().height - bands.top - bands.bottom) - 2,
+        'speech under her feet',
+      );
+      assert.ok(pet.getBounds().y + below.bottom <= area.y + area.height, 'speech on screen');
+      report.top = { bounds: pet.getBounds(), speech: below };
+      fs.writeFileSync(path.join(dir, 'pet-top.png'), (await pet.webContents.capturePage()).toPNG());
 
-      // 3. Drop her above a window: she lands on its top edge.
+      // 4. Let go just above a window: she steps onto its top edge.
       await sleep(800);
       const fixture = new BrowserWindow({
         x: area.x + 120,
@@ -217,34 +248,130 @@ app.on('browser-window-created', (_e, win) => {
       surfaces = () => (fixture.isDestroyed() ? [] : [{ ...fixture.getBounds(), id: 'fixture' }]);
       const top = fixture.getBounds();
       const b1 = await body();
-      pet.setPosition(Math.round(top.x + 300 - b1.footX), Math.round(top.y - 160 - b1.footY));
+      pet.setPosition(Math.round(top.x + 300 - b1.footX), Math.round(top.y - 20 - b1.footY));
       await sleep(200);
       await carry(20, 0);
-      await wait(async () => Math.abs((await feet()).y - top.y) <= 3, 'landed on the window', 120);
+      await wait(async () => near((await feet()).y, top.y), 'stepped onto the window', 120);
+      await wait(
+        () => pj('document.querySelector(".pet-landing").classList.contains("landing")'),
+        'landing squash',
+      );
       report.perch = { windowTop: top.y, feet: await feet() };
 
-      // 4. Move the window: she rides along.
+      // 5. Move the window: she rides along.
       const start = await feet();
       fixture.setPosition(top.x + 120, top.y + 60);
       await wait(
         async () => {
           const f = await feet();
-          return Math.abs(f.y - (top.y + 60)) <= 3 && Math.abs(f.x - (start.x + 120)) <= 3;
+          return near(f.y, top.y + 60) && near(f.x, start.x + 120);
         },
         'rode the window',
         120,
       );
       report.ride = { from: start, to: await feet() };
 
-      // 5. Close the window: she falls to the floor.
+      // 6. Close the window: she stays where she is.
+      const riding = await feet();
       fixture.destroy();
-      const floorAfter = area.y + area.height - (pet.getBounds().height - (await body()).footY);
-      await wait(
-        async () => Math.abs((await feet()).y - floorAfter) <= 3,
-        'fell when the window closed',
-        160,
+      await sleep(3000);
+      const after = await feet();
+      assert.ok(near(after.x, riding.x, 1) && near(after.y, riding.y, 1), 'she stays when the window goes');
+      report.closed = { before: riding, after };
+
+      // 7. The toolbar is invisible until the pointer is over it; over her, a faint handle shows
+      // where it is. Her speech and the toolbar never overlap.
+      pet.setPosition(area.x + 300, area.y + 200);
+      await sleep(300);
+      const b2 = await body();
+      input('mouseMove', b2.cx, b2.cy);
+      await sleep(350);
+      assert.equal(await opacity('.pet-toolbar'), 0, 'hidden while the pointer is on her');
+      assert.ok(await pj('document.querySelector(".desktop-pet-shell").classList.contains("figure-hover")'));
+      assert.equal(await opacity('.pet-toolbar-hint'), 1);
+      input('mouseDown', b2.cx, b2.cy, { button: 'left', clickCount: 1 });
+      input('mouseUp', b2.cx, b2.cy, { button: 'left', clickCount: 1 });
+      await wait(() => pj('!!document.querySelector(".pet-speech")'), 'she answers a touch');
+      const zone = await rect('.pet-toolbar-zone');
+      input('mouseMove', (zone.left + zone.right) / 2, (zone.top + zone.bottom) / 2);
+      await sleep(350);
+      assert.equal(await opacity('.pet-toolbar'), 1, 'shown under the pointer');
+      const bar = await rect('.pet-toolbar'),
+        said = await rect('.pet-speech');
+      assert.ok(said.bottom <= bar.top || said.top >= bar.bottom, 'speech and toolbar do not overlap');
+      assert.ok(said.bottom <= b2.cy, 'her speech is above her');
+      fs.writeFileSync(path.join(dir, 'pet-toolbar-open.png'), (await pet.webContents.capturePage()).toPNG());
+      input('mouseMove', 2, 2);
+      await sleep(350);
+      assert.equal(await opacity('.pet-toolbar'), 0, 'hidden again once the pointer leaves');
+      fs.writeFileSync(path.join(dir, 'pet-toolbar.png'), (await pet.webContents.capturePage()).toPNG());
+
+      // 8. The size slider resizes her and is saved.
+      const sized = pet.getBounds().height;
+      await pj(
+        `(() => { const el = document.querySelector('[aria-label="桌宠大小"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '1.2'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`,
       );
-      report.fall = { floorY: floorAfter, feet: await feet() };
+      await wait(() => pet.getBounds().height !== sized, 'resized by the slider');
+      await wait(
+        () => js('window.mori.load().then(r=>r.state.settings.petScale===1.2)'),
+        'slider size saved',
+      );
+      assert.equal(pet.getBounds().height, 360 + bands.top + bands.bottom);
+      report.slider = { before: sized, after: pet.getBounds().height };
+
+      // 9. Talk to her from the desktop: no other window is opened.
+      const windows = BrowserWindow.getAllWindows().length;
+      await pj('document.querySelector(\'[aria-label="和角色说话"]\').click()');
+      await wait(
+        () => pj('document.activeElement?.getAttribute("aria-label") === "聊天消息"'),
+        'message box focused',
+      );
+      await pj(
+        `(() => { const el = document.querySelector('[aria-label="聊天消息"]'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(el, '你好'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`,
+      );
+      await wait(() => pj('document.querySelector(\'[aria-label="聊天消息"]\').value === "你好"'), 'typed');
+      await pj(
+        `document.querySelector('[aria-label="聊天消息"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))`,
+      );
+      await wait(
+        () => js('window.mori.load().then(r=>(r.state.messages[r.state.activeCharacterId]||[]).length>=2)'),
+        'reply saved',
+      );
+      const saved = await js('window.mori.load().then(r=>r.state.messages[r.state.activeCharacterId])');
+      const reply = saved.at(-1).content;
+      assert.equal(saved.at(-2).content, '你好');
+      await wait(
+        () => pj(`document.querySelector('.pet-speech p')?.textContent === ${JSON.stringify(reply)}`),
+        'reply above her',
+      );
+      assert.equal(
+        await pj('document.querySelector(\'[aria-label="聊天消息"]\').value'),
+        '',
+        'the box is cleared',
+      );
+      assert.equal(BrowserWindow.getAllWindows().length, windows, 'no window opened');
+      const box = await rect('.pet-composer');
+      assert.ok(
+        box.top >= bands.top + (pet.getBounds().height - bands.top - bands.bottom) - 2,
+        'message box under her',
+      );
+      fs.writeFileSync(path.join(dir, 'pet-chat.png'), (await pet.webContents.capturePage()).toPNG());
+      report.chat = { reply };
+
+      // 10. She reopens where she was left.
+      const left = pet.getBounds();
+      await sleep(1000);
+      await js('window.mori.closePet()');
+      await wait(() => pet.isDestroyed(), 'closed');
+      await js('window.mori.openPet()');
+      await wait(() => {
+        pet = BrowserWindow.getAllWindows().find(
+          (w) => !w.isDestroyed() && w.webContents.getURL().includes('pet=1'),
+        );
+        return !!pet;
+      }, 'reopened');
+      assert.deepEqual(pet.getBounds(), left);
+      report.reopened = pet.getBounds();
       fs.writeFileSync(path.join(dir, 'pet.png'), (await pet.webContents.capturePage()).toPNG());
       assert.equal(networkCalls, 0);
       assert.deepEqual(exceptions, []);

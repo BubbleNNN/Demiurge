@@ -12,11 +12,13 @@ export function choosePlace(
   kind: 'read' | 'hide' | 'any',
 ): Place | null {
   const { area, bounds, surfaces } = scene;
+  // The pet window's bands may hang past the top and bottom of the work area.
+  const margins = scene.margins || { top: 0, bottom: 0 };
   const fits = (p: { x: number; y: number }) =>
     p.x >= area.x &&
-    p.y >= area.y &&
+    p.y >= area.y - margins.top &&
     p.x + bounds.width <= area.x + area.width &&
-    p.y + bounds.height <= area.y + area.height;
+    p.y + bounds.height <= area.y + area.height + margins.bottom;
   if (kind !== 'hide')
     for (let i = 0; i < surfaces.length; i++) {
       const w = surfaces[i];

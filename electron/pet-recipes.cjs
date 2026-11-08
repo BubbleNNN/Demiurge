@@ -122,7 +122,8 @@ function partRecipe(id, input, options) {
   };
 }
 
-function motionClip(name, indices, input = {}) {
+// `rest`: the frame she rests in between gestures; short gestures start and end on it.
+function motionClip(name, indices, input = {}, rest = 0) {
   const recipe = motionRecipe(name, input);
   const count = indices.length;
   const time = (values) => values.map((ms) => Math.round(ms * recipe.tempo));
@@ -155,7 +156,7 @@ function motionClip(name, indices, input = {}) {
   }
   if (name === 'talk')
     return {
-      frames: [0, ...indices.slice(1)],
+      frames: [rest, ...indices.slice(1)],
       durations: time(count === 8 ? [100, 90, 110, 100, 90, 110, 100, 120] : [100, 140, 120, 150]),
       loop: true,
     };
@@ -166,7 +167,7 @@ function motionClip(name, indices, input = {}) {
     shake: count === 8 ? [100, 90, 130, 80, 90, 130, 90, 100, 140] : [100, 170, 170, 130, 140],
     bounce: count === 8 ? [100, 80, 110, 65, 120, 65, 100, 120, 140] : [100, 130, 180, 120, 140],
   };
-  return { frames: [0, ...indices.slice(1), 0], durations: time(timing[name]), loop: false };
+  return { frames: [rest, ...indices.slice(1), rest], durations: time(timing[name]), loop: false };
 }
 
 function activityTransitions(name, indices, input = {}) {

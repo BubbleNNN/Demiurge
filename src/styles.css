@@ -3017,6 +3017,9 @@ select:focus {
   height: 100vh;
   background: transparent;
 }
+/* The desktop pet window: her figure in the middle, a band above it for what she says and a band
+   below it for the controls (sizes from shared/pet-window.json). Everything outside her figure and
+   the controls is transparent and lets clicks through to the desktop. */
 .desktop-pet-shell {
   --muted: color-mix(in srgb, var(--ink) 55%, white);
   --line: color-mix(in srgb, var(--accent) 15%, white);
@@ -3025,116 +3028,343 @@ select:focus {
   height: 100vh;
   width: 100%;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-direction: column;
-  padding-bottom: 10px;
   color: var(--ink);
   background: transparent;
 }
 .pet-draggable {
-  height: calc(100vh - 132px);
-  width: calc(100% - 24px);
-  position: relative;
+  position: absolute;
+  top: var(--band-top);
+  bottom: var(--band-bottom);
+  left: var(--band-side);
+  right: var(--band-side);
   cursor: grab;
   touch-action: none;
 }
 .pet-draggable:active {
   cursor: grabbing;
 }
-.pet-toolbar {
+.pet-band {
   position: absolute;
-  top: 8px;
-  right: 12px;
-  z-index: 9;
+  left: 8px;
+  right: 8px;
+  z-index: 10;
   display: flex;
-  gap: 4px;
-  background: color-mix(in srgb, var(--paper) 92%, transparent);
-  border: 1px solid var(--line);
-  padding: 5px;
-  border-radius: 12px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  box-shadow: 0 3px 12px #49334210;
-}
-.desktop-pet-shell:hover .pet-toolbar,
-.desktop-pet-shell:focus-within .pet-toolbar {
-  opacity: 1;
-}
-.pet-toolbar > button {
-  height: 25px;
-  width: 27px;
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-}
-.pet-toolbar > button:hover,
-.pet-toolbar > button[aria-pressed="true"] {
-  background: var(--accent-soft);
-  border-radius: 7px;
-}
-.pet-name-tag {
-  font-size: 10px;
-  display: flex;
-  gap: 8px;
+  flex-direction: column;
   align-items: center;
-  background: color-mix(in srgb, var(--paper) 92%, transparent);
-  border: 1px solid var(--line);
-  padding: 6px 11px;
-  border-radius: 20px;
-  color: var(--accent);
+  gap: 6px;
+  pointer-events: none;
 }
-.pet-name-tag > i {
-  height: 3px;
-  width: 3px;
-  background: var(--accent);
-  border-radius: 50%;
+.pet-band > * {
+  pointer-events: auto;
 }
+/* Only the on-screen part of each band holds anything. */
+.pet-band.above {
+  top: calc(var(--band-top) - var(--room-above));
+  height: var(--room-above);
+  justify-content: flex-end;
+  padding-bottom: 2px;
+}
+.pet-band.below {
+  bottom: calc(var(--band-bottom) - var(--room-below));
+  height: var(--room-below);
+  justify-content: flex-start;
+  padding-top: 2px;
+}
+/* What she says: right above her head, or below her feet near the top of the screen. */
 .pet-speech {
-  position: absolute;
-  top: 52px;
-  left: 16px;
-  right: 16px;
-  z-index: 3;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-height: 84px;
-  padding: 8px 13px;
+  position: relative;
+  max-width: 100%;
+  min-height: 0;
+  flex: 0 1 auto;
+  display: flex;
+  padding: 8px 26px 8px 13px;
   border: 1px solid var(--line);
   background: var(--paper);
   border-radius: 14px;
-  font-size: 11px;
-  line-height: 1.8;
-  max-width: none;
+  box-shadow: 0 4px 14px #49334214;
+  font-size: 12px;
+  line-height: 1.65;
   color: var(--ink);
-  text-align: left;
+  cursor: pointer;
 }
-.pet-chat-panel {
+.pet-speech > p {
+  margin: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pet-speech::after {
+  content: '';
   position: absolute;
-  inset: 6px 7px 43px;
+  left: 50%;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: var(--paper);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: translateX(-50%) rotate(45deg);
+}
+.speech-below .pet-speech::after {
+  bottom: auto;
+  top: -6px;
+  transform: translateX(-50%) rotate(225deg);
+}
+.pet-speech-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pet-speech:hover .pet-speech-close,
+.pet-speech-close:focus-visible {
+  opacity: 1;
+}
+.pet-speech.thinking {
+  gap: 4px;
+  padding: 11px 14px;
+  cursor: default;
+}
+.pet-speech.thinking > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  animation: pet-thinking 1.2s ease-in-out infinite;
+}
+.pet-speech.thinking > i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.pet-speech.thinking > i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes pet-thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+/* The toolbar is invisible until the pointer is over it (or keyboard focus is in it). */
+.pet-toolbar-zone {
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+.pet-toolbar-hint {
+  position: absolute;
+  top: 3px;
+  width: 30px;
+  height: 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.figure-hover .pet-toolbar-hint {
+  opacity: 1;
+}
+.pet-toolbar {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  border: 1px solid var(--line);
+  padding: 4px 6px 5px;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px #49334214;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.pet-toolbar-zone:hover .pet-toolbar,
+.pet-toolbar:has(:focus-visible),
+.pet-toolbar:has(input:active) {
+  opacity: 1;
+}
+.pet-toolbar-zone:hover .pet-toolbar-hint {
+  opacity: 0;
+}
+/* Sharing a band with her speech (near a screen edge), the toolbar keeps only its handle in the
+   layout; under the pointer it opens over the speech, which steps aside meanwhile. */
+.pet-band.shared .pet-toolbar-zone {
+  position: static;
+  flex: 0 0 14px;
+}
+.pet-band.shared .pet-toolbar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.pet-band.below.shared .pet-toolbar {
+  top: 2px;
+}
+.pet-band.above.shared .pet-toolbar {
+  bottom: 2px;
+}
+.pet-band.shared .pet-toolbar-hint {
+  position: static;
+  display: block;
+  margin: 5px auto 0;
+}
+.pet-band.shared .pet-toolbar-zone:hover .pet-toolbar {
+  pointer-events: auto;
+}
+.pet-band.shared:has(.pet-toolbar-zone:hover) > .pet-speech {
+  visibility: hidden;
+}
+.pet-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+.pet-toolbar-row > button {
+  height: 27px;
+  width: 29px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--accent);
+}
+.pet-toolbar-row > button:hover,
+.pet-toolbar-row > button[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+.pet-toolbar-row > button:disabled {
+  opacity: 0.4;
+}
+.pet-toolbar-row + .pet-toolbar-row {
+  border-top: 1px solid var(--line);
+  padding-top: 2px;
+}
+.pet-size {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 4px 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.pet-size input {
+  flex: 1;
+  min-width: 90px;
+  accent-color: var(--accent);
+}
+.pet-size output {
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Talking to her from the desktop, with no other window open. */
+.pet-composer-area {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+}
+.pet-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: 0 4px 16px #4933421c;
+}
+.pet-composer textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  max-height: 66px;
+  resize: none;
+  border: 0;
+  outline: 0;
+  padding: 5px 4px;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+  field-sizing: content;
+}
+.pet-composer > button {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+}
+.pet-composer > button:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.pet-composer > button.send:not(:disabled) {
+  background: var(--accent);
+  color: white;
+}
+.pet-composer > button:disabled {
+  opacity: 0.45;
+}
+.pet-composer-error {
+  margin: 0;
+  padding: 5px 9px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #fff1f1 92%, transparent);
+  color: #9b3434;
+  font-size: 11px;
+  line-height: 1.5;
+}
+/* The full conversation and shared moments cover her and the on-screen parts of both bands. */
+.pet-chat-panel,
+.pet-moment {
+  position: absolute;
+  top: calc(var(--band-top) - var(--room-above) + 4px);
+  bottom: calc(var(--band-bottom) - var(--room-below) + 4px);
+  left: 7px;
+  right: 7px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--paper);
+  z-index: 15;
+  box-shadow: 0 6px 20px #49334215;
+}
+.pet-chat-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 8;
-  box-shadow: 0 6px 20px #49334215;
 }
-.with-chat .pet-toolbar {
-  top: 21px;
-  right: 18px;
-  opacity: 1;
-  background: none;
-  box-shadow: none;
-  border: 0;
+.pet-moment {
+  overflow: auto;
+}
+.pet-moment .moment-card {
+  margin: 0;
+  min-width: 0;
+  padding: 12px;
 }
 .pet-chat-panel .chat-header {
-  min-height: 81px;
-  padding: 15px 115px 15px 16px;
+  min-height: 64px;
+  padding: 12px 16px;
   gap: 8px;
 }
 .pet-chat-panel .chat-header .icon-button {
@@ -3175,16 +3405,34 @@ select:focus {
 .pet-chat-panel .chat-footer {
   font-size: 7px;
 }
+.pet-invite,
 .pet-toast {
-  position: absolute;
-  top: 0;
-  background: var(--paper);
-  border-radius: 10px;
+  max-width: 100%;
   border: 1px solid var(--line);
-  font-size: 10px;
-  padding: 10px;
-  z-index: 20;
-  line-height: 1.8;
+  border-radius: 14px;
+  padding: 9px 11px;
+  background: var(--paper);
+  box-shadow: 0 4px 14px #49334214;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink);
+  overflow-y: auto;
+}
+.pet-invite p {
+  margin: 0 0 7px;
+}
+.pet-invite button {
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  margin-right: 8px;
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-speech.thinking > i {
+    animation: none;
+    opacity: 0.7;
+  }
 }
 @media (min-width: 1600px) {
   .content-layout {
@@ -5501,7 +5749,8 @@ select:focus {
     sans-serif;
   margin-bottom: 5px;
 }
-.pet-draggable:focus-visible {
+/* Only for keyboard users: a pointer on her never leaves an outline around the window. */
+.pet-draggable:focus-visible:not(:hover) {
   outline: 1px dashed var(--accent);
   outline-offset: -3px;
   border-radius: 20px;
@@ -6179,13 +6428,6 @@ select:focus {
   flex: 0 0 auto;
   margin-top: 5px;
 }
-/* Desktop controls share the active character's theme, and disappear when not used. */
-.pet-toolbar {max-width:calc(100% - 24px);flex-wrap:wrap;justify-content:center}
-.pet-invite {position:absolute;top:50px;left:12px;right:12px;z-index:12;border:1px solid var(--line);border-radius:14px;padding:10px;background:var(--paper);font-size:12px;color:var(--ink)}
-.pet-invite p {margin:0 0 8px}.pet-invite button {padding:6px 10px;border-radius:12px;background:var(--accent-soft);margin-right:8px;color:var(--accent)}
-.pet-moment {position:absolute;inset:48px 8px 38px;z-index:15;overflow:auto;background:var(--paper);border-radius:16px;border:1px solid var(--line)}
-.pet-moment .moment-card {margin:0;min-width:0;padding:12px}
-
 /* What the chat model understood from a correction, and the sources it used. */
 .revision-plan {
   display: flex;

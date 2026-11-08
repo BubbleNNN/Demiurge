@@ -108,6 +108,9 @@ export const bridge: MoriBridge = window.mori ?? {
   onChatStatusChanged() {
     return () => {};
   },
+  onPetRoom() {
+    return () => {};
+  },
   onStateChanged(callback) {
     listeners.add(callback);
     const listener = (event: StorageEvent) => {

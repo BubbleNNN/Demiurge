@@ -1,4 +1,4 @@
-import {useDesktopLife} from './features/desktop/useDesktopLife';
+import { useDesktopLife } from './features/desktop/useDesktopLife';
 import { isActivity, activityDuration, activities } from './animation/activities';
 import { activityIcons } from './features/companion/activityIcons';
 import { Moment, type MomentResult } from './features/companion/Moments';
@@ -20,7 +20,8 @@ import { CompanionScene } from './features/companion/CompanionScene';
 import { ConversationPanel, type ConversationMode } from './features/conversation/ConversationPanel';
 import { DesktopPage } from './features/desktop/DesktopPage';
 import { PetProductionStudio } from './features/appearance/PetProductionStudio';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import petBands from '../shared/pet-window.json';
 import { chatServiceReady, imageServiceReady, selectedSearchProvider, searchProviderNames } from './research';
 import {
   ArrowUpRight,
@@ -41,8 +42,9 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
-  ZoomIn,
-  ZoomOut,
+  Compass,
+  History,
+  Send,
   Upload,
   WandSparkles,
   X,
@@ -137,8 +139,13 @@ const emotions: { id: Emotion; name: string; mark: string }[] = [
   { id: 'surprised', name: '惊讶', mark: '✧' },
 ];
 const actionNames: Record<PetAction, string> = {
-  walk_left:'向左跑',walk_right:'向右跑',walk_up:'向后跑',walk_down:'向前跑',drag:'被拎起',listen:'倾听',
-  office:'办公',
+  walk_left: '向左跑',
+  walk_right: '向右跑',
+  walk_up: '向后跑',
+  walk_down: '向前跑',
+  drag: '被拎起',
+  listen: '倾听',
+  office: '办公',
   idle: '待机',
   bounce: '小跳',
   nod: '点头',
@@ -180,6 +187,13 @@ export default function App() {
   const [stageZoom, setStageZoom] = useState<number | null>(null);
   const stageZoomSave = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [petChat, setPetChat] = useState(false);
+  // The message box under the desktop pet: talk to her without opening any other window.
+  const [petComposer, setPetComposer] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  // Points of the pet window's bands above and below her that are on screen (see pet-layout.cjs).
+  const [petRoom, setPetRoom] = useState({ above: petBands.top, below: petBands.bottom });
+  // The pointer is on her: a faint handle shows where the hidden toolbar is.
+  const [figureHover, setFigureHover] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
   const [bubbleHidden, setBubbleHidden] = useState(false);
   const [sceneSettingsOpen, setSceneSettingsOpen] = useState(false);
@@ -197,7 +211,16 @@ export default function App() {
   // Carried by the user she swings like a pendulum from the grab point, and settles when let go.
   const bodyRef = useRef<HTMLDivElement>(null);
   const landRef = useRef<HTMLDivElement>(null);
-  const swing = useRef({ angle: 0, velocity: 0, vx: 0, lifted: false, at: 0, last: 0, raf: 0, origin: '50% 0%' });
+  const swing = useRef({
+    angle: 0,
+    velocity: 0,
+    vx: 0,
+    lifted: false,
+    at: 0,
+    last: 0,
+    raf: 0,
+    origin: '50% 0%',
+  });
   const [sizeNote, setSizeNote] = useState('');
   const scaleSave = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const scaleNote = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -540,32 +563,53 @@ export default function App() {
     setLifeVersion((v) => v + 1);
   }, [character.id]);
   const desktop = useDesktopLife({
-    petMode,characterId:character.id,enabled:ready&&motionEnabled&&state.settings.desktopLifeEnabled!==false,
-    blocked:interactionBusy||talking||resting||Boolean(moment)||petChat,
+    petMode,
+    characterId: character.id,
+    enabled: ready && motionEnabled && state.settings.desktopLifeEnabled !== false,
+    blocked: interactionBusy || talking || resting || Boolean(moment) || petChat || petComposer,
     temperament: character.behavior,
     tired: lifeRef.current.activity === 'sleep' || lifeRef.current.energy < 18,
     occupied: isActivity(action),
-    onAction:a=>setAction(supportsAction(skin,a)?a:a==='bounce'&&supportsAction(skin,'drag')?'drag':'idle'),
-    onLine:line=>{setInteractionLine(line);setBubbleHidden(false);},
-    onRemark:(line)=>{
+    onAction: (a) =>
+      setAction(
+        supportsAction(skin, a) ? a : a === 'bounce' && supportsAction(skin, 'drag') ? 'drag' : 'idle',
+      ),
+    onLine: (line) => {
+      setInteractionLine(line);
+      setBubbleHidden(false);
+    },
+    onRemark: (line) => {
       // Her own remarks share the attention budget with the routine's chatter.
-      if(!mayRemark(attentionRef.current,Date.now(),userIdleRef.current))return;
-      recordRemark(attentionRef.current,Date.now());persistAttention();
-      setInteractionLine(line);setBubbleHidden(false);
+      if (!mayRemark(attentionRef.current, Date.now(), userIdleRef.current)) return;
+      recordRemark(attentionRef.current, Date.now());
+      persistAttention();
+      setInteractionLine(line);
+      setBubbleHidden(false);
     },
-    onLand:(height)=>{
-      setLanding((n)=>n+1);
+    onLand: (height) => {
+      setLanding((n) => n + 1);
       // A short hop or a gentle drop by the user gets the usual reaction to being carried.
-      if(dropping.current){dropping.current=false;if(height<140)interact('drag');}
+      if (dropping.current) {
+        dropping.current = false;
+        if (height < 140) interact('drag');
+      }
     },
-    onPerch:()=>{
-      const doing=lifeRef.current.activity;
-      if(isActivity(doing)&&supportsAction(skin,doing))move(doing,'neutral',true);
-      else setAction(supportsAction(skin,'read')?'read':'idle');
+    onPerch: () => {
+      const doing = lifeRef.current.activity;
+      if (isActivity(doing) && supportsAction(skin, doing)) move(doing, 'neutral', true);
+      else setAction(supportsAction(skin, 'read') ? 'read' : 'idle');
     },
-    onResult:found=>{settleInvite(lifeRef.current,found?'accept':'ignored');
-      if(found){lifeRef.current.desktopEvents=[...(lifeRef.current.desktopEvents||[]),{at:Date.now(),text:'一起玩捉迷藏，你找到了我'}].slice(-12);lifeRef.current.social=Math.max(0,lifeRef.current.social-35);}
-      persistLife();},
+    onResult: (found) => {
+      settleInvite(lifeRef.current, found ? 'accept' : 'ignored');
+      if (found) {
+        lifeRef.current.desktopEvents = [
+          ...(lifeRef.current.desktopEvents || []),
+          { at: Date.now(), text: '一起玩捉迷藏，你找到了我' },
+        ].slice(-12);
+        lifeRef.current.social = Math.max(0, lifeRef.current.social - 35);
+      }
+      persistLife();
+    },
   });
   const lifeTick = useRef<() => void>(() => {});
   lifeTick.current = () => {
@@ -594,7 +638,11 @@ export default function App() {
     ) {
       persistAttention();
       if (motionEnabled && supportsAction(skin, 'wave')) interact('greet', true);
-      setInteractionLine(['你回来啦！', '欢迎回来，刚才去做什么了？', '回来啦。我一直在这边等你哦。'][Math.floor(Math.random() * 3)]);
+      setInteractionLine(
+        ['你回来啦！', '欢迎回来，刚才去做什么了？', '回来啦。我一直在这边等你哦。'][
+          Math.floor(Math.random() * 3)
+        ],
+      );
       setBubbleHidden(false);
     }
     const step = advanceLife(life, {
@@ -608,13 +656,22 @@ export default function App() {
         talking ||
         resting ||
         Boolean(moment) ||
-        desktop.active || petChat ||
+        desktop.active ||
+        petChat ||
+        petComposer ||
         Boolean(drag.current) ||
         (behavior.current.priority >= 100 && behavior.current.until > performance.now()),
     });
     if (!step) return;
-    if(!life.pending)setInvitation(null);
-    if(petMode && !desktop.active && !step.invite && !life.pending && ['read','diary','office'].includes(step.activity))void desktop.explore('read',true);
+    if (!life.pending) setInvitation(null);
+    if (
+      petMode &&
+      !desktop.active &&
+      !step.invite &&
+      !life.pending &&
+      ['read', 'diary', 'office'].includes(step.activity)
+    )
+      void desktop.explore('read', true);
     if (step.changed) {
       if (isActivity(step.activity) && supportsAction(skin, step.activity) && motionEnabled) {
         activityEnd.current = life.until;
@@ -628,8 +685,16 @@ export default function App() {
     if (step.speech && !step.invite) recordRemark(attention, now);
     if (step.invite || step.speech) persistAttention();
     if (step.invite) {
-      setInvitation(step.invite);setBubbleHidden(false);
-      if(petMode)void desktop.explore('hide',true).then(started=>{if(started){setInvitation(null);lifeRef.current.pending=null;persistLife();}});
+      setInvitation(step.invite);
+      setBubbleHidden(false);
+      if (petMode)
+        void desktop.explore('hide', true).then((started) => {
+          if (started) {
+            setInvitation(null);
+            lifeRef.current.pending = null;
+            persistLife();
+          }
+        });
     } else if (step.speech && !interactionLine) {
       setInteractionLine(step.speech);
       setBubbleHidden(false);
@@ -641,6 +706,11 @@ export default function App() {
     const timer = setInterval(() => lifeTick.current(), 5000);
     return () => clearInterval(timer);
   }, [ready]);
+  function openPetComposer() {
+    setPetChat(false);
+    setPetComposer(true);
+    setTimeout(() => composerRef.current?.focus(), 0);
+  }
   function openMoment(id: MomentId) {
     desktop.stop();
     if (invitation) settleInvite(lifeRef.current, 'accept');
@@ -698,6 +768,21 @@ export default function App() {
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [petChat]);
+  useEffect(() => {
+    if (!petMode) return;
+    return bridge.onPetRoom?.(setPetRoom);
+  }, [petMode]);
+  // The message box takes the keyboard when it opens, and folds away when the user goes back to
+  // another app without having typed anything.
+  useEffect(() => {
+    if (!petComposer || petChat) return;
+    composerRef.current?.focus();
+    const away = () => {
+      if (!composerRef.current?.value.trim() && !chatBusy) setPetComposer(false);
+    };
+    window.addEventListener('blur', away);
+    return () => window.removeEventListener('blur', away);
+  }, [petComposer, petChat, chatBusy]);
   // Greetings are no longer on a timer: she greets the user when they come back (see lifeTick).
   useEffect(() => {
     const el = landRef.current;
@@ -721,14 +806,23 @@ export default function App() {
   useEffect(() => {
     if (!petMode || !isDesktop) return;
     let ignore = false;
+    let over = false;
     const pointer = (e: MouseEvent) => {
       const controls =
-        e.target instanceof Element && e.target.closest('.pet-toolbar,.pet-chat-panel,.pet-speech');
+        e.target instanceof Element &&
+        e.target.closest(
+          '.pet-toolbar-zone,.pet-composer-area,.pet-chat-panel,.pet-speech,.pet-invite,.pet-moment,.pet-toast',
+        );
       const figure = document.querySelector('.pet-draggable');
-      const next = !drag.current && !controls && !(figure && hitCharacter(figure, e.clientX, e.clientY));
+      const onFigure = Boolean(figure && hitCharacter(figure, e.clientX, e.clientY));
+      const next = !drag.current && !controls && !onFigure;
       if (next !== ignore) {
         ignore = next;
         bridge.setPetClickThrough(next);
+      }
+      if (onFigure !== over) {
+        over = onFigure;
+        setFigureHover(onFigure);
       }
     };
     window.addEventListener('mousemove', pointer);
@@ -762,7 +856,9 @@ export default function App() {
       const moving = s.lifted || Math.abs(s.angle) > 0.15 || Math.abs(s.velocity) > 0.4;
       if (el) {
         el.style.transformOrigin = s.origin;
-        el.style.transform = moving ? `rotate(${s.angle.toFixed(2)}deg)${s.lifted ? ' scale(0.98, 1.03)' : ''}` : '';
+        el.style.transform = moving
+          ? `rotate(${s.angle.toFixed(2)}deg)${s.lifted ? ' scale(0.98, 1.03)' : ''}`
+          : '';
       }
       if (moving) s.raf = requestAnimationFrame(step);
       else {
@@ -777,12 +873,13 @@ export default function App() {
     liveScale.current ??
     state.settings.petScale ??
     { small: 220 / 300, medium: 1, large: 390 / 300 }[state.settings.petSize || 'medium'];
-  function resizePet(value: number) {
+  // `note`: say the new size over her (scrolling and pinching); the slider shows it itself.
+  function resizePet(value: number, note = true) {
     const next = Math.round(Math.max(0.45, Math.min(2.6, value)) * 100) / 100;
     liveScale.current = next;
     petScaleRef.current = next;
     bridge.scalePet(next);
-    setSizeNote(`大小 ${Math.round(next * 100)}%`);
+    setSizeNote(note ? `大小 ${Math.round(next * 100)}%` : '');
     clearTimeout(scaleNote.current);
     scaleNote.current = setTimeout(() => setSizeNote(''), 1400);
     clearTimeout(scaleSave.current);
@@ -1582,69 +1679,242 @@ export default function App() {
         <p>正在打开你的角色空间…</p>
       </div>
     );
-  if (petMode)
-    return (
-      <div className={`desktop-pet-shell ${petChat ? 'with-chat' : ''}`} style={themeVars(character)}>
-        <div className="pet-toolbar">
-          <button aria-label="探索桌面" title="探索桌面" disabled={desktop.active||interactionBusy||talking} onClick={()=>void desktop.explore()}>⌖</button>
-          <button aria-label="一起玩" title="一起玩" onClick={()=>openMoment('guess')}>♡</button>
-          {desktop.active&&<button aria-label="结束桌面活动" onClick={()=>desktop.stop()}>■</button>}
-          <button aria-label="缩小桌宠" title="缩小（也可以在角色上滚动或捏合）" onClick={() => resizePet(petScaleRef.current / 1.12)}>
-            <ZoomOut size={16} />
-          </button>
-          <button aria-label="放大桌宠" title="放大（也可以在角色上滚动或捏合）" onClick={() => resizePet(petScaleRef.current * 1.12)}>
-            <ZoomIn size={16} />
-          </button>
-          <button aria-label="打开工坊" onClick={() => notifyError(bridge.openWorkshop())}>
-            <Flower2 size={16} />
-          </button>
-          <button aria-label="打开桌宠聊天" onClick={() => setPetChat(!petChat)}>
-            <MessageCircle size={16} />
-          </button>
+  if (petMode) {
+    // Her speech goes in the band above her and the controls in the band below. Near the top of
+    // the screen the band above is off screen, so her speech moves below her; near the bottom the
+    // controls move above her.
+    const speechBelow = petRoom.above < 64 && petRoom.below >= petRoom.above;
+    const controlsAbove = petRoom.below < 64 && petRoom.above > petRoom.below;
+    const speechText = interactionLine || lastReply?.content || '';
+    // Near a screen edge her speech and the controls can share one band.
+    const speech =
+      desktop.phase === 'inviting' ? (
+        <div className="pet-invite" role="status">
+          <p>{desktop.status}</p>
+          <button onClick={desktop.start}>好呀，去藏吧</button>
+          <button onClick={desktop.decline}>等会儿</button>
+        </div>
+      ) : invitation && !moment && !petChat ? (
+        <div className="pet-invite" role="status">
+          <p>{momentOffers[invitation].invite}</p>
+          <button onClick={() => openMoment(invitation)}>好呀，一起</button>
+          <button onClick={declineInvitation}>等会儿</button>
+        </div>
+      ) : toast ? (
+        <div className="pet-toast" role="status">
+          {toast}
+        </div>
+      ) : !petChat && !moment && interactionBusy ? (
+        <div className="pet-speech thinking" role="status" aria-label={`${character.name}正在想怎么回应你`}>
+          <i />
+          <i />
+          <i />
+        </div>
+      ) : !petChat && !moment && !bubbleHidden && speechText ? (
+        <div
+          className="pet-speech"
+          role="status"
+          title="点一下回复"
+          onClick={(event) => {
+            if (!(event.target instanceof Element && event.target.closest('button'))) openPetComposer();
+          }}
+        >
+          <p>{speechText}</p>
           <button
-            aria-label={resting ? '唤醒角色' : '让角色休息'}
-            onClick={() => interact(resting ? 'wake' : 'rest')}
+            className="pet-speech-close"
+            aria-label="收起回复气泡"
+            onClick={() => setBubbleHidden(true)}
           >
-            {resting ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          {activities
-            .filter(({ id }) => supportsAction(skin, id))
-            .map(({ id }) => {
-              const Icon = activityIcons[id];
-              return (
-                <button
-                  key={id}
-                  aria-label={`桌宠${actionNames[id]}`}
-                  aria-pressed={action === id}
-                  disabled={interactionBusy || talking}
-                  title={`${actionNames[id]}，约一分钟`}
-                  onClick={() => move(id, 'neutral')}
-                >
-                  <Icon size={16} />
-                </button>
-              );
-            })}
-          {isActivity(action) && (
-            <button aria-label="停止桌宠活动" title="停止活动" onClick={() => move('idle', 'neutral')}>
-              <Square size={16} />
-            </button>
-          )}
-          <button aria-label="收起桌宠" onClick={() => notifyError(bridge.closePet())}>
-            <X size={16} />
+            <X size={12} />
           </button>
         </div>
-        {desktop.phase==='inviting'&&<div className="pet-invite"><p>{desktop.status}</p><button onClick={desktop.start}>好呀，去藏吧</button><button onClick={desktop.decline}>等会儿</button></div>}
-        {invitation&&!moment&&!petChat&&<div className="pet-invite"><p>{momentOffers[invitation].invite}</p><button onClick={()=>openMoment(invitation)}>好呀，一起</button><button onClick={declineInvitation}>等会儿</button></div>}
-        {moment&&<div className="pet-moment"><Moment id={moment} name={character.name} reducedMotion={!motionEnabled} onDone={finishMoment} onClose={()=>setMoment(null)}/></div>}
-        {petChat && <div className="pet-chat-panel">{conversationPanel('pet')}</div>}
-        {!petChat && !moment && !invitation && desktop.phase!=='inviting' && !bubbleHidden && (interactionLine || lastReply) && (
-          <button className="pet-speech" onClick={() => setPetChat(true)}>
-            {(interactionLine || lastReply?.content || '').slice(0, 70)}
+      ) : null;
+    const controls = petChat ? null : petComposer ? (
+      <div className="pet-composer-area">
+        <div className="pet-composer" role="group" aria-label={`和${character.name}说话`}>
+          <button aria-label="打开桌宠聊天" title="对话记录" onClick={() => setPetChat(true)}>
+            <History size={15} />
           </button>
+          <textarea
+            ref={composerRef}
+            rows={1}
+            maxLength={4000}
+            aria-label="聊天消息"
+            placeholder={`和${character.name}说点什么…`}
+            value={message}
+            onChange={(event) =>
+              setMessageDrafts((drafts) => ({ ...drafts, [character.id]: event.target.value }))
+            }
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                void sendChat();
+              } else if (event.key === 'Escape') {
+                event.preventDefault();
+                setPetComposer(false);
+              }
+            }}
+          />
+          {chatBusy ? (
+            <button aria-label="停止等待回复" title="停止等待" disabled={chatStopping} onClick={stopChat}>
+              <Square size={13} />
+            </button>
+          ) : (
+            <button
+              className="send"
+              aria-label="发送消息"
+              title="发送（Enter）"
+              disabled={!message.trim() || interactionBusy}
+              onClick={() => void sendChat()}
+            >
+              <Send size={15} />
+            </button>
+          )}
+          <button aria-label="收起输入框" title="收起（Esc）" onClick={() => setPetComposer(false)}>
+            <X size={14} />
+          </button>
+        </div>
+        {chatError && (
+          <p className="pet-composer-error" role="alert">
+            {chatError}
+          </p>
         )}
+      </div>
+    ) : (
+      // Hidden until the pointer is over it; a faint handle shows where it is while the pointer is
+      // on her.
+      <div className="pet-toolbar-zone">
+        <span className="pet-toolbar-hint" aria-hidden="true" />
+        <div className="pet-toolbar" role="toolbar" aria-label="桌宠工具栏">
+          <div className="pet-toolbar-row">
+            <button aria-label="和角色说话" title={`和${character.name}说话`} onClick={openPetComposer}>
+              <MessageCircle size={16} />
+            </button>
+            {desktop.active ? (
+              <button aria-label="结束桌面活动" title="结束桌面活动" onClick={() => desktop.stop()}>
+                <Square size={14} />
+              </button>
+            ) : (
+              <button
+                aria-label="探索桌面"
+                title="探索桌面"
+                disabled={interactionBusy || talking}
+                onClick={() => void desktop.explore()}
+              >
+                <Compass size={16} />
+              </button>
+            )}
+            <button aria-label="一起玩" title="一起玩" onClick={() => openMoment('guess')}>
+              <Heart size={16} />
+            </button>
+            <button
+              aria-label={resting ? '唤醒角色' : '让角色休息'}
+              title={resting ? '唤醒' : '休息'}
+              onClick={() => interact(resting ? 'wake' : 'rest')}
+            >
+              {resting ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <button
+              aria-label="打开工坊"
+              title="打开 Mori"
+              onClick={() => notifyError(bridge.openWorkshop())}
+            >
+              <Flower2 size={16} />
+            </button>
+            <button aria-label="收起桌宠" title="收起桌宠" onClick={() => notifyError(bridge.closePet())}>
+              <X size={16} />
+            </button>
+          </div>
+          {activities.some(({ id }) => supportsAction(skin, id)) && (
+            <div className="pet-toolbar-row" role="group" aria-label="活动">
+              {activities
+                .filter(({ id }) => supportsAction(skin, id))
+                .map(({ id }) => {
+                  const Icon = activityIcons[id];
+                  return (
+                    <button
+                      key={id}
+                      aria-label={`桌宠${actionNames[id]}`}
+                      aria-pressed={action === id}
+                      disabled={interactionBusy || talking}
+                      title={`${actionNames[id]}，约一分钟`}
+                      onClick={() => move(id, 'neutral')}
+                    >
+                      <Icon size={16} />
+                    </button>
+                  );
+                })}
+              {isActivity(action) && (
+                <button aria-label="停止桌宠活动" title="停止活动" onClick={() => move('idle', 'neutral')}>
+                  <Square size={14} />
+                </button>
+              )}
+            </div>
+          )}
+          <label className="pet-size">
+            <span>大小</span>
+            <input
+              type="range"
+              min="0.45"
+              max="2.6"
+              step="0.01"
+              value={petScaleRef.current}
+              aria-label="桌宠大小"
+              onChange={(event) => resizePet(Number(event.target.value), false)}
+            />
+            <output>{Math.round(petScaleRef.current * 100)}%</output>
+          </label>
+        </div>
+      </div>
+    );
+    return (
+      <div
+        className={`desktop-pet-shell ${speechBelow ? 'speech-below' : ''} ${controlsAbove ? 'controls-above' : ''} ${figureHover ? 'figure-hover' : ''}`}
+        data-status={desktop.status}
+        style={
+          {
+            ...themeVars(character),
+            '--band-top': `${petBands.top}px`,
+            '--band-bottom': `${petBands.bottom}px`,
+            '--band-side': `${petBands.side}px`,
+            '--room-above': `${petRoom.above}px`,
+            '--room-below': `${petRoom.below}px`,
+          } as CSSProperties
+        }
+      >
+        <div
+          className={`pet-band above ${controlsAbove && !speechBelow && speech && controls ? 'shared' : ''}`}
+        >
+          {controlsAbove && controls}
+          {!speechBelow && speech}
+        </div>
+        <div
+          className={`pet-band below ${speechBelow && !controlsAbove && speech && controls ? 'shared' : ''}`}
+        >
+          {speechBelow && speech}
+          {!controlsAbove && controls}
+        </div>
+        {moment && (
+          <div className="pet-moment">
+            <Moment
+              id={moment}
+              name={character.name}
+              reducedMotion={!motionEnabled}
+              onDone={finishMoment}
+              onClose={() => setMoment(null)}
+            />
+          </div>
+        )}
+        {petChat && <div className="pet-chat-panel">{conversationPanel('pet')}</div>}
         <div
           className="pet-draggable"
-          style={desktop.mask?{clipPath:`path(evenodd, "M 0 0 H ${innerWidth} V ${innerHeight} H 0 Z M ${desktop.mask.x-12} ${desktop.mask.y-(document.querySelector('.pet-draggable')?.getBoundingClientRect().top||0)} h ${desktop.mask.width} v ${desktop.mask.height} h ${-desktop.mask.width} Z")`}:undefined}
+          style={
+            desktop.mask
+              ? {
+                  clipPath: `path(evenodd, "M 0 0 H ${innerWidth} V ${innerHeight} H 0 Z M ${desktop.mask.x - 12} ${desktop.mask.y - (document.querySelector('.pet-draggable')?.getBoundingClientRect().top || 0)} h ${desktop.mask.width} v ${desktop.mask.height} h ${-desktop.mask.width} Z")`,
+                }
+              : undefined
+          }
           role="button"
           tabIndex={0}
           aria-label={`和${character.name}互动，按 Enter 轻触，拖动可移动桌宠`}
@@ -1679,7 +1949,7 @@ export default function App() {
                 bodyRef.current?.classList.add('lifted');
                 startSwing();
               }
-              if(supportsAction(skin,'drag'))setAction('drag');
+              if (supportsAction(skin, 'drag')) setAction('drag');
               const now = performance.now(),
                 dt = Math.max(8, now - swing.current.at) / 1000;
               swing.current.vx = swing.current.vx * 0.65 + (x / dt) * 0.35;
@@ -1710,11 +1980,11 @@ export default function App() {
               event.currentTarget.releasePointerCapture(event.pointerId);
           }}
           onLostPointerCapture={() => {
-            if(action==='drag')setAction('idle');
+            if (action === 'drag') setAction('idle');
             drag.current = null;
           }}
           onPointerCancel={() => {
-            if(action==='drag')setAction('idle');
+            if (action === 'drag') setAction('idle');
             if (drag.current?.moved) {
               swing.current.lifted = false;
               bodyRef.current?.classList.remove('lifted');
@@ -1739,15 +2009,14 @@ export default function App() {
             </div>
           )}
         </div>
-        {sizeNote && <span className="pet-size-note" role="status">{sizeNote}</span>}
-        <span className="pet-name-tag" title={desktop.status}>
-          {character.name}
-          <i />
-          {engineName(skin)}
-        </span>
-        {toast && <div className="pet-toast">{toast}</div>}
+        {sizeNote && (
+          <span className="pet-size-note" role="status">
+            {sizeNote}
+          </span>
+        )}
       </div>
     );
+  }
   const homeView = view === 'home' || view === 'chat';
   const settingsView = view === 'settings' || view === 'desktop';
   const quickReplies = localChat
@@ -2457,13 +2726,17 @@ export default function App() {
               preview={avatar}
               size={state.settings.petSize || 'medium'}
               // A preset replaces any free size set by scrolling on the pet.
-              onSize={(petSize) => commit((s) => ({ ...s, settings: { ...s.settings, petSize, petScale: undefined } }))}
+              onSize={(petSize) =>
+                commit((s) => ({ ...s, settings: { ...s.settings, petSize, petScale: undefined } }))
+              }
               scale={petScaleRef.current}
               onScale={(petScale) => commit((s) => ({ ...s, settings: { ...s.settings, petScale } }))}
               characterName={character.name}
               skinName={skin?.name}
               autonomous={state.settings.desktopLifeEnabled}
-              onAutonomous={desktopLifeEnabled=>commit(s=>({...s,settings:{...s.settings,desktopLifeEnabled}}))}
+              onAutonomous={(desktopLifeEnabled) =>
+                commit((s) => ({ ...s, settings: { ...s.settings, desktopLifeEnabled } }))
+              }
               desktopAvailable={isDesktop}
               onOpen={() => notifyError(bridge.openPet())}
               onClose={() => notifyError(bridge.closePet())}
@@ -2820,7 +3093,9 @@ export default function App() {
           skins={skins}
           imageReady={isDesktop && imageServiceReady(state.settings, keys)}
           revisionReady={
-            isDesktop && chatServiceReady(state.settings, keys) && selectedSearchProvider(state.settings, keys) !== 'none'
+            isDesktop &&
+            chatServiceReady(state.settings, keys) &&
+            selectedSearchProvider(state.settings, keys) !== 'none'
           }
           onClose={() => setPetProductionOpen(false)}
           onBusy={setJobBusy}

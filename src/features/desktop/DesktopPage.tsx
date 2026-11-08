@@ -6,7 +6,7 @@ interface Props {
   skinName?: string;
   desktopAvailable: boolean;
   autonomous?: boolean;
-  onAutonomous: (enabled:boolean)=>void;
+  onAutonomous: (enabled: boolean) => void;
   onOpen: () => void;
   onClose: () => void;
   preview: ReactNode;
@@ -22,7 +22,8 @@ export function DesktopPage({
   characterName,
   skinName,
   desktopAvailable,
-  autonomous,onAutonomous,
+  autonomous,
+  onAutonomous,
   onOpen,
   onClose,
   preview,
@@ -40,9 +41,20 @@ export function DesktopPage({
       <div className="desktop-size-controls">
         <h2>桌面陪伴</h2>
         <p>
-          {characterName} · {skinName || '尚未选择外观'}。拖动人物移动位置，悬停显示工具栏。
+          {characterName} · {skinName || '尚未选择外观'}
+          。可以把她拖到屏幕上任何地方，她会待在那里；把鼠标移到她脚下会出现工具栏，点其中的对话按钮就能直接和她说话。
         </p>
-        <label><input type="checkbox" checked={autonomous!==false} onChange={e=>onAutonomous(e.target.checked)}/> 自主探索桌面与寻找活动位置</label><p className="fine-print">桌宠悬停工具栏的 ⌖ 可立即探索。跑动和被拎起需要先制作对应动作；旧外观仍可使用。</p>
+        <label>
+          <input
+            type="checkbox"
+            checked={autonomous !== false}
+            onChange={(e) => onAutonomous(e.target.checked)}
+          />{' '}
+          自主探索桌面与寻找活动位置
+        </label>
+        <p className="fine-print">
+          工具栏里的指南针可让她立即去探索。刚被你放下后，她会在原地待几分钟再自己走动。跑动和被拎起需要先制作对应动作；旧外观仍可使用。
+        </p>
         <div className="pet-size-options" role="group" aria-label="桌宠大小">
           {(['small', 'medium', 'large'] as const).map((value, index) => (
             <button
@@ -68,7 +80,9 @@ export function DesktopPage({
             onChange={(e) => onScale(Number(e.target.value))}
           />
         </label>
-        <p className="fine-print">也可以把鼠标放在桌宠身上滚动滚轮，或在触控板上捏合来放大缩小。</p>
+        <p className="fine-print">
+          桌宠工具栏里也有同样的大小滑块；把鼠标放在她身上滚动滚轮，或在触控板上捏合，也能放大缩小。
+        </p>
         <div className="toolbar">
           <button className="button primary" disabled={!desktopAvailable || !skinName} onClick={onOpen}>
             打开桌宠
