@@ -89,6 +89,8 @@ export const bridge: MoriBridge = window.mori ?? {
   },
   movePet() {},
   setPetClickThrough() {},
+  scalePet() {},
+  userIdle: async () => 0,
   async openWorkshop() {
     location.search = '';
   },

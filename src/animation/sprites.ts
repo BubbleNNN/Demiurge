@@ -102,6 +102,24 @@ export function prepareSpriteFrames(image: HTMLImageElement, animation: SpriteAn
   if (pixels > 32 * 1024 * 1024) throw new Error('动画解码超过内存预算，请拆分素材包');
   return animation.frames.map((_, index) => paint(image, animation, index, true));
 }
+// The canvas's size on screen. A rotation (the pet swinging while carried) must not change it,
+// but a zoom from a scaled ancestor must, so the drawing stays sharp. Layout size times the
+// rotation-free scale of every transformed ancestor gives exactly that.
+function displaySize(canvas: HTMLCanvasElement) {
+  if (!canvas.offsetWidth || typeof getComputedStyle !== 'function' || typeof DOMMatrixReadOnly !== 'function') {
+    const rect = canvas.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }
+  let scale = 1;
+  for (let node: Element | null = canvas; node; node = node.parentElement) {
+    const transform = getComputedStyle(node).transform;
+    if (transform && transform !== 'none') {
+      const m = new DOMMatrixReadOnly(transform);
+      scale *= Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) || 1;
+    }
+  }
+  return { width: canvas.offsetWidth * scale, height: canvas.offsetHeight * scale };
+}
 export function drawSpriteFrame(
   canvas: HTMLCanvasElement,
   drawable: Drawable,
@@ -112,7 +130,7 @@ export function drawSpriteFrame(
   const cell = asSpriteCell(drawable);
   const context = canvas.getContext('2d');
   if (!context) throw new Error('无法绘制动画');
-  const bounds = canvas.getBoundingClientRect();
+  const bounds = displaySize(canvas);
   // Respect Retina/HiDPI screens beyond 2x, with an explicit viewport memory
   // budget instead of silently capping every screen at 2x.
   const ratio = Math.min(

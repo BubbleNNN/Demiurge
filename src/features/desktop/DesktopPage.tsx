@@ -12,6 +12,9 @@ interface Props {
   preview: ReactNode;
   size: 'small' | 'medium' | 'large';
   onSize: (size: 'small' | 'medium' | 'large') => void;
+  /** Free size, as a multiple of the medium size. */
+  scale: number;
+  onScale: (scale: number) => void;
 }
 
 // The desktop pet is one switch plus a size; how it behaves is shown on hover in the pet itself.
@@ -25,6 +28,8 @@ export function DesktopPage({
   preview,
   size,
   onSize,
+  scale,
+  onScale,
 }: Props) {
   return (
     <section className="desktop-workspace settings-card" aria-label="桌宠窗口模块">
@@ -51,6 +56,19 @@ export function DesktopPage({
             </button>
           ))}
         </div>
+        <label className="pet-scale-control">
+          自由调整大小 <span>{Math.round(scale * 100)}%</span>
+          <input
+            type="range"
+            min="0.45"
+            max="2.6"
+            step="0.05"
+            value={scale}
+            aria-label="桌宠大小"
+            onChange={(e) => onScale(Number(e.target.value))}
+          />
+        </label>
+        <p className="fine-print">也可以把鼠标放在桌宠身上滚动滚轮，或在触控板上捏合来放大缩小。</p>
         <div className="toolbar">
           <button className="button primary" disabled={!desktopAvailable || !skinName} onClick={onOpen}>
             打开桌宠

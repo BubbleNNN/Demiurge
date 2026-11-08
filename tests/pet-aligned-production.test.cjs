@@ -207,3 +207,46 @@ test('two poses drawn touching each other cannot be split and ask for a new shee
     }
   assert.throws(() => inspectSheet(f.url(f.encode(image.bitmap, image.width, image.height)), f.codec, 'listen', options), /连在一起/);
 });
+
+test('blink frames drawn off the grid land exactly on the idle frame, so waiting does not vibrate', () => {
+  const sheet = f.decode(f.image(true));
+  // Shift the right column 9 px left and the bottom row 6 px up: the compressed grid models draw.
+  const moved = Buffer.alloc(sheet.bitmap.length);
+  for (let y = 0; y < sheet.height; y++)
+    for (let x = 0; x < sheet.width; x++) {
+      const sx = x >= 128 ? x + 9 : x,
+        sy = y >= 128 ? y + 6 : y;
+      if (sx >= sheet.width || sy >= sheet.height) continue;
+      sheet.bitmap.copy(moved, (y * sheet.width + x) * 4, (sy * sheet.width + sx) * 4, (sy * sheet.width + sx) * 4 + 4);
+    }
+  const packed = packFrames(f.url(f.image()), { blink: f.url(f.encode(moved, sheet.width, sheet.height)) }, 'sticker', f.codec, options);
+  const atlas = f.decode(Buffer.from(packed.image.split(',')[1], 'base64'));
+  const a = packed.sprite;
+  // Head colour position in logical units, as the player places each frame.
+  const head = (index) => {
+    const frame = a.frames[index],
+      [rx, ry, rw, rh] = frame.rect,
+      [cw, ch] = frame.cell,
+      [ox, oy] = frame.offset;
+    let sx = 0,
+      sy = 0,
+      n = 0;
+    for (let y = 0; y < rh; y++)
+      for (let x = 0; x < rw; x++) {
+        const i = ((ry + y) * atlas.width + rx + x) * 4;
+        if (atlas.bitmap[i] === 210 && atlas.bitmap[i + 1] === 115 && atlas.bitmap[i + 3] === 255) {
+          sx += ((x + ox) / cw) * a.width;
+          sy += ((y + oy) / ch) * a.height;
+          n++;
+        }
+      }
+    return [sx / n, sy / n];
+  };
+  const idle = head(0);
+  // One source pixel of this small fixture, in logical units; the drawn offset was 9 and 6 pixels.
+  const pixel = a.frames[0].cell[1] / a.height > 0 ? a.height / a.frames[a.clips.blink.frames[1]].cell[1] : 1;
+  for (const index of a.clips.blink.frames) {
+    const [x, y] = head(index);
+    assert.ok(Math.abs(x - idle[0]) <= pixel && Math.abs(y - idle[1]) <= pixel, `frame ${index} head at ${x},${y} vs idle ${idle}`);
+  }
+});

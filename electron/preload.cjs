@@ -69,6 +69,8 @@ contextBridge.exposeInMainWorld('mori', {
   openExternal: invoke('open-external'),
   movePet: (delta) => ipcRenderer.send('mori:move-pet', delta),
   setPetClickThrough: (enabled) => ipcRenderer.send('mori:pet-click-through', enabled),
+  scalePet: (scale) => ipcRenderer.send('mori:scale-pet', scale),
+  userIdle: invoke('user-idle'),
   onProgress: subscribe('progress'),
   onStateChanged: subscribe('state-changed'),
   onKeysChanged: subscribe('keys-changed'),

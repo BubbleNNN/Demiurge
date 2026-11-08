@@ -12,6 +12,7 @@ const {
   net,
   nativeImage,
   clipboard,
+  powerMonitor,
 } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -259,10 +260,20 @@ function updatePetLayout(state) {
     require('../shared/cyrene-motion-pack.json').entries.find(
       (e) => e.builtin === skin?.builtin && !skin?.images.neutral,
     )?.animation;
-  const aspect = animation ? animation.width / animation.height : skin?.style === 'powerpuff' ? 1 : 0.75;
-  const next = require('./pet-layout.cjs').petBounds(state.settings.petSize, aspect, area, current);
+  petAspect = animation ? animation.width / animation.height : skin?.style === 'powerpuff' ? 1 : 0.75;
+  // While the pet is being resized live, the saved scale catches up afterwards; never undo it.
+  if (Date.now() < liveScaleUntil) return;
+  const next = require('./pet-layout.cjs').petBounds(
+    state.settings.petSize,
+    petAspect,
+    area,
+    current,
+    state.settings.petScale,
+  );
   if (Object.keys(next).some((key) => next[key] !== current[key])) pet.setBounds(next);
 }
+let petAspect = 0.75,
+  liveScaleUntil = 0;
 async function createPet() {
   const state = await store.loadState();
   const character = state?.characters.find((c) => c.id === state.activeCharacterId);
@@ -1168,6 +1179,18 @@ app.whenReady().then(async () => {
     const position = require('./pet-layout.cjs').clampPetPosition(target.x, target.y, pet.getBounds(), area);
     pet.setPosition(position.x, position.y);
   });
+  // Live resizing while the user scrolls or pinches over the pet; the renderer saves the final
+  // scale a moment later, and the layout then lands on the same bounds.
+  ipcMain.on('mori:scale-pet', (event, scale) => {
+    if (!isTrusted(event) || !pet || event.sender !== pet.webContents || !Number.isFinite(scale)) return;
+    const current = pet.getBounds(),
+      area = screen.getDisplayMatching(current).workArea;
+    liveScaleUntil = Date.now() + 1500;
+    pet.setBounds(require('./pet-layout.cjs').petBounds('medium', petAspect, area, current, scale));
+  });
+  // Seconds since the last keyboard or mouse input anywhere, so the character asks for attention
+  // at a pause rather than in the middle of the user's typing.
+  handle('user-idle', () => powerMonitor.getSystemIdleTime());
   ipcMain.on('mori:pet-click-through', (event, enabled) => {
     if (isTrusted(event) && pet && event.sender === pet.webContents && typeof enabled === 'boolean')
       pet.setIgnoreMouseEvents(enabled, { forward: true });

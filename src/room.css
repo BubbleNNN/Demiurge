@@ -238,7 +238,9 @@
   left: var(--figure-x);
   right: auto;
   width: min(560px, 46%);
-  transform: translateX(-50%);
+  /* The user's zoom grows her from the feet; the canvas re-renders at the new size, so it stays sharp. */
+  transform: translateX(-50%) scale(var(--stage-zoom, 1));
+  transform-origin: 50% 100%;
   z-index: 3;
 }
 .room-scene .room-figure .illustration-motion > img,
@@ -1374,4 +1376,101 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Wardrobe: each look carries its own delete control, shown on hover or focus. */
+.wardrobe-item {
+  position: relative;
+  display: grid;
+}
+.wardrobe-item > .wardrobe-card {
+  width: 100%;
+}
+.wardrobe-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper, #fff) 92%, transparent);
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.wardrobe-item:hover .wardrobe-delete,
+.wardrobe-delete:focus-visible {
+  opacity: 1;
+}
+.wardrobe-delete:hover {
+  color: #b33a3a;
+  background: #fff1f1;
+}
+@media (hover: none) {
+  .wardrobe-delete {
+    opacity: 1;
+  }
+}
+
+/* Desktop pet body: the swing while carried is set inline from App; the landing squash is here. */
+.pet-landing,
+.pet-body {
+  position: absolute;
+  inset: 0;
+}
+.pet-landing {
+  transform-origin: 50% 100%;
+}
+.pet-landing.landing {
+  animation: pet-land 380ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes pet-land {
+  0% {
+    transform: scale(1, 1);
+  }
+  28% {
+    transform: scale(1.07, 0.88);
+  }
+  62% {
+    transform: scale(0.97, 1.04);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+.pet-body.lifted {
+  cursor: grabbing;
+  filter: drop-shadow(0 18px 14px rgba(40, 30, 60, 0.18));
+}
+.pet-size-note {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper, #fff) 92%, transparent);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-landing.landing {
+    animation: none;
+  }
+}
+.pet-scale-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.pet-scale-control input {
+  grid-column: 1 / -1;
 }

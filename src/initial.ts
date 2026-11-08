@@ -132,7 +132,9 @@ export function migrateState(value: AppState | null): AppState {
     };
   }
   const missing = value.characters.some((c) => c.id === cyrene.id)
-    ? builtinSkins.filter((s) => !value.skins.some((v) => v.id === s.id))
+    ? builtinSkins.filter(
+        (s) => !value.skins.some((v) => v.id === s.id) && !value.settings.removedBuiltins?.includes(s.id),
+      )
     : [];
   const characters = value.characters.map((c) => {
     if (c.id !== cyrene.id || c.roleplay) return c;

@@ -515,6 +515,10 @@ function validateModel(value, label) {
   };
 }
 
+function scaleValue(value, min, max, label) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) invalid(label, 'expected a number');
+  return Math.round(Math.max(min, Math.min(max, value)) * 100) / 100;
+}
 function validateSettings(value) {
   const s = record(value, 'settings');
   if (s.codexHome !== undefined && (typeof s.codexHome !== 'string' || s.codexHome.length > 1024 || s.codexHome.includes('\0') || (s.codexHome && !path.isAbsolute(s.codexHome))))
@@ -524,6 +528,17 @@ function validateSettings(value) {
     ...(s.desktopLifeEnabled !== undefined ? {desktopLifeEnabled:boolean(s.desktopLifeEnabled,'settings.desktopLifeEnabled')} : {}),
     ...(s.petSize !== undefined
       ? { petSize: enumValue(s.petSize, ['small', 'medium', 'large'], 'settings.petSize') }
+      : {}),
+    // Free sizing: the desktop pet's figure height and the in-app stage zoom.
+    ...(s.petScale !== undefined ? { petScale: scaleValue(s.petScale, 0.45, 2.6, 'settings.petScale') } : {}),
+    ...(s.stageZoom !== undefined ? { stageZoom: scaleValue(s.stageZoom, 0.5, 2, 'settings.stageZoom') } : {}),
+    // Built-in looks the user deleted; they are not restored on the next start.
+    ...(s.removedBuiltins !== undefined
+      ? {
+          removedBuiltins: array(s.removedBuiltins, 'settings.removedBuiltins', 50, (v, l) =>
+            string(v, l, 128, false),
+          ),
+        }
       : {}),
     ...(s.chatMode !== undefined
       ? { chatMode: enumValue(s.chatMode, ['model', 'local'], 'settings.chatMode') }

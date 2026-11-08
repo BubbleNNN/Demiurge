@@ -236,6 +236,12 @@ export interface Settings {
   codexHome?: string;
   desktopLifeEnabled?: boolean;
   petSize?: 'small' | 'medium' | 'large';
+  /** Desktop pet size as a multiple of the medium size; set by scrolling or pinching on the pet. */
+  petScale?: number;
+  /** Character zoom on the in-app stage. */
+  stageZoom?: number;
+  /** Built-in looks the user deleted, so they are not restored. */
+  removedBuiltins?: string[];
   chatMode?: 'model' | 'local';
   llmBaseUrl: string;
   llmProtocol?: 'openai' | 'anthropic' | 'codex';
@@ -529,6 +535,10 @@ export interface MoriBridge {
   closePet(): Promise<void>;
   movePet(delta: { x: number; y: number }): void;
   setPetClickThrough(enabled: boolean): void;
+  /** Resize the desktop pet live; the scale is a multiple of the medium size. */
+  scalePet(scale: number): void;
+  /** Seconds since the user last touched keyboard or mouse. */
+  userIdle(): Promise<number>;
   openWorkshop(): Promise<void>;
   exportCharacter(input: { character: Character; skins: Skin[] }): Promise<boolean>;
   importCharacter(): Promise<{ character: Character; skins: Skin[] } | null>;

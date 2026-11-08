@@ -60,7 +60,7 @@ export function createLife(now = Date.now()): LifeState {
     chapter: 0,
     resume: null,
     nextSpeech: now + 45000,
-    nextInvite: now + 120000,
+    nextInvite: now + 8 * 60000,
     missed: 0,
     pending: null,
     moments: [],
@@ -191,6 +191,9 @@ export function advanceLife(
     proactive = true,
     blocked = false,
     random = Math.random,
+    // The attention budget (see attention.ts): whether she may invite or remark right now.
+    canInvite = true,
+    canRemark = true,
   } = {},
 ): LifeStep | null {
   const elapsed = Math.max(0, now - s.updatedAt);
@@ -253,20 +256,20 @@ export function advanceLife(
             : (110000 + random() * 90000) * pace;
     s.until = now + duration;
     changed = previous !== s.activity;
-    announce = changed && proactive && s.activity !== 'sleep' ? random() < 0.6 : false;
+    announce = changed && proactive && s.activity !== 'sleep' ? random() < 0.4 : false;
   }
 
   let speech: string | null = null;
   let invite: MomentId | null = null;
   if (proactive && !s.pending && s.activity !== 'sleep' && !quiet(hour)) {
-    if (now >= s.nextInvite && s.social >= 50) {
+    if (now >= s.nextInvite && s.social >= 50 && canInvite) {
       invite = offerFor(s, random);
       s.pending = { offer: invite, expires: now + 60000 };
       s.lastOffer = invite;
       s.nextSpeech = now + 180000;
-    } else if (announce || now >= s.nextSpeech) {
+    } else if ((announce || now >= s.nextSpeech) && canRemark) {
       speech = s.reason || null;
-      s.nextSpeech = now + 150000 + random() * 120000;
+      s.nextSpeech = now + 360000 + random() * 360000;
     }
   }
   return { activity: s.activity, changed, speech, invite };

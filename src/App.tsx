@@ -41,6 +41,8 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
+  ZoomIn,
+  ZoomOut,
   Upload,
   WandSparkles,
   X,
@@ -82,6 +84,16 @@ import { CharacterPacks } from './components/CharacterPacks';
 import { CharacterSetup } from './components/CharacterSetup';
 import { CharacterReadiness } from './components/CharacterReadiness';
 import { usableCharacterSkin, selectedCharacterSkin, existingCharacter } from './characterReadiness';
+import {
+  freshAttention,
+  mayInvite,
+  mayRemark,
+  noticeReturn,
+  recordInvite,
+  recordRemark,
+  restoreAttention,
+  type Attention,
+} from './attention';
 import { creationDraftKey, parseCreationDraft } from './creationDraft';
 import {
   activateCharacterPack,
@@ -164,6 +176,9 @@ export default function App() {
   const [previewSpeech, setPreviewSpeech] = useState(false);
   const [showEarlierArt, setShowEarlierArt] = useState(false);
   const [zoom, setZoom] = useState(1);
+  // The home stage keeps its own zoom, remembered across starts.
+  const [stageZoom, setStageZoom] = useState<number | null>(null);
+  const stageZoomSave = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [petChat, setPetChat] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
   const [bubbleHidden, setBubbleHidden] = useState(false);
@@ -171,6 +186,23 @@ export default function App() {
   const [touchFeedback, setTouchFeedback] = useState<{ kind: 'headpat' | 'poke'; key: number } | null>(null);
   // Daily life: needs, self-chosen activities, invitations and shared moments (see life.ts).
   const lifeRef = useRef<LifeState>(createLife());
+  // How often she may reach out (see attention.ts), and how long the user has been idle.
+  const attentionRef = useRef<Attention>(freshAttention());
+  const userIdleRef = useRef(0);
+  const openedAt = useRef(Date.now());
+  // Bumped on every touchdown after a jump, fall or drop, to play the landing squash.
+  const [landing, setLanding] = useState(0);
+  const dropping = useRef(false);
+  const resizePetRef = useRef<(value: number) => void>(() => {});
+  // Carried by the user she swings like a pendulum from the grab point, and settles when let go.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const landRef = useRef<HTMLDivElement>(null);
+  const swing = useRef({ angle: 0, velocity: 0, vx: 0, lifted: false, at: 0, last: 0, raf: 0, origin: '50% 0%' });
+  const [sizeNote, setSizeNote] = useState('');
+  const scaleSave = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const scaleNote = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const liveScale = useRef<number | null>(null);
+  const petScaleRef = useRef(1);
   const [, setLifeVersion] = useState(0);
   const [invitation, setInvitation] = useState<MomentId | null>(null);
   const [moment, setMoment] = useState<MomentId | null>(null);
@@ -468,6 +500,38 @@ export default function App() {
       return createLife();
     }
   }
+  const attentionKey = `mori-attention-${character.id}`;
+  function persistAttention() {
+    try {
+      localStorage.setItem(attentionKey, JSON.stringify(attentionRef.current));
+    } catch {
+      /* Without storage the limits still hold for this session. */
+    }
+  }
+  useEffect(() => {
+    try {
+      attentionRef.current = restoreAttention(JSON.parse(localStorage.getItem(attentionKey) || 'null'));
+    } catch {
+      attentionRef.current = freshAttention();
+    }
+  }, [attentionKey]);
+  useEffect(() => {
+    if (!ready || !isDesktop) return;
+    let live = true;
+    const poll = () =>
+      void bridge
+        .userIdle()
+        .then((seconds) => {
+          if (live && Number.isFinite(seconds)) userIdleRef.current = seconds;
+        })
+        .catch(() => {});
+    poll();
+    const timer = setInterval(poll, 4000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [ready]);
   useEffect(() => {
     lifeRef.current = readLife();
     setInvitation(null);
@@ -478,8 +542,27 @@ export default function App() {
   const desktop = useDesktopLife({
     petMode,characterId:character.id,enabled:ready&&motionEnabled&&state.settings.desktopLifeEnabled!==false,
     blocked:interactionBusy||talking||resting||Boolean(moment)||petChat,
-    onAction:a=>setAction(supportsAction(skin,a)?a:'idle'),
+    temperament: character.behavior,
+    tired: lifeRef.current.activity === 'sleep' || lifeRef.current.energy < 18,
+    occupied: isActivity(action),
+    onAction:a=>setAction(supportsAction(skin,a)?a:a==='bounce'&&supportsAction(skin,'drag')?'drag':'idle'),
     onLine:line=>{setInteractionLine(line);setBubbleHidden(false);},
+    onRemark:(line)=>{
+      // Her own remarks share the attention budget with the routine's chatter.
+      if(!mayRemark(attentionRef.current,Date.now(),userIdleRef.current))return;
+      recordRemark(attentionRef.current,Date.now());persistAttention();
+      setInteractionLine(line);setBubbleHidden(false);
+    },
+    onLand:(height)=>{
+      setLanding((n)=>n+1);
+      // A short hop or a gentle drop by the user gets the usual reaction to being carried.
+      if(dropping.current){dropping.current=false;if(height<140)interact('drag');}
+    },
+    onPerch:()=>{
+      const doing=lifeRef.current.activity;
+      if(isActivity(doing)&&supportsAction(skin,doing))move(doing,'neutral',true);
+      else setAction(supportsAction(skin,'read')?'read':'idle');
+    },
     onResult:found=>{settleInvite(lifeRef.current,found?'accept':'ignored');
       if(found){lifeRef.current.desktopEvents=[...(lifeRef.current.desktopEvents||[]),{at:Date.now(),text:'一起玩捉迷藏，你找到了我'}].slice(-12);lifeRef.current.social=Math.max(0,lifeRef.current.social-35);}
       persistLife();},
@@ -500,10 +583,26 @@ export default function App() {
       return;
     }
     const life = lifeRef.current;
+    const now = Date.now(),
+      attention = attentionRef.current;
+    if (
+      state.settings.proactiveEnabled !== false &&
+      noticeReturn(attention, now, userIdleRef.current, openedAt.current) &&
+      !interactionBusy &&
+      !talking &&
+      !moment
+    ) {
+      persistAttention();
+      if (motionEnabled && supportsAction(skin, 'wave')) interact('greet', true);
+      setInteractionLine(['你回来啦！', '欢迎回来，刚才去做什么了？', '回来啦。我一直在这边等你哦。'][Math.floor(Math.random() * 3)]);
+      setBubbleHidden(false);
+    }
     const step = advanceLife(life, {
       available: activities.map((item) => item.id),
       temperament: character.behavior,
       proactive: state.settings.proactiveEnabled !== false,
+      canInvite: mayInvite(attention, now, userIdleRef.current, character.behavior),
+      canRemark: mayRemark(attention, now, userIdleRef.current),
       blocked:
         interactionBusy ||
         talking ||
@@ -525,6 +624,9 @@ export default function App() {
         move('idle', emotion);
       }
     }
+    if (step.invite) recordInvite(attention, now);
+    if (step.speech && !step.invite) recordRemark(attention, now);
+    if (step.invite || step.speech) persistAttention();
     if (step.invite) {
       setInvitation(step.invite);setBubbleHidden(false);
       if(petMode)void desktop.explore('hide',true).then(started=>{if(started){setInvitation(null);lifeRef.current.pending=null;persistLife();}});
@@ -596,20 +698,26 @@ export default function App() {
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [petChat]);
+  // Greetings are no longer on a timer: she greets the user when they come back (see lifeTick).
   useEffect(() => {
-    if (!state.settings.proactiveEnabled || !petMode || !motionEnabled || desktop.active || invitation || moment) return;
-    const timer = setInterval(() => {
-      if (
-        !document.hidden &&
-        !interactionBusy &&
-        !talking &&
-        action === 'idle' &&
-        supportsAction(skin, 'wave')
-      )
-        interact('greet', true);
-    }, proactiveInterval(character));
-    return () => clearInterval(timer);
-  }, [state.settings.proactiveEnabled, petMode, motionEnabled, interactionBusy, talking, action, skin, desktop.active, invitation, moment]);
+    const el = landRef.current;
+    if (!landing || !el) return;
+    el.classList.remove('landing');
+    void el.offsetWidth;
+    el.classList.add('landing');
+  }, [landing]);
+  useEffect(() => {
+    if (!petMode) return;
+    const el = document.querySelector<HTMLElement>('.pet-draggable');
+    if (!el) return;
+    // Scrolling resizes gently; a trackpad pinch arrives as a wheel event with ctrlKey.
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      resizePetRef.current(petScaleRef.current * Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.001)));
+    };
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => el.removeEventListener('wheel', wheel);
+  }, [petMode, ready]);
   useEffect(() => {
     if (!petMode || !isDesktop) return;
     let ignore = false;
@@ -637,6 +745,53 @@ export default function App() {
     },
     [],
   );
+  function startSwing() {
+    const s = swing.current;
+    if (s.raf) return;
+    s.last = performance.now();
+    const step = () => {
+      const now = performance.now(),
+        dt = Math.min(0.05, (now - s.last) / 1000) || 0.016;
+      s.last = now;
+      // The pointer's speed fades when it stops, so she swings back under the grab point.
+      s.vx *= Math.exp(-dt * 5);
+      const target = s.lifted ? Math.max(-28, Math.min(28, -s.vx * 0.035)) : 0;
+      s.velocity += ((target - s.angle) * 70 - s.velocity * 9) * dt;
+      s.angle += s.velocity * dt;
+      const el = bodyRef.current;
+      const moving = s.lifted || Math.abs(s.angle) > 0.15 || Math.abs(s.velocity) > 0.4;
+      if (el) {
+        el.style.transformOrigin = s.origin;
+        el.style.transform = moving ? `rotate(${s.angle.toFixed(2)}deg)${s.lifted ? ' scale(0.98, 1.03)' : ''}` : '';
+      }
+      if (moving) s.raf = requestAnimationFrame(step);
+      else {
+        s.raf = 0;
+        s.angle = s.velocity = 0;
+      }
+    };
+    s.raf = requestAnimationFrame(step);
+  }
+  // Desktop pet size: scroll or pinch over her, or use the toolbar; saved a moment later.
+  petScaleRef.current =
+    liveScale.current ??
+    state.settings.petScale ??
+    { small: 220 / 300, medium: 1, large: 390 / 300 }[state.settings.petSize || 'medium'];
+  function resizePet(value: number) {
+    const next = Math.round(Math.max(0.45, Math.min(2.6, value)) * 100) / 100;
+    liveScale.current = next;
+    petScaleRef.current = next;
+    bridge.scalePet(next);
+    setSizeNote(`大小 ${Math.round(next * 100)}%`);
+    clearTimeout(scaleNote.current);
+    scaleNote.current = setTimeout(() => setSizeNote(''), 1400);
+    clearTimeout(scaleSave.current);
+    scaleSave.current = setTimeout(() => {
+      commit((s) => ({ ...s, settings: { ...s.settings, petScale: next } }));
+      liveScale.current = null;
+    }, 600);
+  }
+  resizePetRef.current = resizePet;
   async function save(updater: (s: AppState) => AppState, original?: AppState | null) {
     const pending = saveQueue.current
       .catch(() => {})
@@ -1121,6 +1276,34 @@ export default function App() {
       };
     });
   }
+  function deleteSkin(item: Skin) {
+    if (jobBusy || chatBusy) return;
+    const others = state.skins.filter(
+      (s) => s.id !== item.id && s.characterId === item.characterId && usableCharacterSkin(s, character),
+    );
+    const note = others.length ? '' : '\n这是该角色最后一套可用外观，删除后桌宠会先收起。';
+    const source = item.generation ? '\n制作任务里的原始素材仍保留，之后可以在制作页重新整理出来。' : '';
+    if (!window.confirm(`删除外观「${item.name}」？${note}${source}`)) return;
+    commit((s) => {
+      const active = s.activeSkinId === item.id;
+      const next = active ? others[0]?.id || '' : s.activeSkinId;
+      const preferred = { ...s.preferredSkins };
+      if (preferred[item.characterId] === item.id) {
+        if (others[0]) preferred[item.characterId] = others[0].id;
+        else delete preferred[item.characterId];
+      }
+      return {
+        ...s,
+        skins: s.skins.filter((s2) => s2.id !== item.id),
+        activeSkinId: next,
+        preferredSkins: preferred,
+        settings: item.builtin
+          ? { ...s.settings, removedBuiltins: [...new Set([...(s.settings.removedBuiltins || []), item.id])] }
+          : s.settings,
+      };
+    });
+    setToast(`已删除外观「${item.name}」。`);
+  }
   function chooseSkin(item: Skin) {
     if (!usableCharacterSkin(item, character)) {
       setGenerateOpen(true);
@@ -1269,7 +1452,7 @@ export default function App() {
       motionEnabled={motionEnabled}
       mouth={mouth}
       tracking={tracking}
-      zoom={view === 'desktop' ? 1 : zoom}
+      zoom={view === 'desktop' || view === 'home' ? 1 : zoom}
       compact={petMode}
     />
   );
@@ -1406,6 +1589,12 @@ export default function App() {
           <button aria-label="探索桌面" title="探索桌面" disabled={desktop.active||interactionBusy||talking} onClick={()=>void desktop.explore()}>⌖</button>
           <button aria-label="一起玩" title="一起玩" onClick={()=>openMoment('guess')}>♡</button>
           {desktop.active&&<button aria-label="结束桌面活动" onClick={()=>desktop.stop()}>■</button>}
+          <button aria-label="缩小桌宠" title="缩小（也可以在角色上滚动或捏合）" onClick={() => resizePet(petScaleRef.current / 1.12)}>
+            <ZoomOut size={16} />
+          </button>
+          <button aria-label="放大桌宠" title="放大（也可以在角色上滚动或捏合）" onClick={() => resizePet(petScaleRef.current * 1.12)}>
+            <ZoomIn size={16} />
+          </button>
           <button aria-label="打开工坊" onClick={() => notifyError(bridge.openWorkshop())}>
             <Flower2 size={16} />
           </button>
@@ -1471,6 +1660,11 @@ export default function App() {
             if (!hit) return;
             desktop.stop(true);
             drag.current = { x: e.screenX, y: e.screenY, moved: false, hit };
+            // She swings from wherever she was grabbed.
+            const body = bodyRef.current?.getBoundingClientRect();
+            if (body) swing.current.origin = `${e.clientX - body.left}px ${e.clientY - body.top}px`;
+            swing.current.at = performance.now();
+            swing.current.vx = 0;
             e.currentTarget.setPointerCapture(e.pointerId);
           }}
           onPointerMove={(e) => {
@@ -1478,8 +1672,18 @@ export default function App() {
             const x = e.screenX - drag.current.x,
               y = e.screenY - drag.current.y;
             if (Math.abs(x) + Math.abs(y) > 2) {
-              drag.current.moved = true;
+              if (!drag.current.moved) {
+                drag.current.moved = true;
+                desktop.lift();
+                swing.current.lifted = true;
+                bodyRef.current?.classList.add('lifted');
+                startSwing();
+              }
               if(supportsAction(skin,'drag'))setAction('drag');
+              const now = performance.now(),
+                dt = Math.max(8, now - swing.current.at) / 1000;
+              swing.current.vx = swing.current.vx * 0.65 + (x / dt) * 0.35;
+              swing.current.at = now;
               bridge.movePet({ x, y });
               drag.current.x = e.screenX;
               drag.current.y = e.screenY;
@@ -1487,8 +1691,19 @@ export default function App() {
           }}
           onPointerUp={(event) => {
             if (!drag.current) return;
-            if (drag.current.moved) interact('drag');
-            else if (resting) interact('wake');
+            const moved = drag.current.moved;
+            if (moved) {
+              swing.current.lifted = false;
+              bodyRef.current?.classList.remove('lifted');
+              // Let go: she falls onto whatever is below, then reacts to the ride.
+              dropping.current = true;
+              void desktop.drop().then(() => {
+                if (dropping.current) {
+                  dropping.current = false;
+                  interact('drag');
+                }
+              });
+            } else if (resting) interact('wake');
             else touchCharacter(drag.current.hit);
             drag.current = null;
             if (event.currentTarget.hasPointerCapture(event.pointerId))
@@ -1500,10 +1715,19 @@ export default function App() {
           }}
           onPointerCancel={() => {
             if(action==='drag')setAction('idle');
+            if (drag.current?.moved) {
+              swing.current.lifted = false;
+              bodyRef.current?.classList.remove('lifted');
+              void desktop.drop();
+            }
             drag.current = null;
           }}
         >
-          {avatar}
+          <div className="pet-landing" ref={landRef}>
+            <div className={`pet-body ${desktop.airborne ? 'airborne' : ''}`} ref={bodyRef}>
+              {avatar}
+            </div>
+          </div>
           {touchFeedback && (
             <div
               key={touchFeedback.key}
@@ -1515,6 +1739,7 @@ export default function App() {
             </div>
           )}
         </div>
+        {sizeNote && <span className="pet-size-note" role="status">{sizeNote}</span>}
         <span className="pet-name-tag" title={desktop.status}>
           {character.name}
           <i />
@@ -1580,6 +1805,16 @@ export default function App() {
             skin={skin}
             skins={displaySkins}
             avatar={avatar}
+            zoom={stageZoom ?? state.settings.stageZoom ?? 1}
+            onZoom={(value) => {
+              const next = Math.round(Math.max(0.6, Math.min(1.6, value)) * 100) / 100;
+              setStageZoom(next);
+              clearTimeout(stageZoomSave.current);
+              stageZoomSave.current = setTimeout(() => {
+                commit((s) => ({ ...s, settings: { ...s.settings, stageZoom: next } }));
+                setStageZoom(null);
+              }, 600);
+            }}
             thumbnail={assetThumb}
             composer={conversationPanel('room')}
             setup={
@@ -1755,22 +1990,32 @@ export default function App() {
                   )}
                   <div className="wardrobe-grid">
                     {skins.map((item) => (
-                      <button
-                        className={`wardrobe-card ${skin?.id === item.id ? 'selected' : ''}`}
-                        aria-pressed={skin?.id === item.id}
-                        key={item.id}
-                        onClick={() => chooseSkin(item)}
-                      >
-                        <div>
-                          {assetThumb(item)}
-                          <span>{engineName(item)}</span>
-                        </div>
-                        <strong>{item.name}</strong>
-                        <small>
-                          {styleName(item.style)} · {reviewLabel(item) || '导入外观'}
-                          {skin?.id === item.id && <Check size={14} />}
-                        </small>
-                      </button>
+                      <div className="wardrobe-item" key={item.id}>
+                        <button
+                          className={`wardrobe-card ${skin?.id === item.id ? 'selected' : ''}`}
+                          aria-pressed={skin?.id === item.id}
+                          onClick={() => chooseSkin(item)}
+                        >
+                          <div>
+                            {assetThumb(item)}
+                            <span>{engineName(item)}</span>
+                          </div>
+                          <strong>{item.name}</strong>
+                          <small>
+                            {styleName(item.style)} · {reviewLabel(item) || '导入外观'}
+                            {skin?.id === item.id && <Check size={14} />}
+                          </small>
+                        </button>
+                        <button
+                          className="wardrobe-delete"
+                          aria-label={`删除外观：${item.name}`}
+                          title="删除这套外观"
+                          disabled={jobBusy || chatBusy}
+                          onClick={() => deleteSkin(item)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -2211,7 +2456,10 @@ export default function App() {
             <DesktopPage
               preview={avatar}
               size={state.settings.petSize || 'medium'}
-              onSize={(petSize) => commit((s) => ({ ...s, settings: { ...s.settings, petSize } }))}
+              // A preset replaces any free size set by scrolling on the pet.
+              onSize={(petSize) => commit((s) => ({ ...s, settings: { ...s.settings, petSize, petScale: undefined } }))}
+              scale={petScaleRef.current}
+              onScale={(petScale) => commit((s) => ({ ...s, settings: { ...s.settings, petScale } }))}
               characterName={character.name}
               skinName={skin?.name}
               autonomous={state.settings.desktopLifeEnabled}

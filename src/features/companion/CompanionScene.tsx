@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   BookOpen,
   Copy,
@@ -15,6 +15,8 @@ import {
   Sun,
   Volume2,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { supportsAction } from '../../artwork';
 import { hitCharacter } from '../../animation/framing';
@@ -47,6 +49,9 @@ interface Props {
   skin?: Skin;
   skins: Skin[];
   avatar: ReactNode;
+  /** Character zoom on the stage, changed by scrolling or pinching over her. */
+  zoom: number;
+  onZoom: (zoom: number) => void;
   thumbnail: (skin: Skin) => ReactNode;
   composer: ReactNode;
   setup?: ReactNode;
@@ -91,6 +96,8 @@ export function CompanionScene({
   skin,
   skins,
   avatar,
+  zoom,
+  onZoom,
   thumbnail,
   composer,
   setup,
@@ -167,6 +174,11 @@ export function CompanionScene({
       <div className="room-floor" aria-hidden="true" />
       <div
         className="scene-artwork room-figure"
+        style={{ '--stage-zoom': zoom } as CSSProperties}
+        onWheel={(event) => {
+          // A trackpad pinch arrives as a wheel event with ctrlKey.
+          onZoom(zoom * Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.001)));
+        }}
         onPointerUp={(event) => {
           if (!skin || interactionBusy || talking || resting || event.button !== 0) return;
           const hit = hitCharacter(event.currentTarget, event.clientX, event.clientY);
@@ -363,6 +375,14 @@ export function CompanionScene({
             >
               <Eye size={16} />
               视线跟随
+            </button>
+            <button aria-label="缩小角色" onClick={() => onZoom(zoom / 1.12)} disabled={zoom <= 0.6}>
+              <ZoomOut size={16} />
+              缩小
+            </button>
+            <button aria-label="放大角色" onClick={() => onZoom(zoom * 1.12)} disabled={zoom >= 1.6}>
+              <ZoomIn size={16} />
+              放大 {Math.round(zoom * 100)}%
             </button>
             <button onClick={onOpenAppearance} aria-label="打开外观调整">
               <SlidersHorizontal size={16} />

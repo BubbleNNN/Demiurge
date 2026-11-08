@@ -143,6 +143,10 @@ const median = (values) => {
 };
 function registeredFrames(sheet, recipe, width, height, edgeContacts) {
   const { columns, rows, count } = recipe;
+  // How rows are put on one level: activities stand, sit or lie on the floor (median lowest
+  // point); a jump has one grounded pose per row (lowest point); a lifted character hangs from
+  // the same grip (highest point).
+  const rowMode = recipe.aligned ? 'floor' : recipe.id === 'drag' ? 'grip' : 'ground';
   const cellW = sheet.width / columns,
     cellH = sheet.height / rows;
   const { labels, figures } = labelFigures(sheet);
@@ -205,18 +209,61 @@ function registeredFrames(sheet, recipe, width, height, edgeContacts) {
   if (!Number.isFinite(slope) || Math.abs(slope / cellW - 1) <= 0.02 || Math.abs(slope / cellW - 1) > 0.25)
     slope = cellW;
   const slotX = (col) => meanX + (col - meanC) * slope;
-  // Rows: every twelve-frame motion stays on the floor (sitting, lying, walking in place), so
-  // each row's floor line is its median lowest point; poses inside a row keep their own heights.
-  const floor = Array.from({ length: rows }, (_, r) =>
-    median(main.filter((_, index) => Math.floor(index / columns) === r).map((figure) => figure.bottom)),
+  // Rows: put every row on one level; poses inside a row keep their own heights.
+  const inRow = (r) => main.filter((_, index) => Math.floor(index / columns) === r);
+  const level = Array.from({ length: rows }, (_, r) =>
+    rowMode === 'floor'
+      ? median(inRow(r).map((figure) => figure.bottom))
+      : rowMode === 'ground'
+        ? Math.max(...inRow(r).map((figure) => figure.bottom - r * cellH)) + r * cellH
+        : Math.min(...inRow(r).map((figure) => figure.top - r * cellH)) + r * cellH,
   );
   // Row 1 keeps its old place in the canvas, so a sheet already on the grid packs as before.
-  const floorY = height - (cellH - (floor[0] - 0));
+  const floorY = height - cellH + level[0];
   const offsets = main.map((_, index) => {
     const col = index % columns,
       row = Math.floor(index / columns);
-    return [Math.round(width / 2 - slotX(col)), Math.round(floorY - floor[row])];
+    return [Math.round(width / 2 - slotX(col)), Math.round(floorY - level[row])];
   });
+  // A loop is one activity repeated in place: a body that creeps sideways from phase to phase
+  // and snaps back each cycle reads as vibration. Each loop phase is laid over the first one by
+  // its upper body (head and shoulders stay put while legs, arms and props move), searching only
+  // a small sideways range so a deliberate lean survives.
+  if (recipe.aligned && count >= 8) {
+    const upper = (figure) => {
+      const list = [],
+        limit = figure.top + Math.floor((figure.bottom - figure.top) * 0.6);
+      for (let y = figure.top; y <= limit; y++)
+        for (let x = figure.left; x <= figure.right; x++)
+          if (labels[y * sheet.width + x] === figure.id && sheet.bitmap[(y * sheet.width + x) * 4 + 3] >= 128)
+            list.push(x, y);
+      return list;
+    };
+    const reference = main[4],
+      [rox, roy] = offsets[4];
+    const ref = new Set();
+    const refPoints = upper(reference);
+    for (let i = 0; i < refPoints.length; i += 2) ref.add((refPoints[i] + rox) * 65536 + refPoints[i + 1] + roy);
+    const radius = Math.round(cellW * 0.05);
+    for (const index of [5, 6, 7]) {
+      const list = upper(main[index]),
+        [ox, oy] = offsets[index];
+      let best = -1,
+        shift = 0,
+        still = 0;
+      for (let dx = -radius; dx <= radius; dx++) {
+        let hits = 0;
+        for (let i = 0; i < list.length; i += 2) if (ref.has((list[i] + ox + dx) * 65536 + list[i + 1] + oy)) hits++;
+        if (dx === 0) still = hits;
+        if (hits > best || (hits === best && Math.abs(dx) < Math.abs(shift))) {
+          best = hits;
+          shift = dx;
+        }
+      }
+      // Ties keep the smallest move, so a pose only moves when the overlap really improves.
+      if (best > still) offsets[index][0] += shift;
+    }
+  }
   // Grow the canvas only as much as the placed figures need, keeping the safety margin.
   let padLeft = 0,
     padRight = 0,
@@ -287,7 +334,7 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
   const width = recipe.count === 8 ? unit * 3 : unit;
   const height = recipe.count === 8 ? unit * 4 : unit;
   const edgeContacts = [];
-  const frames = recipe.aligned
+  const frames = recipe.aligned || options.transitionVersion === 3
     ? registeredFrames(sheet, recipe, width, height, edgeContacts)
     : Array.from({ length: recipe.count }, (_, index) => {
     const col = index % recipe.columns,
@@ -310,7 +357,7 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
     return { width, height, bitmap };
   });
   // Registered frames still need real content on a transparent background.
-  if (recipe.aligned) frames.forEach((frame) => bounds(frame));
+  if (recipe.aligned || options.transitionVersion === 3) frames.forEach((frame) => bounds(frame));
   const unique = new Set(frames.map((f) => createHash('sha256').update(f.bitmap).digest('hex')));
   if (unique.size < 2) throw new Error('所有帧完全相同，没有实际动作或表情变化，请重新生成这个动作。');
   if (recipe.count === 8 && unique.size < 6)
@@ -384,6 +431,69 @@ function inspectSheet(dataUrl, codec, motion, options = {}) {
   return splitSheet(dataUrl, codec, motion, options).report;
 }
 
+// Clips that redraw the idle pose with a small change (eyes, mouth, head, one arm, a face).
+const OVER_IDLE = new Set(['blink', 'talk', 'nod', 'shake', 'wave', 'emotions']);
+// Where a frame sits over the idle frame: the translation that overlaps their opaque shapes most,
+// found coarse to fine. Scale is the clip's own (the model draws a sheet at one size). Returns
+// the frame point that lands on the idle frame's foot anchor.
+function alignToIdle(master, masterBox, masterAnchor, frame, scale, start) {
+  const levels = [64, 256, 768].map((h) => Math.min(1, h / masterBox.height));
+  const masks = levels.map((k) => {
+    const w = Math.ceil(master.width * k),
+      h = Math.ceil(master.height * k),
+      mask = new Uint8Array(w * h);
+    for (let v = 0; v < h; v++)
+      for (let u = 0; u < w; u++) {
+        const x = Math.min(master.width - 1, Math.floor(u / k)),
+          y = Math.min(master.height - 1, Math.floor(v / k));
+        mask[v * w + u] = master.bitmap[(y * master.width + x) * 4 + 3] >= 128 ? 1 : 0;
+      }
+    return { w, h, mask };
+  });
+  const box = bounds(frame);
+  const points = (k) => {
+    const f = scale * k,
+      list = [];
+    for (let v = Math.floor(box.top * f); v <= Math.ceil(box.bottom * f); v++)
+      for (let u = Math.floor(box.left * f); u <= Math.ceil(box.right * f); u++) {
+        const x = Math.min(frame.width - 1, Math.floor(u / f)),
+          y = Math.min(frame.height - 1, Math.floor(v / f));
+        if (frame.bitmap[(y * frame.width + x) * 4 + 3] >= 128) list.push(u, v);
+      }
+    return list;
+  };
+  // Translation in idle pixels that maps the frame's foot anchor onto the idle frame's.
+  let tx = masterAnchor.x - start.x * scale,
+    ty = masterAnchor.y - start.y * scale;
+  levels.forEach((k, level) => {
+    const { w, h, mask } = masks[level],
+      list = points(k),
+      radius = level === 0 ? 10 : 4;
+    const cx = Math.round(tx * k),
+      cy = Math.round(ty * k);
+    let best = -1,
+      bx = cx,
+      by = cy;
+    for (let dy = -radius; dy <= radius; dy++)
+      for (let dx = -radius; dx <= radius; dx++) {
+        let hits = 0;
+        for (let i = 0; i < list.length; i += 2) {
+          const u = list[i] + cx + dx,
+            v = list[i + 1] + cy + dy;
+          if (u >= 0 && v >= 0 && u < w && v < h && mask[v * w + u]) hits++;
+        }
+        // Prefer the smallest correction among equally good fits.
+        if (hits > best || (hits === best && Math.abs(dx) + Math.abs(dy) < Math.abs(bx - cx) + Math.abs(by - cy))) {
+          best = hits;
+          bx = cx + dx;
+          by = cy + dy;
+        }
+      }
+    tx = bx / k;
+    ty = by / k;
+  });
+  return { x: (masterAnchor.x - tx) / scale, y: (masterAnchor.y - ty) / scale };
+}
 function packFrames(masterImage, sheets, style, codec, options = {}) {
   productionOptions(options);
   const master = decodePng(masterImage, codec),
@@ -429,7 +539,17 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     // using neutral; following alternating feet per frame causes lateral jitter.
     const fixedAnchor = footAnchor(frames[0], first);
     const footX = frames.map((frame) => (aligned ? fixedAnchor.x : footAnchor(frame, bounds(frame)).x));
-    groups.push({ name: motion, frames, anchor: footAnchor(frames[0], first), footX, sourceScale });
+    let footY;
+    // Blinks, mouths, nods, waves and expressions redraw the idle pose. Each such frame is laid
+    // exactly over the idle frame, so nothing but the authored change moves between them.
+    if (aligned && OVER_IDLE.has(motion)) {
+      const anchors = frames.map((frame) =>
+        alignToIdle(master, masterBox, masterAnchor, frame, sourceScale, footAnchor(frame, bounds(frame))),
+      );
+      anchors.forEach((a, i) => (footX[i] = a.x));
+      footY = anchors.map((a) => a.y);
+    }
+    groups.push({ name: motion, frames, anchor: footAnchor(frames[0], first), footX, footY, sourceScale });
   }
   const pixelated = style === 'pixel' || style === '8bit';
   if (style === 'sticker' || style === 'pastel' || style === 'chibi-pet')
@@ -438,18 +558,24 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     );
   function build(width, height, quality = 1) {
     const records = groups.flatMap((g) =>
-      g.frames.map((f, i) => ({ ...f, group: g, box: bounds(f), anchorX: g.footX[i] })),
+      g.frames.map((f, i) => ({
+        ...f,
+        group: g,
+        box: bounds(f),
+        anchorX: g.footX[i],
+        anchorY: g.footY ? g.footY[i] : g.anchor.y,
+      })),
     );
     let left = 0,
       right = 0,
       top = 0,
       bottom = 0;
     for (const f of records) {
-      const { anchor, sourceScale } = f.group;
+      const { sourceScale } = f.group;
       left = Math.min(left, (f.box.left - f.anchorX) * sourceScale);
       right = Math.max(right, (f.box.right - f.anchorX + 1) * sourceScale);
-      top = Math.min(top, (f.box.top - anchor.y) * sourceScale);
-      bottom = Math.max(bottom, (f.box.bottom - anchor.y + 1) * sourceScale);
+      top = Math.min(top, (f.box.top - f.anchorY) * sourceScale);
+      bottom = Math.max(bottom, (f.box.bottom - f.anchorY + 1) * sourceScale);
     }
     const scale = Math.min((width - 24) / (right - left), (height - 24) / (bottom - top));
     const dx = width / 2 - ((left + right) * scale) / 2,
@@ -470,7 +596,7 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
         // Preserve authored RGBA samples exactly. Frame canvas dimensions encode
         // the clip's display scale; alignment only translates by whole pixels.
         const ox = Math.round(dx * density - f.anchorX);
-        const oy = Math.round(dy * density - g.anchor.y);
+        const oy = Math.round(dy * density - f.anchorY);
         const startX = Math.max(0, -ox),
           endX = Math.min(f.width, cw - ox);
         for (let sy = Math.max(0, -oy); sy < Math.min(f.height, ch - oy); sy++) {
@@ -482,7 +608,7 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
         for (let y = 0; y < ch; y++)
           for (let x = 0; x < cw; x++) {
             const sx = (x - dx * density) / s + f.anchorX,
-              sy = (y - dy * density) / s + g.anchor.y;
+              sy = (y - dy * density) / s + f.anchorY;
             if (sx < 0 || sy < 0 || sx >= f.width - 1 || sy >= f.height - 1) continue;
             const target = (y * cw + x) * 4;
             if (pixelated) {
