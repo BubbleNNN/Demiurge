@@ -142,7 +142,8 @@ test('physical shelf packing retains different frame resolutions and never silen
   assert.equal(layout.width, 1536);
   assert.equal(layout.height, 1536);
   assert.throws(() => layoutFrames([{ width: 8193, height: 1 }]), /不会自动降/);
-  assert.throws(() => assertAtlasBytes({ length: 8 * 1024 * 1024 + 1 }), /不会自动降/);
+  assertAtlasBytes({ length: 8 * 1024 * 1024 + 1 });
+  assert.throws(() => assertAtlasBytes({ length: 32 * 1024 * 1024 + 1 }), /不会自动降/);
 });
 test('alpha crops retain whole figures straddling nominal cells and reject joined or cut-off figures', () => {
   const width = 400,

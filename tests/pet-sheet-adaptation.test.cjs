@@ -161,6 +161,8 @@ test('poses that drift sideways inside their grid cells are registered by their 
   const atlas = f.decode(Buffer.from(packed.image.split(',')[1], 'base64'));
   const feet = (index) => {
     const [x0, y0, w, h] = packed.sprite.frames[index].rect;
+    const [cw, ch] = packed.sprite.frames[index].cell;
+    const [ox, oy] = packed.sprite.frames[index].offset;
     let sum = 0,
       count = 0,
       bottom = 0;
@@ -173,7 +175,7 @@ test('poses that drift sideways inside their grid cells are registered by their 
           sum += x;
           count++;
         }
-    return { x: (sum / count) * (packed.sprite.width / w), y: bottom * (packed.sprite.height / h) };
+    return { x: (sum / count + ox) * (packed.sprite.width / cw), y: (bottom + oy) * (packed.sprite.height / ch) };
   };
   const wave = packed.sprite.clips.wave.frames.slice(1, -1).map(feet);
   const xs = wave.map((point) => point.x);

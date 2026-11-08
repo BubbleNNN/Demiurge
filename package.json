@@ -1,6 +1,6 @@
 {
   "name": "mori-companion",
-  "version": "0.3.15",
+  "version": "0.3.16",
   "private": true,
   "description": "An API-powered character companion and desktop pet workshop.",
   "main": "electron/main.cjs",

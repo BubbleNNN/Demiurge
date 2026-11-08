@@ -5,9 +5,11 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { mergeSnapshots, mergeValue } = require('./merge.cjs');
 
-const MAX_FILE_BYTES = 128 * 1024 * 1024;
+const MAX_FILE_BYTES = 256 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_TOTAL_IMAGE_BYTES = 96 * 1024 * 1024;
+// A frame atlas keeps every authored pixel of up to twenty motions; it may be far larger than one picture.
+const MAX_ATLAS_BYTES = 32 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 192 * 1024 * 1024;
 const EMOTIONS = ['neutral', 'happy', 'thinking', 'sad', 'sleepy', 'surprised'];
 const ACTIVITIES = require('../shared/activities.json').activities.map((activity) => activity.id);
 const ACTIONS = ['walk_left','walk_right','walk_up','walk_down','drag','listen','idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', ...ACTIVITIES];
@@ -220,13 +222,13 @@ function validateRoleplay(value, label) {
     spoilerPolicy: enumValue(r.spoilerPolicy, ['avoid', 'allow'], label),
   };
 }
-function rasterImage(value, label, budget) {
+function rasterImage(value, label, budget, limit = MAX_IMAGE_BYTES) {
   // Keep imported assets self-contained. In particular, SVG, file URLs and remote trackers are not accepted.
-  string(value, label, Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 64, false);
+  string(value, label, Math.ceil(limit / 3) * 4 + 64, false);
   const match = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
   if (!match || match[2].length % 4 !== 0) invalid(label, 'expected a base64 PNG, JPEG or WebP image');
   const bytes = Buffer.from(match[2], 'base64');
-  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES || bytes.toString('base64') !== match[2])
+  if (!bytes.length || bytes.length > limit || bytes.toString('base64') !== match[2])
     invalid(label, 'invalid or oversized image');
   const valid =
     match[1] === 'png'
@@ -254,7 +256,7 @@ function rasterImage(value, label, budget) {
     invalid(label, 'image dimensions must be between 1 and 8192 pixels');
   }
   budget.bytes += bytes.length;
-  if (budget.bytes > MAX_TOTAL_IMAGE_BYTES) invalid(label, 'total image size exceeds 96 MiB');
+  if (budget.bytes > MAX_TOTAL_IMAGE_BYTES) invalid(label, 'total image size exceeds 192 MiB');
   return value;
 }
 
@@ -365,7 +367,12 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
   const images = {};
   for (const emotion of EMOTIONS) {
     if (inputImages[emotion] !== undefined)
-      images[emotion] = rasterImage(inputImages[emotion], `${label}.images.${emotion}`, budget);
+      images[emotion] = rasterImage(
+        inputImages[emotion],
+        `${label}.images.${emotion}`,
+        budget,
+        emotion === 'neutral' && s.sprite !== undefined ? MAX_ATLAS_BYTES : MAX_IMAGE_BYTES,
+      );
   }
   let sprite;
   if (s.sprite !== undefined) {

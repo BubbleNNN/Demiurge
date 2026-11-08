@@ -181,7 +181,7 @@ test('packing shrinks frames uniformly, with an explicit warning, only when the 
     ...fixture.codec,
     encode(...args) {
       encodes++;
-      return encodes === 1 ? Buffer.alloc(8 * 1024 * 1024 + 1) : fixture.codec.encode(...args);
+      return encodes === 1 ? Buffer.alloc(32 * 1024 * 1024 + 1) : fixture.codec.encode(...args);
     },
   };
   const packed = packFrames(image, { wave: sheet }, 'original', oversizedOnce);
@@ -194,10 +194,10 @@ test('packing shrinks frames uniformly, with an explicit warning, only when the 
     ...fixture.codec,
     encode() {
       attempts++;
-      return Buffer.alloc(8 * 1024 * 1024 + 1);
+      return Buffer.alloc(32 * 1024 * 1024 + 1);
     },
   };
-  assert.throws(() => packFrames(image, { wave: sheet }, 'original', never), /图集超过 8 MiB/);
+  assert.throws(() => packFrames(image, { wave: sheet }, 'original', never), /图集超过 32 MiB/);
   assert.equal(attempts, 6, 'bounded retries, then a clear failure');
 });
 test('two styles run with direct reference provenance, separate masters and automatic pending candidate installation', async (t) => {

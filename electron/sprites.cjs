@@ -46,7 +46,21 @@ function validateAnimation(value, bounds) {
       if (!Array.isArray(f.offset) || f.offset.length !== 2) throw new Error('动画帧偏移无效。');
       offset = f.offset.map((v) => integer(v, -2048, 2048, '帧偏移'));
     }
-    return { rect, duration: integer(f.duration, 16, 30000, '帧时长'), ...(offset ? { offset } : {}) };
+    // A trimmed frame: `cell` is the physical size of its full canvas and `offset` is where the
+    // stored rect sits inside that canvas, in the same physical pixels.
+    let cell;
+    if (f.cell !== undefined) {
+      if (!Array.isArray(f.cell) || f.cell.length !== 2) throw new Error('动画帧画布无效。');
+      cell = f.cell.map((v) => integer(v, 1, 8192, '帧画布'));
+      if (!offset || offset[0] < 0 || offset[1] < 0 || offset[0] + rect[2] > cell[0] || offset[1] + rect[3] > cell[1])
+        throw new Error('裁边后的动画帧超出其画布。');
+    }
+    return {
+      rect,
+      duration: integer(f.duration, 16, 30000, '帧时长'),
+      ...(offset ? { offset } : {}),
+      ...(cell ? { cell } : {}),
+    };
   });
   const clips = {};
   for (const [name, value] of Object.entries(object(a.clips))) {

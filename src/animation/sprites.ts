@@ -23,18 +23,23 @@ export function prepareSpriteFrame(image: HTMLImageElement, animation: SpriteAni
     throw new Error('动画帧超出图集边界');
   context.imageSmoothingEnabled = !animation.pixelated;
   if (!animation.pixelated) context.imageSmoothingQuality = 'high';
-  const scale = Math.min(canvas.width / width, canvas.height / height);
-  context.drawImage(
-    image,
-    x,
-    y,
-    width,
-    height,
-    (canvas.width - width * scale) / 2 + ((frame.offset?.[0] || 0) * canvas.width) / animation.width,
-    (canvas.height - height * scale) / 2 + ((frame.offset?.[1] || 0) * canvas.height) / animation.height,
-    width * scale,
-    height * scale,
-  );
+  if (frame.cell) {
+    // Trimmed frame: the stored pixels go back where they came from, one to one.
+    context.drawImage(image, x, y, width, height, frame.offset?.[0] || 0, frame.offset?.[1] || 0, width, height);
+  } else {
+    const scale = Math.min(canvas.width / width, canvas.height / height);
+    context.drawImage(
+      image,
+      x,
+      y,
+      width,
+      height,
+      (canvas.width - width * scale) / 2 + ((frame.offset?.[0] || 0) * canvas.width) / animation.width,
+      (canvas.height - height * scale) / 2 + ((frame.offset?.[1] || 0) * canvas.height) / animation.height,
+      width * scale,
+      height * scale,
+    );
+  }
   if (palette?.length) {
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
     const data = pixels.data;

@@ -174,7 +174,7 @@ test('references share workspace image budget and reject duplicate IDs, remote U
   }
   const { validateReferences } = require('../electron/store.cjs');
   assert.throws(
-    () => validateReferences([original], 'references', { bytes: 96 * 1024 * 1024 }),
+    () => validateReferences([original], 'references', { bytes: 192 * 1024 * 1024 }),
     /total image size/,
   );
 });

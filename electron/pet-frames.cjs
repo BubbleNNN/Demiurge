@@ -273,13 +273,85 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     const scale = Math.min((width - 24) / (right - left), (height - 24) / (bottom - top));
     const dx = width / 2 - ((left + right) * scale) / 2,
       dy = 12 - top * scale;
-    const sizes = records.map((f) => {
+    // Render every frame onto its own full logical canvas at its native density, then keep only
+    // the pixels the figure occupies. The frame records where that piece sits in the canvas, so
+    // the atlas stores no transparent margins and no sample is resized.
+    const pieces = records.map((f) => {
+      const g = f.group;
       // Keep each clip at its own native sampling density. The logical canvas
       // is identical, so changing resolution does not change pose scale.
-      const density = pixelated ? 1 : quality / (scale * f.group.sourceScale);
-      return { width: Math.ceil(width * density), height: Math.ceil(height * density) };
+      const density = pixelated ? 1 : quality / (scale * g.sourceScale);
+      const cw = Math.ceil(width * density),
+        ch = Math.ceil(height * density);
+      const canvas = Buffer.alloc(cw * ch * 4);
+      const s = scale * g.sourceScale * density;
+      if (aligned && !pixelated) {
+        // Preserve authored RGBA samples exactly. Frame canvas dimensions encode
+        // the clip's display scale; alignment only translates by whole pixels.
+        const ox = Math.round(dx * density - f.anchorX);
+        const oy = Math.round(dy * density - g.anchor.y);
+        const startX = Math.max(0, -ox),
+          endX = Math.min(f.width, cw - ox);
+        for (let sy = Math.max(0, -oy); sy < Math.min(f.height, ch - oy); sy++) {
+          if (endX <= startX) continue;
+          const source = (sy * f.width + startX) * 4;
+          f.bitmap.copy(canvas, ((sy + oy) * cw + startX + ox) * 4, source, source + (endX - startX) * 4);
+        }
+      } else {
+        for (let y = 0; y < ch; y++)
+          for (let x = 0; x < cw; x++) {
+            const sx = (x - dx * density) / s + f.anchorX,
+              sy = (y - dy * density) / s + g.anchor.y;
+            if (sx < 0 || sy < 0 || sx >= f.width - 1 || sy >= f.height - 1) continue;
+            const target = (y * cw + x) * 4;
+            if (pixelated) {
+              const offset = (Math.round(sy) * f.width + Math.round(sx)) * 4;
+              f.bitmap.copy(canvas, target, offset, offset + 4);
+            } else {
+              const ix = Math.floor(sx),
+                iy = Math.floor(sy),
+                fx = sx - ix,
+                fy = sy - iy;
+              for (let c = 0; c < 4; c++) {
+                const sample = (xx, yy) => f.bitmap[(yy * f.width + xx) * 4 + c];
+                canvas[target + c] = Math.round(
+                  sample(ix, iy) * (1 - fx) * (1 - fy) +
+                    sample(ix + 1, iy) * fx * (1 - fy) +
+                    sample(ix, iy + 1) * (1 - fx) * fy +
+                    sample(ix + 1, iy + 1) * fx * fy,
+                );
+              }
+            }
+          }
+      }
+      // Tight box of anything visible, with one transparent pixel of padding for sampling.
+      let bl = cw,
+        bt = ch,
+        br = -1,
+        bb = -1;
+      for (let y = 0; y < ch; y++)
+        for (let x = 0; x < cw; x++)
+          if (canvas[(y * cw + x) * 4 + 3]) {
+            if (x < bl) bl = x;
+            if (x > br) br = x;
+            if (y < bt) bt = y;
+            if (y > bb) bb = y;
+          }
+      if (br < 0) throw new Error('对齐后的动作帧没有可见内容，请重新生成此动作。');
+      bl = Math.max(0, bl - 1);
+      bt = Math.max(0, bt - 1);
+      br = Math.min(cw - 1, br + 1);
+      bb = Math.min(ch - 1, bb + 1);
+      const pw = br - bl + 1,
+        ph = bb - bt + 1;
+      const piece = Buffer.alloc(pw * ph * 4);
+      for (let y = 0; y < ph; y++) canvas.copy(piece, y * pw * 4, ((bt + y) * cw + bl) * 4, ((bt + y) * cw + bl + pw) * 4);
+      return { width: pw, height: ph, bitmap: piece, cell: [cw, ch], offset: [bl, bt] };
     });
-    const layout = layoutFramesFlexible(sizes, (aligned ? 32 : 16) * 1024 * 1024),
+    const layout = layoutFramesFlexible(
+        pieces.map((piece) => ({ width: piece.width, height: piece.height })),
+        (aligned ? 32 : 16) * 1024 * 1024,
+      ),
       atlasWidth = layout.width,
       atlasHeight = layout.height;
     const bitmap = Buffer.alloc(atlasWidth * atlasHeight * 4),
@@ -289,52 +361,12 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     let index = 0;
     for (const g of groups) {
       const indices = [];
-      for (const [frameIndex, f] of g.frames.entries()) {
-        const anchorX = g.footX[frameIndex];
-        const rect = layout.rects[index];
-        const density = Math.min(rect[2] / width, rect[3] / height);
-        const s = scale * g.sourceScale * density;
-        if (aligned && !pixelated) {
-          // Preserve authored RGBA samples exactly. Frame canvas dimensions encode
-          // the clip's display scale; alignment only translates by whole pixels.
-          const ox = Math.round(dx * density - anchorX);
-          const oy = Math.round(dy * density - g.anchor.y);
-          const startX = Math.max(0, -ox),
-            endX = Math.min(f.width, rect[2] - ox);
-          for (let sy = Math.max(0, -oy); sy < Math.min(f.height, rect[3] - oy); sy++) {
-            if (endX <= startX) continue;
-            const source = (sy * f.width + startX) * 4;
-            const target = ((rect[1] + sy + oy) * atlasWidth + rect[0] + startX + ox) * 4;
-            f.bitmap.copy(bitmap, target, source, source + (endX - startX) * 4);
-          }
-        } else {
-          for (let y = 0; y < rect[3]; y++)
-            for (let x = 0; x < rect[2]; x++) {
-              const sx = (x - dx * density) / s + anchorX,
-                sy = (y - dy * density) / s + g.anchor.y;
-              if (sx < 0 || sy < 0 || sx >= f.width - 1 || sy >= f.height - 1) continue;
-              const target = ((rect[1] + y) * atlasWidth + rect[0] + x) * 4;
-              if (pixelated) {
-                const offset = (Math.round(sy) * f.width + Math.round(sx)) * 4;
-                f.bitmap.copy(bitmap, target, offset, offset + 4);
-              } else {
-                const ix = Math.floor(sx),
-                  iy = Math.floor(sy),
-                  fx = sx - ix,
-                  fy = sy - iy;
-                for (let c = 0; c < 4; c++) {
-                  const sample = (xx, yy) => f.bitmap[(yy * f.width + xx) * 4 + c];
-                  bitmap[target + c] = Math.round(
-                    sample(ix, iy) * (1 - fx) * (1 - fy) +
-                      sample(ix + 1, iy) * fx * (1 - fy) +
-                      sample(ix, iy + 1) * (1 - fx) * fy +
-                      sample(ix + 1, iy + 1) * fx * fy,
-                  );
-                }
-              }
-            }
-        }
-        frames.push({ rect, duration: 140 });
+      for (let frameIndex = 0; frameIndex < g.frames.length; frameIndex++) {
+        const rect = layout.rects[index],
+          piece = pieces[index];
+        for (let y = 0; y < piece.height; y++)
+          piece.bitmap.copy(bitmap, ((rect[1] + y) * atlasWidth + rect[0]) * 4, y * piece.width * 4, (y + 1) * piece.width * 4);
+        frames.push({ rect, duration: 140, cell: piece.cell, offset: piece.offset });
         indices.push(index++);
       }
       if (g.name === 'idle') {

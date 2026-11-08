@@ -49,18 +49,8 @@ app.whenReady().then(() => {
       assert.ok(result.sprite.clips['enter_' + id]);
       assert.ok(result.sprite.clips['exit_' + id]);
     }
-    const pixels = result.sprite.frames.reduce(
-      (s, f) =>
-        s +
-        Math.round(
-          result.sprite.width * Math.max(f.rect[2] / result.sprite.width, f.rect[3] / result.sprite.height),
-        ) *
-          Math.round(
-            result.sprite.height *
-              Math.max(f.rect[2] / result.sprite.width, f.rect[3] / result.sprite.height),
-          ),
-      0,
-    );
+    // Each frame's renderer canvas is its `cell`; the stored rect holds only the visible pixels.
+    const pixels = result.sprite.frames.reduce((s, f) => s + f.cell[0] * f.cell[1], 0);
     assert.ok(pixels <= 32 * 1024 * 1024, `renderer needs ${pixels} pixels`);
     assert.ok(!result.warnings.some((w) => w.includes('% 保存')));
     fs.mkdirSync(root, { recursive: true });

@@ -4,6 +4,8 @@ import type { SpriteAnimation, SpriteFrame } from '../types';
 // the logical size as a forced downsampling target for illustrated frames.
 export function spriteCellSize(animation: SpriteAnimation, frame: SpriteFrame) {
   if (animation.pixelated) return { width: animation.width, height: animation.height };
+  // A trimmed frame names its own canvas; its rect alone says nothing about density.
+  if (frame.cell) return { width: frame.cell[0], height: frame.cell[1] };
   const scale = Math.max(frame.rect[2] / animation.width, frame.rect[3] / animation.height);
   return {
     width: Math.max(1, Math.round(animation.width * scale)),

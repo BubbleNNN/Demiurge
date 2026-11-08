@@ -136,8 +136,8 @@ export function FrameReview({
           <div className="frame-review-detail">
             <FrameCanvas source={source} animation={animation} index={selected} full />
             <span>
-              第 {selected + 1} 帧 · {animation.frames[selected].rect[2]} ×{' '}
-              {animation.frames[selected].rect[3]} 像素
+              第 {selected + 1} 帧 · {animation.frames[selected].cell?.[0] ?? animation.frames[selected].rect[2]} ×{' '}
+              {animation.frames[selected].cell?.[1] ?? animation.frames[selected].rect[3]} 像素
             </span>
           </div>
           <div className="frame-review-grid">

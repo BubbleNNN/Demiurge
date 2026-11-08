@@ -186,7 +186,10 @@ export interface PixelShape {
 export interface SpriteFrame {
   rect: [number, number, number, number];
   duration: number;
+  /** Without `cell`: a shift in logical canvas units. With `cell`: the rect's position in that canvas, in physical pixels. */
   offset?: [number, number];
+  /** Physical size of the frame's full canvas when the stored rect holds only the visible pixels. */
+  cell?: [number, number];
 }
 export interface SpriteClip {
   frames: number[];

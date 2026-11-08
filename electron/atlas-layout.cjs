@@ -22,8 +22,8 @@ function layoutFrames(sizes, columns = 4, pixelBudget = 16 * 1024 * 1024) {
   return { width: atlasWidth, height: y, rects };
 }
 function assertAtlasBytes(bytes) {
-  if (bytes.length > 8 * 1024 * 1024)
-    throw new Error('保留原始清晰度的动画图集超过 8 MiB，请减少动作或分成多个角色包；不会自动降清晰度。');
+  if (bytes.length > 32 * 1024 * 1024)
+    throw new Error('保留原始清晰度的动画图集超过 32 MiB，请减少动作或分成多个角色包；不会自动降清晰度。');
 }
 function layoutFramesFlexible(sizes, pixelBudget = 16 * 1024 * 1024) {
   try {

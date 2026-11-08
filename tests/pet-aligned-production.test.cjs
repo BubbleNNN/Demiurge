@@ -46,8 +46,10 @@ test('curled sleep is retained at authored height and its sleeping alias uses a 
   assert.deepEqual(result.sprite.clips.sleep.frames, [5, 6, 7, 8]);
   assert.deepEqual(result.sprite.clips.sleepy.frames, [5]);
   const decoded = f.decode(Buffer.from(result.image.split(',')[1], 'base64'));
+  // Frames store only their visible pixels; `cell` is the full canvas they belong to.
   const height = (i) => {
     const [x, y, w, h] = result.sprite.frames[i].rect;
+    const canvasHeight = result.sprite.frames[i].cell[1];
     let lo = h,
       hi = 0;
     for (let yy = 0; yy < h; yy++)
@@ -56,7 +58,7 @@ test('curled sleep is retained at authored height and its sleeping alias uses a 
           lo = Math.min(lo, yy);
           hi = Math.max(hi, yy);
         }
-    return (hi - lo + 1) / h;
+    return (hi - lo + 1) / canvasHeight;
   };
   assert.ok(height(5) < height(1) * 0.5, 'sleep should stay curled, not stretched to standing height');
 });
@@ -85,6 +87,7 @@ test('fixed registration preserves foot changes without shifting a stationary he
   const atlas = f.decode(Buffer.from(result.image.split(',')[1], 'base64'));
   const headX = (index) => {
     const [x, y, w, h] = result.sprite.frames[index].rect;
+    const [ox] = result.sprite.frames[index].offset;
     let sum = 0,
       count = 0;
     for (let yy = 0; yy < h; yy++)
@@ -96,7 +99,7 @@ test('fixed registration preserves foot changes without shifting a stationary he
           atlas.bitmap[i + 2] === 160 &&
           atlas.bitmap[i + 3] === 255
         ) {
-          sum += xx;
+          sum += xx + ox;
           count++;
         }
       }
