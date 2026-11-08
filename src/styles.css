@@ -6179,3 +6179,9 @@ select:focus {
   flex: 0 0 auto;
   margin-top: 5px;
 }
+/* Desktop controls share the active character's theme, and disappear when not used. */
+.pet-toolbar {max-width:calc(100% - 24px);flex-wrap:wrap;justify-content:center}
+.pet-invite {position:absolute;top:50px;left:12px;right:12px;z-index:12;border:1px solid var(--line);border-radius:14px;padding:10px;background:var(--paper);font-size:12px;color:var(--ink)}
+.pet-invite p {margin:0 0 8px}.pet-invite button {padding:6px 10px;border-radius:12px;background:var(--accent-soft);margin-right:8px;color:var(--accent)}
+.pet-moment {position:absolute;inset:48px 8px 38px;z-index:15;overflow:auto;background:var(--paper);border-radius:16px;border:1px solid var(--line)}
+.pet-moment .moment-card {margin:0;min-width:0;padding:12px}

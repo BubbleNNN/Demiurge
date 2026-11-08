@@ -21,10 +21,17 @@ test('character identity and appearance select matching palettes while explicit 
   assert.equal(resolveTheme({ name: '海风', appearance: '水蓝色头发' }).id, 'ocean');
   assert.equal(resolveTheme({ name: '昔涟', theme: 'forest' }).id, 'forest');
   assert.equal(themeVars({ name: '昔涟', accent: '#123456' })['--accent'], '#123456');
+  // Four looks are offered; the same list gates new production tasks in the main process.
   assert.deepEqual(
     styles.map((style) => style.id),
-    ['original', 'anime', 'chibi', 'sticker', 'powerpuff', 'pixel', '8bit', '3d'],
+    require('../shared/creation-styles.json'),
   );
+  assert.deepEqual(
+    styles.map((style) => style.id),
+    ['original', '8bit', '3d', 'chibi-pet'],
+  );
+  for (const retired of ['anime', 'chibi', 'sticker', 'pastel', 'powerpuff', 'pixel', 'figure'])
+    assert.equal(availableStyle(retired), true, `${retired} skins made earlier stay visible`);
 });
 test('first workspace and old demo migrations disable fake replies without deleting saved characters', () => {
   const fresh = initialState();

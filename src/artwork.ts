@@ -50,7 +50,7 @@ export function supportsAction(skin: Skin | undefined, action: PetAction) {
       skin.model?.motionMap?.[action] ||
         ((action === 'nod' || action === 'shake') && skin.model?.boneMap?.head),
     );
-  return skin?.kind === 'vrm' && !['read', 'gaming'].includes(action);
+  return skin?.kind === 'vrm' && ['idle','wave','nod','shake','sleep','bounce'].includes(action);
 }
 export function supportsEmotion(skin: Skin | undefined, emotion: Emotion) {
   if (emotion === 'neutral') return true;

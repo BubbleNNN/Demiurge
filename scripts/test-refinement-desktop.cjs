@@ -66,7 +66,7 @@ app.on('browser-window-created', (_, created) => {
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       const baseline = await state();
       // Draft survives cancellation AND a renderer reload.
       await click('添加角色');
@@ -79,7 +79,7 @@ app.on('browser-window-created', (_, created) => {
         win.webContents.once('did-finish-load', resolve);
         win.reload();
       });
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await click('添加角色');
       assert.equal(await js(`document.querySelector('[aria-label="新角色名字"]').value`), '待完善人物');
       assert.equal(
@@ -99,7 +99,7 @@ app.on('browser-window-created', (_, created) => {
       assert.match(await js(`window.mori.openPet().then(()=>'',error=>error.message)`), /已核对的外观/);
       assert.equal(BrowserWindow.getAllWindows().length, 1);
       await click('稍后补充素材，保留角色档案');
-      await click('陪伴空间');
+      await click('Mori 首页');
       await wait(`!!document.querySelector('.character-readiness')`);
       await capture('new-character-setup');
       // Reopening with the same name/work resumes that profile without overwriting notes.
@@ -120,10 +120,10 @@ app.on('browser-window-created', (_, created) => {
         `window.mori.load().then(({state:s})=>window.mori.save({...s,preferredSkins:{[${JSON.stringify(baseline.activeCharacterId)}]:'cyrene-powerpuff-v1'}},s))`,
       );
       await js(
-        `[...document.querySelectorAll('.character-item')].find(b=>b.textContent.includes('昔涟')).click()`,
+        `[...document.querySelectorAll('.rail-avatar')].find(b=>b.getAttribute('aria-label').includes('昔涟')).click()`,
       );
       await wait(`window.mori.load().then(({state})=>state.activeSkinId==='cyrene-powerpuff-v1')`);
-      await click('陪伴空间');
+      await click('Mori 首页');
       await wait(`!!document.querySelector('.scene-artwork canvas[data-figure-bounds]')`);
       // Real bitmap hit tests: transparent point must do nothing; head/body route separately.
       const points =
@@ -144,8 +144,8 @@ app.on('browser-window-created', (_, created) => {
       await wait(`!!document.querySelector('.touch-feedback.poke')`);
       await wait(`document.querySelector('.scene-artwork canvas').dataset.clip==='nod'`);
       assert.deepEqual((await state()).messages, resumed.messages);
-      await click('桌宠窗口');
-      await wait(`!!document.querySelector('.desktop-customizer')`);
+      await click('连接与设置');
+      await wait(`!!document.querySelector('.desktop-workspace')`);
       await capture('desktop-size-preview');
       for (const width of [900, 1400]) {
         win.setSize(width, 900);

@@ -39,6 +39,7 @@ fs.writeFileSync(
       llmBaseUrl: 'https://never-call.example/v1',
       llmModel: 'saved-chat',
       imageBaseUrl: 'https://production.mori.example/v1',
+      searchProvider: 'wiki',
       imageModel: '',
       demoMode: false,
       proactiveEnabled: false,
@@ -72,14 +73,26 @@ ipcMain.handle = (channel, handler) =>
     }
     return handler(...args);
   });
+const wikiSearches = [];
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://production.mori.example/v1/images/edits');
   const form = init.body,
     prompt = String(form.get('prompt'));
   calls.push({ prompt, size: form.get('size') });
   const isSheet = /regular [24]-by-2 grid/.test(prompt);
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
-  assert.deepEqual(Buffer.from(await images.at(-1).arrayBuffer()), originalBytes);
+  // A chibi base carries the Furina sticker last, as a style guide only; sheets end with the original.
+  const identity = Buffer.from(await images.at(-1).arrayBuffer());
+  if (!isSheet && identity.equals(furina)) assert.deepEqual(Buffer.from(await images[0].arrayBuffer()), originalBytes);
+  else assert.deepEqual(identity, originalBytes);
   const bytes = isSheet ? fixture.image(true, { frames: form.get('size') === '1536x1024' ? 8 : 4 }) : master;
   return new Response(JSON.stringify({ data: [{ b64_json: bytes.toString('base64') }] }), {
     headers: { 'Content-Type': 'application/json' },
@@ -118,13 +131,15 @@ app.on('browser-window-created', (_event, created) => {
       `(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.textContent.trim()===${JSON.stringify(label)}||b.getAttribute('aria-label')===${JSON.stringify(label)})&&!b.disabled);if(!b)throw new Error('Missing button '+${JSON.stringify(label)});b.click()})()`,
     );
   const open = async () => {
-    await click('外观工作台');
+    await click('Mori 首页');
+    await click('角色工作室');
+    await click('外观与动作');
     await click('自动制作多画风桌宠');
     await wait(`!!document.querySelector('[aria-label="动作帧数"]')`);
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'production-fixture'},{imageKey:'isolated-test-key'}))`,
       );
@@ -132,6 +147,14 @@ app.on('browser-window-created', (_event, created) => {
       await js(
         `(()=>{ const e=document.querySelector('[aria-label="动作帧数"]'); e.value='8'; e.dispatchEvent(new Event('change',{bubbles:true})); const t=document.querySelector('[aria-label="动作气质"]'); t.value='gentle'; t.dispatchEvent(new Event('change',{bubbles:true})); const a=document.querySelector('[aria-label="外观要求"]'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(a,'轮廓清晰，保留发饰'); a.dispatchEvent(new Event('input',{bubbles:true})); })()`,
       );
+      // The eight-frame transport covers the classic gestures; twelve-frame activities have their own test.
+      const eightFrame = ['blink', 'talk', 'wave', 'nod', 'shake', 'emotions'];
+      for (const motion of require('../shared/pet-motions.json')) {
+        const pressed = await js(
+          `document.querySelector('[aria-label=${JSON.stringify('制作动作：' + motion.name)}]').getAttribute('aria-pressed')==='true'`,
+        );
+        if (pressed !== eightFrame.includes(motion.id)) await click('制作动作：' + motion.name);
+      }
       await click('开始自动制作桌宠');
       await wait(
         `document.querySelectorAll('[aria-label="角色基准预览"] img').length===1&&!document.querySelector('.production-step.working')`,
@@ -148,7 +171,7 @@ app.on('browser-window-created', (_event, created) => {
       await new Promise((r) => setTimeout(r, 400));
       fs.writeFileSync(path.join(dir, 'base-checkpoint.png'), (await win.webContents.capturePage()).toPNG());
       win.webContents.reload();
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await open();
       await wait(`document.querySelectorAll('[aria-label="角色基准预览"] img').length===1`);
       assert.equal(calls.length, 1);
@@ -197,24 +220,24 @@ app.on('browser-window-created', (_event, created) => {
       await click('刷新任务');
       await wait(`document.querySelectorAll('.production-job-tabs button').length===2`);
       await js(
-        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('原作画风')).click()`,
+        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('原作')).click()`,
       );
-      await wait(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作画风')`);
+      await wait(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作')`);
       delayedMasterId = jobs[0].id;
       await js(
-        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('软萌 Q 版')).click()`,
+        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('旧版 Q 版')).click()`,
       );
       for (let n = 0; n < 100 && !releaseMasterReply; n++) await new Promise((r) => setTimeout(r, 20));
       assert.ok(releaseMasterReply);
       assert.equal(await js(`document.querySelectorAll('[aria-label="角色基准预览"] img').length`), 0);
       await js(
-        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('原作画风')).click()`,
+        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('原作')).click()`,
       );
-      await wait(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作画风')`);
+      await wait(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作')`);
       releaseMasterReply();
       await new Promise((r) => setTimeout(r, 200));
       assert.equal(
-        await js(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作画风')`),
+        await js(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作')`),
         true,
         'Late replies from an old task cannot replace the selected master',
       );

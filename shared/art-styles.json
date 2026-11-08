@@ -35,6 +35,15 @@
     "url": "",
     "prompt": "A clean flat-color chibi sticker desktop companion, approximately TWO heads tall, round face, compact limbs and large readable eyes. Use confident dark contours of consistent weight, broad clearly separated hair locks, solid color shapes and one hard-edged shadow tone per material. Keep the face and signature accessories legible at 96 to 160 pixels tall. Preserve this SAME character's recognizable hairstyle, costume color divisions, ornaments and anatomical identity; simplify detail without borrowing another character's hat, clothes, symbols or anatomy. No painterly gradients, glossy 3D toy shading, fuzzy plush texture, tiny ornamental noise, white sticker backing, glow, aura or drop shadow. One complete full-body figure with separated hands and feet and generous transparent margins."
   },
+  "pastel": {
+    "shape": "约两头身的圆润 Q 版桌宠：圆脸、大眼、短小紧凑的四肢；保留角色标志性的发型、发饰与服装分区。",
+    "surface": "干净利落的描边与柔和粉彩平涂，一到两层赛璐璐阴影；颜色明快不发灰，96–160 像素高度仍能看清表情与饰物。",
+    "canvas": "单个全身角色、透明 PNG，站姿放松、双脚落地，头发与手脚四周留足空隙；无背景、地面、光晕或文字。",
+    "motion": "先确认同一张 Q 版基准，再沿用相同头身比、线条粗细与配色制作动作帧。",
+    "tool": "Mori 柔彩 Q 版工作流（参考 Anime Codex 桌宠画风）",
+    "url": "",
+    "prompt": "A round, two-head-tall chibi desktop pet: rounded face, large expressive eyes, compact short limbs and a small soft body. Bold clean outlines of even weight, flat PASTEL cel shading with one or two crisp shadow tones, bright clear colors that never look muddy, and a highly readable silhouette at 160 px tall. Preserve this SAME character's hairstyle and bangs, hair colors and gradients, hair ornaments, signature clothes, costume color divisions and accessories, simplified into clean shapes; do not borrow another character's anatomy, hat or costume. No painterly texture, 3D toy rendering, glow, sparkles or drop shadow. One complete full-body figure standing calmly with separated hands and feet and generous transparent margins."
+  },
   "powerpuff": {
     "shape": "飞天小女警式超大圆头、占据大半张脸的椭圆眼睛、约 1.6 头身的短小身体和圆头四肢；保留角色发型与饰物轮廓。",
     "surface": "统一粗黑描边与纯色平涂；大块虹膜、黑瞳孔和白色高光，不使用细腻日式眼睛、渐变或材质纹理。",
@@ -70,5 +79,23 @@
     "tool": "VRoid 模型与发型材质",
     "url": "https://vroid.pixiv.help/hc/en-us/sections/900000861886-Hairstyle-Editor",
     "prompt": "An unmistakable low-poly 3D adventure-game character render with faceted geometric hair locks and clothing, broad flat polygon planes, modeled nose and cheeks, physical directional lighting and ambient occlusion, simple solid-color materials. Preserve the original character design. No painted outlines, fine illustration texture, smooth high-poly resin finish or photographic person. Output is a render image, not a 3D model file."
+  },
+  "figure": {
+    "shape": "约 2.5 头身的软萌手办：圆头、大眼、短小肢体，像精致的树脂 Q 版手办；保留角色发型、发饰与服装结构。",
+    "surface": "柔和的三维体积与哑光材质，柔光照明、细腻但不刺眼的高光；颜色干净通透，不使用写实皮肤纹理或厚重描边。",
+    "canvas": "单个全身角色、透明 PNG，站在不可见的地面上，无底座、背景、地面阴影或光晕。",
+    "motion": "沿用同一手办造型制作姿势帧，保持相同体积、光照方向与比例。",
+    "tool": "Mori 软萌手办工作流（参考 Anime Codex 桌宠画风）",
+    "url": "",
+    "prompt": "A soft, cute 3D chibi FIGURE of this SAME character, about 2.5 heads tall: rounded head, large glossy eyes, short limbs, smooth sculpted volumes like a premium resin or vinyl collectible. Gentle studio lighting from the front-left, soft matte materials with restrained specular highlights, clean saturated colors, subtle ambient occlusion; no outlines, no realistic skin texture, no plush fibers. Preserve the character's hairstyle and bangs, hair colors and gradients, hair ornaments, costume construction, color divisions and accessories as sculpted shapes. No base, stand, background, floor shadow, glow or text. One complete full-body figure standing calmly with separated hands and feet and generous transparent margins."
+  },
+  "chibi-pet": {
+    "shape": "先查找同一角色已有的 Q 版形象，沿用其头身比、五官与服装简化设计；未找到时使用芙宁娜贴纸画风。",
+    "surface": "有可靠现成参考时跟随参考；无参考时采用清晰深色轮廓、约两头身、干净平涂与少量硬阴影。",
+    "canvas": "单个全身透明 PNG，头发、手脚与饰物留足空隙；无白色贴纸底板、背景光晕或棋盘格。",
+    "motion": "先确认同一张贴纸基准，再制作真实动作帧；所有帧沿用相同轮廓粗细、头身比、配色与饰物。",
+    "tool": "Mori Q 版参考检索与制作",
+    "url": "",
+    "prompt": "A clean flat-color chibi sticker desktop companion, approximately TWO heads tall, round face, compact limbs and large readable eyes. Use confident dark contours of consistent weight, broad clearly separated hair locks, solid color shapes and one hard-edged shadow tone per material. Keep the face and signature accessories legible at 96 to 160 pixels tall. Preserve this SAME character's recognizable hairstyle, costume color divisions, ornaments and anatomical identity; simplify detail without borrowing another character's hat, clothes, symbols or anatomy. No painterly gradients, glossy 3D toy shading, fuzzy plush texture, tiny ornamental noise, white sticker backing, glow, aura or drop shadow. One complete full-body figure with separated hands and feet and generous transparent margins."
   }
 }

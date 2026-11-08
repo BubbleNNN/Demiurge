@@ -1,3 +1,4 @@
+import { isActivity } from '../../animation/activities';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
@@ -37,7 +38,7 @@ import type {
 const checks = [
   '发型、脸部和标志性饰物与原图一致',
   '服装结构和配色一致，画风有明确区别',
-  '动作衔接自然，没有变脸、肢体缺失或边缘裁切',
+  '动作衔接自然，没有变脸、肢体缺失或边缘裁切（睡醒、跑停、收起道具逐帧核对）',
 ];
 const candidateDirectionOrder = ['balanced', 'bold', 'soft'] as const;
 const stepName = (step: PetJob['steps'][number]) =>
@@ -85,15 +86,8 @@ export function PetProductionStudio({
   onReferences: (references: VisualReference[]) => Promise<void>;
   onSaveSkin: (skin: Skin, activate: boolean) => Promise<void>;
 }) {
-  const [selectedStyles, setSelectedStyles] = useState<ArtStyle[]>(['chibi']);
-  const [selectedMotions, setSelectedMotions] = useState<PetMotion[]>([
-    'blink',
-    'talk',
-    'wave',
-    'nod',
-    'sleep',
-    'emotions',
-  ]);
+  const [selectedStyles, setSelectedStyles] = useState<ArtStyle[]>(['chibi-pet']);
+  const [selectedMotions, setSelectedMotions] = useState<PetMotion[]>(motions.map((m) => m.id as PetMotion));
   const [frameCount, setFrameCount] = useState<4 | 8>(4);
   const [candidateCount, setCandidateCount] = useState<1 | 2 | 3>(1);
   const [candidateVariation, setCandidateVariation] =
@@ -369,6 +363,7 @@ export function PetProductionStudio({
     resultRequest.current++;
     const created = await bridge.startPetJob({
       characterId: character.id,
+      transitionVersion: 3,
       styles: selectedStyles,
       frameCount,
       candidateCount: sourceId ? 1 : candidateCount,
@@ -461,7 +456,7 @@ export function PetProductionStudio({
             <WandSparkles size={24} />
           </span>
           <div>
-            <h3>从一张原图，做出会回应的她。</h3>
+            <h3>先确认形象，再制作动作。</h3>
             <p>先比较角色形象，再做动作。不满意的动作可以单独修正，逐步做成喜欢的样子。</p>
           </div>
         </header>
@@ -502,7 +497,7 @@ export function PetProductionStudio({
           <div className="production-section-heading">
             <div>
               <small>01 · 角色图</small>
-              <h4>选择她的模样</h4>
+              <h4>选择角色画风</h4>
             </div>
             <div className="toolbar">
               <button
@@ -544,10 +539,11 @@ export function PetProductionStudio({
               </button>
             ))}
           </div>
-          {selectedStyles.includes('sticker') && (
+          {selectedStyles.includes('chibi-pet') && (
             <p className="notice">
-              清爽贴纸采用两头身、清晰深色轮廓和单层平涂；先确认角色图，再沿用同一造型制作动作。
-              成品会清理极低透明度的背景残留，原始生成图仍保留在任务中。
+              Q版先搜索并核对这个角色已有的 Q 版／表情包形象；找到后参考其设计制作。
+              未找到可用参考时，使用 Anime Codex 芙宁娜贴纸画风。网络或搜索失败会提示重试。
+              搜索和图片核对可能产生模型用量，完成后会显示采用的来源。
             </p>
           )}
           {sources.length > 0 && (
@@ -683,7 +679,7 @@ export function PetProductionStudio({
                 onChange={(e) => setFrameCount(Number(e.target.value) as 4 | 8)}
               >
                 <option value={4}>四帧 · 简洁关键姿势</option>
-                <option value={8}>八帧 · 完整起势与收势（实验）</option>
+                <option value={8}>八帧 · 更细的表情与手势</option>
               </select>
             </label>
             <label className="production-master-select">
@@ -723,19 +719,20 @@ export function PetProductionStudio({
           <div className="production-section-heading">
             <div>
               <small>02 · 动画</small>
-              <h4>选择她会做的动作</h4>
+              <h4>选择需要的动作</h4>
             </div>
             <button
               className="text-button"
               disabled={busy}
               onClick={() => setSelectedMotions(motions.map((m) => m.id as PetMotion))}
             >
-              全选动作
+              完整桌宠动作包
             </button>
           </div>
           <p className="muted">
-            读书与玩掌机固定使用八帧，包含进入、活动和收起道具，每组一次 1536×1024
-            图像请求。其他动作沿用上方帧数。尺寸略有偏差的等分图集会在本机补透明留白；裁切和无可见变化仍会提示处理。
+            新版动作流程：生活活动、四向跑动、倾听和睡眠各十二帧，进入、循环、退出各四帧， 每组一次 1024×1024
+            图像请求。默认已选完整动作包与新版 Q 版。其他动作沿用上方帧数。
+            原帧不自动降清晰度；图集超限会保留已生成素材并提示处理。
           </p>
           <div className="production-motion-grid">
             {motions.map((m) => (
@@ -841,7 +838,11 @@ export function PetProductionStudio({
               <p className="empty-note">
                 当前任务：常规动作 {job.frameCount || 4} 帧 ·{' '}
                 {{ natural: '自然', gentle: '轻柔', lively: '活泼' }[job.temperament || 'natural']}
-                {job.motions.some(m => m === 'read' || m === 'gaming') ? ' · 生活活动固定八帧' : ''}
+                {job.transitionVersion === 3
+                  ? ' · 新版十二帧动作流程'
+                  : job.motions.some((m) => isActivity(m))
+                    ? ' · 旧版八帧流程；请新建任务使用新版'
+                    : ' · 旧版流程；请新建任务使用新版'}
                 {(job.candidateCount || 1) > 1 ? ` · 每种画风 ${job.candidateCount} 张候选` : ''}
                 {(job.candidateCount || 1) > 1 && job.candidateVariation
                   ? ` · ${job.candidateVariation === 'explore' ? '探索不同表现' : '同一方向微调'}`
@@ -892,6 +893,15 @@ export function PetProductionStudio({
                               {styleName(base.style)}
                               {siblings.length > 1 ? ` · 候选 ${ordinal}` : ''}
                             </strong>
+                            {base.generation?.chibiResearch && (
+                              <div aria-label="Q版形象来源">
+                                <span>{base.generation.chibiResearch.status === 'found' ? '已参考现成 Q 版形象' : '未找到可用参考 · 芙宁娜贴纸画风'}</span>
+                                <small>{base.generation.chibiResearch.reason}</small>
+                                {base.generation.chibiResearch.sources.map((source) => (
+                                  <button type="button" className="text-button" key={source.url} onClick={() => void bridge.openExternal(source.url)}>{source.title}</button>
+                                ))}
+                              </div>
+                            )}
                             {base.generation?.candidateDirection && (
                               <span className="production-candidate-direction" aria-label="候选表现方向">
                                 {candidateDirections[base.generation.candidateDirection].label}

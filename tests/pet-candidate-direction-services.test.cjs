@@ -203,3 +203,23 @@ test('activity requests use eight poses, consistent props and the exact chosen m
     assert.deepEqual(call.images, [base.images.neutral, character.visualReferences[0].image].map(bytes));
   }
 });
+
+test('aligned prompt permits seated life, links separate motion references, and specifies both running steps', async () => {
+  const {services,calls}=transport();
+  const base=await services.generateSkin({character,style:'sticker'},settings,credentials);
+  for (const motion of ['read','sleep','walk_right','office']) {
+    await services.generatePetSheet({character,skin:base,motion,transitionVersion:3,referenceDigest:referencePack(character).digest,continuityReferences:[{motion:'gaming',image:base.images.neutral}]},settings,credentials);
+    const call=calls.at(-1);
+    assert.match(call.prompt,/TWELVE complete full-body frames/);
+    assert.match(call.prompt,/regular 4-by-3 grid/);
+    assert.match(call.prompt,/1024x1024/);
+    assert.match(call.prompt,/THREE separate four-frame segments/);
+    assert.match(call.prompt,/Images 3 through 3 are completed motion sheets/);
+    assert.doesNotMatch(call.prompt,/Keep the whole body standing|never introduce a table/);
+    assert.equal(call.images.length,3);
+    if(motion==='read')assert.match(call.prompt,/book falling from above/);
+    if(motion==='sleep')assert.match(call.prompt,/plant palms and push torso upright/);
+    if(motion==='walk_right')assert.match(call.prompt,/second passing pose/);
+    if(motion==='office')assert.match(call.prompt,/sit on that chair/);
+  }
+});

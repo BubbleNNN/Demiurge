@@ -39,6 +39,7 @@ fs.writeFileSync(
       llmBaseUrl: 'https://never-call.example/v1',
       llmModel: 'saved-chat',
       imageBaseUrl: 'https://production.mori.example/v1',
+      searchProvider: 'wiki',
       imageModel: '',
       demoMode: false,
       proactiveEnabled: false,
@@ -57,6 +58,8 @@ fs.writeFileSync(
     ],
   }),
 );
+const wikiSearches = [];
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 const calls = [],
   styles = require('../shared/art-styles.json');
 let holdNext = true,
@@ -77,17 +80,26 @@ fs.promises.rename = async (from, to) => {
   return rename(from, to);
 };
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://production.mori.example/v1/images/edits');
   assert.equal(init.headers.Authorization, 'Bearer isolated-test-key');
   const form = init.body,
     prompt = String(form.get('prompt'));
-  const style = Object.keys(styles).find((s) => prompt.includes(styles[s].prompt));
+  const style = [...require('../shared/creation-styles.json'), ...Object.keys(styles)].find((s) => prompt.includes(styles[s].prompt));
   assert.ok(style, 'A request must explicitly describe its rendering medium');
   const isSheet = prompt.includes('regular 2-by-2 grid');
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
-  assert.equal(images.length, isSheet ? 2 : 1);
-  assert.deepEqual(Buffer.from(await images.at(-1).arrayBuffer()), originalBytes);
+  // The chibi look carries the Furina sticker last, as a style guide only.
+  assert.equal(images.length, isSheet ? 2 : style === 'chibi-pet' ? 2 : 1);
+  assert.deepEqual(Buffer.from(await images[isSheet ? 1 : 0].arrayBuffer()), originalBytes);
   if (isSheet) assert.deepEqual(Buffer.from(await images[0].arrayBuffer()), master);
+  else if (style === 'chibi-pet') assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina);
   assert.equal(form.get('background'), 'transparent');
   calls.push({ style, isSheet });
   maximum = Math.max(maximum, ++active);
@@ -161,9 +173,11 @@ app.on('browser-window-created', (_event, created) => {
       `!document.querySelector('.production-step.working')&&!document.querySelector('.pet-production .progress-card')`,
     );
   const open = async () => {
-    await click('外观工作台');
+    await click('Mori 首页');
+    await click('角色工作室');
+    await click('外观与动作');
     await click('自动制作多画风桌宠');
-    await wait(`document.querySelectorAll('.production-style-grid button').length===7`);
+    await wait(`document.querySelectorAll('.production-style-grid button').length===4`);
   };
   const capture = async (file) => {
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -171,7 +185,7 @@ app.on('browser-window-created', (_event, created) => {
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       const before = await state();
       await open();
       assert.equal(await js(`document.querySelector('[aria-label="开始自动制作桌宠"]').disabled`), true);
@@ -185,18 +199,25 @@ app.on('browser-window-created', (_event, created) => {
       await click('全选画风');
       assert.equal(
         await js(`document.querySelectorAll('.production-style-grid button[aria-pressed="true"]').length`),
-        7,
+        4,
       );
       await click('清空画风');
       assert.equal(await js(`document.querySelector('[aria-label="开始自动制作桌宠"]').disabled`), true);
-      await click('桌宠画风：软萌 Q 版');
-      await click('桌宠画风：原作画风');
-      await click('全选动作');
+      await click('桌宠画风：Q版');
+      await click('桌宠画风：原作');
+      // Keep the seven four-frame motions; twelve-frame activities have their own native test.
+      const fourFrame = ['blink', 'talk', 'wave', 'nod', 'shake', 'bounce', 'emotions'];
+      for (const motion of require('../shared/pet-motions.json')) {
+        const pressed = await js(
+          `document.querySelector('[aria-label=${JSON.stringify('制作动作：' + motion.name)}]').getAttribute('aria-pressed')==='true'`,
+        );
+        if (pressed !== fourFrame.includes(motion.id)) await click('制作动作：' + motion.name);
+      }
       assert.equal(
         await js(`document.querySelectorAll('.production-motion-grid button[aria-pressed="true"]').length`),
-        8,
+        7,
       );
-      assert.match(await js(`document.querySelector('.production-start').textContent`), /预计 18 次图像请求/);
+      assert.match(await js(`document.querySelector('.production-start').textContent`), /预计 16 次图像请求/);
       await js(`document.querySelector('.production-start').scrollIntoView({block:'center'})`);
       await capture('fixture-plan.png');
       await click('开始自动制作桌宠');
@@ -213,7 +234,7 @@ app.on('browser-window-created', (_event, created) => {
       await idle();
       assert.equal(calls.length, 1);
       win.webContents.reload();
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await open();
       await wait(`document.querySelectorAll('.production-step.done').length===1`);
       assert.equal(calls.length, 1, 'Opening the task never resumes paid work');
@@ -224,34 +245,34 @@ app.on('browser-window-created', (_event, created) => {
       await click('重新生成招手并继续（调用图像 API）');
       await wait(`!!document.querySelector('.production-step.unsaved')`);
       await idle();
-      assert.equal(calls.length, 10, 'Only the failed wave is repeated');
+      assert.equal(calls.length, 9, 'Only the failed wave is repeated');
       assert.equal((await state()).skins.length, 0);
       await click('仅恢复本机保存');
       await wait(
-        `document.querySelectorAll('.production-step.done').length===10&&!!document.querySelector('.production-review')`,
+        `document.querySelectorAll('.production-step.done').length===9&&!!document.querySelector('.production-review')`,
       );
       await idle();
       assert.equal(
         calls.length,
-        10,
+        9,
         'Recovery installs acknowledged atlas without calls or advancing the next style',
       );
       assert.equal((await state()).skins.length, 1);
       await click('继续自动制作');
       await wait(
-        `document.querySelectorAll('.production-step.done').length===11&&!document.querySelector('.production-step.working')`,
+        `document.querySelectorAll('.production-step.done').length===10&&!document.querySelector('.production-step.working')`,
       );
-      assert.equal(calls.length, 11, 'The next style also pauses after its new master');
+      assert.equal(calls.length, 10, 'The next style also pauses after its new master');
       await click('继续自动制作');
       await wait(
-        `document.querySelectorAll('.production-step.done').length===20&&document.querySelectorAll('.production-output-tabs button').length===2`,
+        `document.querySelectorAll('.production-step.done').length===18&&document.querySelectorAll('.production-output-tabs button').length===2`,
       );
       await idle();
-      assert.equal(calls.length, 19);
+      assert.equal(calls.length, 17);
       assert.equal(maximum, 1);
       let loaded = await state();
       assert.equal(loaded.skins.length, 2);
-      assert.ok(loaded.skins.every((s) => s.review.status === 'pending' && s.sprite.frames.length === 33));
+      assert.ok(loaded.skins.every((s) => s.review.status === 'pending' && s.sprite.frames.length === 29));
       assert.equal(loaded.activeSkinId, '');
       const configuredSettings = loaded.settings;
       assert.deepEqual(loaded.characters, before.characters);
@@ -287,7 +308,7 @@ app.on('browser-window-created', (_event, created) => {
       await click('确认形象并启用桌宠');
       await wait(`document.querySelector('.production-output-tabs button').textContent.includes('已确认')`);
       loaded = await state();
-      const approved = loaded.skins.find((s) => s.style === 'chibi');
+      const approved = loaded.skins.find((s) => s.style === 'chibi-pet');
       assert.equal(loaded.activeSkinId, approved.id);
       assert.equal(approved.review.status, 'approved');
       assert.deepEqual(loaded.settings, configuredSettings);
@@ -295,11 +316,11 @@ app.on('browser-window-created', (_event, created) => {
       await wait(`document.body.innerText.includes('角色图、动作时序与角色资料已导出')`);
       const bundle = JSON.parse(fs.readFileSync(packFile, 'utf8'));
       assert.equal(bundle.skins.length, 1);
-      assert.equal(bundle.skins[0].sprite.frames.length, 33);
+      assert.equal(bundle.skins[0].sprite.frames.length, 29);
       assert.ok(bundle.skins[0].sprite.clips.bounce && bundle.skins[0].sprite.clips.talk);
       assert.equal(JSON.stringify(bundle).includes('isolated-test-key'), false);
       await js(
-        `[...document.querySelectorAll('.production-output-tabs button')].find(b=>b.querySelector('strong').textContent==='原作画风').click()`,
+        `[...document.querySelectorAll('.production-output-tabs button')].find(b=>b.querySelector('strong').textContent==='原作').click()`,
       );
       await click('形象不对，标记为不采用');
       await wait(
@@ -309,9 +330,9 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(loaded.activeSkinId, approved.id);
       assert.equal(loaded.skins.find((s) => s.style === 'original').review.status, 'rejected');
       await js(
-        `[...document.querySelectorAll('.production-output-tabs button')].find(b=>b.querySelector('strong').textContent==='软萌 Q 版').click()`,
+        `[...document.querySelectorAll('.production-output-tabs button')].find(b=>b.querySelector('strong').textContent==='Q版').click()`,
       );
-      await click('来到桌面');
+      await click('放到桌面');
       let pet;
       for (let n = 0; n < 150; n++) {
         pet = BrowserWindow.getAllWindows().find((w) => w !== win);
@@ -322,7 +343,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(pet);
       assert.ok(await pet.webContents.executeJavaScript(`!!document.querySelector('canvas[data-clip]')`));
       await click('关闭弹窗');
-      await click('陪伴空间');
+      await click('Mori 首页');
       await wait(`!!document.querySelector('.scene-artwork canvas[data-clip]')`);
       await click('摸摸角色的头');
       await wait(`document.querySelector('.scene-artwork canvas').dataset.clip==='nod'`);
@@ -354,7 +375,7 @@ app.on('browser-window-created', (_event, created) => {
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
       assert.equal(waveObserved, true, 'Wake uses the generated greeting');
-      assert.equal(calls.length, 19);
+      assert.equal(calls.length, 17);
       loaded = await state();
       assert.deepEqual(loaded.characters, before.characters);
       assert.deepEqual(loaded.messages, before.messages);

@@ -1,6 +1,6 @@
 {
   "name": "mori-companion",
-  "version": "0.3.6",
+  "version": "0.3.11",
   "private": true,
   "description": "An API-powered character companion and desktop pet workshop.",
   "main": "electron/main.cjs",
@@ -19,7 +19,9 @@
     "setup:live2d": "node scripts/setup-live2d.cjs",
     "format": "prettier --write src electron scripts tests vite.config.ts README.md docs/*.md",
     "package:mac": "node scripts/package-desktop.cjs",
-    "test:package": "node scripts/test-packaged-desktop.cjs"
+    "test:package": "node scripts/test-packaged-desktop.cjs",
+    "build:desktop-helper": "node scripts/build-desktop-helper.cjs",
+    "test:migration": "electron scripts/test-anime-migration-desktop.cjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.2.8",

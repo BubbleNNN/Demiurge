@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, Film, Layers3, Box, ImagePlus } from 'lucide-react';
 import guides from '../../shared/art-styles.json';
-import { styles, styleName, availableStyle } from '../theme';
+import { styles, styleName } from '../theme';
 import { bridge } from '../bridge';
 import { Modal } from './Modal';
 import { AnimationPreview } from './AnimationPreview';
@@ -18,7 +18,7 @@ export function ArtWorkflow({
   onSaveSkin: (skin: Skin, activate: boolean) => Promise<void>;
   onClose: () => void;
 }) {
-  const [style, setStyle] = useState<ArtStyle>(availableStyle(initialStyle) ? initialStyle : 'original');
+  const [style, setStyle] = useState<ArtStyle>(styles.some(s => s.id === initialStyle) ? initialStyle : 'original');
   const [pending, setPending] = useState<Skin | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

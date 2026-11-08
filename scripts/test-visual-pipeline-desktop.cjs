@@ -170,11 +170,13 @@ app.on('browser-window-created', (_event, win) => {
     );
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await wait(`window.mori.load().then(r=>!!r.state)`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,modelBaseUrl:'https://model.mori.example',modelVersion:'latest'}, {modelKey:'native-model-fixture'}))`,
       );
+      await click('Mori 首页');
+      await click('角色工作室');
       await click('角色档案');
       await wait(`!!document.querySelector('[aria-label="角色参考原图"]')`);
       await click('自动收集参考图');
@@ -211,9 +213,11 @@ app.on('browser-window-created', (_event, win) => {
         win.webContents.once('did-finish-load', resolve);
         win.webContents.reload();
       });
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       assert.equal((await js(`window.mori.load().then(r=>r.keys)`)).modelKey, true);
-      await click('外观工作台');
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
       await wait(`!!document.querySelector('[aria-label="制作 3D 模型"]')`);
       await click('制作 3D 模型');
       await wait(`!!document.querySelector('[aria-label="为昔涟制作 3D 模型"]')`);

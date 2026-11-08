@@ -6,12 +6,7 @@ const { randomUUID } = require('node:crypto');
 const { validateAnimation } = require('./sprites.cjs');
 const names = [
   'idle',
-  'read',
-  'gaming',
-  'enter_read',
-  'exit_read',
-  'enter_gaming',
-  'exit_gaming',
+  ...require('../shared/activities.json').activities.flatMap(({ id }) => [id, `enter_${id}`, `exit_${id}`]),
   'wave',
   'nod',
   'shake',
@@ -112,7 +107,7 @@ async function readSequenceFolder(folder, characterId, style, codec) {
     const options = overrides[name] ?? {};
     if (!options || typeof options !== 'object' || Array.isArray(options))
       throw new Error(`动作 ${name} 设置无效。`);
-    clips[name] = { frames: indices, loop: ['idle', 'sleep', 'talk', 'read', 'gaming'].includes(name), ...options };
+    clips[name] = { frames: indices, loop: ['idle', 'sleep', 'talk', ...require('../shared/activities.json').activities.map((a) => a.id)].includes(name), ...options };
     // Frame indices come only from the selected local files.
     clips[name].frames = indices;
   }

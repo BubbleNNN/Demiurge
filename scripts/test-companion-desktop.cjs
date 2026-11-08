@@ -72,13 +72,19 @@ async function finish(error) {
 app.on('browser-window-created', (_event, created) => {
   if (win) return;
   win = created;
-  const js = (code) => win.webContents.executeJavaScript(code, true);
+  const js = (code) =>
+    win.webContents.executeJavaScript(code, true).catch((error) => {
+      throw new Error(code.slice(0, 300) + ': ' + error.message);
+    });
   const wait = async (code) => {
     for (let n = 0; n < 200; n++) {
       if (await js(code)) return;
       await new Promise((resolve) => setTimeout(resolve, 70));
     }
-    throw new Error('UI did not reach: ' + code);
+    const seen = await js(
+      `JSON.stringify({clip:document.querySelector('.scene-artwork canvas')?.dataset.clip,presence:document.querySelector('.room-presence')?.textContent,feature:document.querySelector('main')?.dataset.feature})`,
+    );
+    throw new Error('UI did not reach: ' + code + ' — saw ' + seen);
   };
   const click = (label) =>
     js(
@@ -91,8 +97,11 @@ app.on('browser-window-created', (_event, created) => {
   const state = () => js('window.mori.load().then(r=>r.state)');
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
-      await click('角色包与本地互动');
+      await wait(`!!document.querySelector('.room-rail')`);
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
+      await click('使用预制角色包');
       await click('精选角色包');
       await wait(`document.querySelectorAll('.pack-outfits button').length===7`);
       assert.equal((await state()).activeCharacterId, previous.id);
@@ -123,7 +132,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(loaded.settings.llmModel, 'saved-model');
       await js(`document.querySelector('.chat-preferences summary').click()`);
       await click('本地台词');
-      await click('展开对话栏');
+      await click('查看对话记录');
       await wait(
         `document.querySelector('.chat-mode-picker button[aria-pressed="true"]').textContent==='本地台词'`,
       );
@@ -151,7 +160,10 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(await js(`document.querySelector('.head-zone').disabled`));
       await click('唤醒角色');
       await wait(`document.querySelector('.scene-artwork canvas').dataset.clip==='wave'`);
-      await click('角色包与本地互动');
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
+      await click('使用预制角色包');
       await click('昔涟的互动台词');
       await setText('互动台词：轻轻点一下', '我们先慢慢做眼前的小事。');
       await click('保存互动台词');
@@ -178,20 +190,21 @@ app.on('browser-window-created', (_event, created) => {
         loaded.characters.find((c) => c.id === importedId).companion.replies.touch[0],
         '一起慢慢做眼前的小事吧。',
       );
+      await click('Mori 首页');
       await js(
-        `(()=>{const b=[...document.querySelectorAll('.skin-tile')].find(b=>b.textContent.includes('记忆存档'));b.click()})()`,
+        `(async()=>{document.querySelector('.room-wardrobe-more[aria-expanded="false"]')?.click();await new Promise(r=>setTimeout(r,60));const b=[...document.querySelectorAll('.room-wardrobe button')].find(b=>(b.getAttribute('aria-label')||'').includes('记忆存档'));b.click()})()`,
       );
       await wait(`!!document.querySelector('.scene-artwork canvas[data-clip]')`);
       win.webContents.reload();
       await wait(
-        `!!document.querySelector('.mori-symbol')&&!!document.querySelector('.scene-artwork canvas[data-clip]')`,
+        `!!document.querySelector('.room-rail')&&!!document.querySelector('.scene-artwork canvas[data-clip]')`,
       );
       assert.equal((await state()).settings.chatMode, 'local');
       await fs.promises.writeFile(
         path.join(dir, 'local-companion.png'),
         (await win.webContents.capturePage()).toPNG(),
       );
-      await click('来到桌面');
+      await click('放到桌面');
       const pet = BrowserWindow.getAllWindows().find((window) => window !== win);
       for (let n = 0; n < 120; n++) {
         if (pet && (await pet.webContents.executeJavaScript(`!!document.querySelector('canvas[data-clip]')`)))

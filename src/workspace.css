@@ -1,0 +1,302 @@
+/* Studio content: cards, grids and dialogs, colored by the active character (tokens in room.css). */
+.studio .button {
+  border-radius: 9px;
+  font-size: 12px;
+  min-height: 38px;
+}
+.studio .button.secondary {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--accent-ink);
+}
+.studio .button.primary {
+  box-shadow: none;
+}
+.studio .page-heading {
+  margin-bottom: 25px;
+}
+.studio .page-kicker,
+.studio .eyebrow {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.studio .page-heading h1,
+.studio .page-intro h1 {
+  font-family: inherit;
+  font-size: 29px;
+  font-weight: 650;
+  color: var(--ink);
+  letter-spacing: -0.7px;
+  line-height: 1.5;
+}
+.studio .page-heading p,
+.studio .page-intro p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.studio .production-entry {
+  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  border-radius: 15px;
+  box-shadow: none;
+  padding: 24px;
+  margin-bottom: 16px;
+  color: var(--accent-ink);
+}
+.studio .production-icon {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: 12px;
+}
+.studio .production-entry small {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.studio .production-entry strong {
+  color: var(--accent-ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+.studio .production-entry p {
+  color: var(--muted);
+  font-size: 11px;
+}
+.studio .production-entry-action {
+  background: var(--ink);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+.creation-tools,
+.motion-workbench {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  margin-bottom: 26px;
+  overflow: clip;
+}
+.creation-tools > summary,
+.motion-workbench > summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-size: 12px;
+}
+.creation-tools > summary::-webkit-details-marker,
+.motion-workbench > summary::-webkit-details-marker {
+  display: none;
+}
+.creation-tools > summary > span,
+.motion-workbench > summary > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.creation-tools > summary > span:last-child,
+.motion-workbench > summary > span:last-child {
+  color: var(--muted);
+  font-size: 10px;
+}
+.creation-tools[open] > summary,
+.motion-workbench[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.creation-tools[open] > summary > span:last-child > svg,
+.motion-workbench[open] > summary > span:last-child > svg {
+  transform: rotate(90deg);
+}
+.creation-tools .engine-grid {
+  padding: 18px;
+  margin: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.studio .engine-grid > button {
+  background: var(--surface);
+  border-color: var(--line);
+  padding: 18px;
+  border-radius: 10px;
+}
+.studio .engine-grid span {
+  font-size: 10px;
+}
+.studio .engine-grid strong {
+  color: var(--accent-ink);
+}
+.saved-appearances {
+  margin: 26px 0;
+}
+.saved-appearances .section-heading h2 {
+  font-size: 16px;
+  color: var(--accent-ink);
+}
+.saved-appearances .section-heading p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.collection-count {
+  margin-left: 6px;
+  padding: 2px 7px;
+  background: var(--accent-soft);
+  color: var(--muted);
+  border-radius: 5px;
+  font-size: 11px;
+}
+.studio .wardrobe-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.studio .wardrobe-card {
+  border-radius: 13px;
+  border-color: var(--line);
+  background: var(--surface);
+  padding: 12px;
+}
+.studio .wardrobe-card > div {
+  background: var(--tint);
+  border-radius: 8px;
+  height: 170px;
+}
+.studio .wardrobe-card.selected {
+  border-color: var(--muted);
+  background: var(--surface);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.studio .wardrobe-card > strong {
+  color: var(--accent-ink);
+  font-size: 12px;
+  margin-top: 12px;
+}
+.studio .wardrobe-card > small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.motion-workbench .workbench {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  background: var(--surface);
+}
+.studio .desktop-customizer,
+.studio .desktop-launch-card,
+.studio .profile-hero {
+  border-color: var(--line);
+  background: var(--surface);
+  border-radius: 16px;
+}
+.studio .desktop-preview {
+  background: var(--tint);
+}
+.studio .settings-layout .main-content {
+  max-width: 1060px;
+}
+@media (max-width: 1150px) {
+  .studio .wardrobe-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .creation-tools .engine-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .studio .production-entry {
+    flex-wrap: wrap;
+    padding: 18px;
+    gap: 14px;
+  }
+  .studio .production-entry strong {
+    font-size: 17px;
+  }
+  .studio .production-entry-action {
+    margin-left: auto;
+  }
+  .creation-tools > summary > span:last-child,
+.motion-workbench > summary > span:last-child {
+    font-size: 0;
+  }
+}
+@media (max-width: 700px) {
+  .studio .page-heading h1,
+.studio .page-intro h1 {
+    font-size: 24px;
+  }
+  .studio .wardrobe-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .studio .wardrobe-card > div {
+    height: 140px;
+  }
+  .creation-tools .engine-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.studio .page-heading p,
+.studio .page-intro p,
+.studio .production-entry p,
+.saved-appearances .section-heading p,
+.studio .wardrobe-card > small {
+  color: var(--accent-ink);
+}
+.studio .production-entry small,
+.studio .page-kicker,
+.studio .eyebrow {
+  color: var(--muted);
+}
+.creation-tools > summary:focus-visible,
+.motion-workbench > summary:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: -4px;
+  border-radius: 10px;
+}
+.tool-group-title {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 12px 0 0;
+}
+.studio .modal {
+  background: var(--surface);
+  border-color: var(--line);
+  border-radius: 18px;
+}
+.studio .modal-heading h2 {
+  color: var(--accent-ink);
+}
+.studio .modal-heading p {
+  color: var(--muted);
+}
+.studio .production-heading {
+  background: var(--tint);
+  border-color: var(--line);
+}
+.studio .production-heading h3 {
+  color: var(--accent-ink);
+}
+.studio .production-section {
+  border-color: var(--line);
+}
+
+/* Long replies stay above the stage controls {
+  top: 70px;
+  bottom: auto;
+  max-height: calc(100% - 170px);
+  display: flex;
+  flex-direction: column;
+}
+@container (max-width: 620px) {
+  .studio .scene-reply-bubble {
+    top: auto;
+    bottom: 90px;
+    max-height: 150px;
+  }
+}

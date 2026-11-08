@@ -101,6 +101,33 @@ export function FrameReview({
           逐帧检查 · {checked.length} / {animation.frames.length}
         </strong>
         <span>选择小图查看原始像素</span>
+        {source && (
+          <span className="frame-review-bulk">
+            <button
+              type="button"
+              className="button secondary"
+              disabled={disabled}
+              onClick={() => {
+                // After watching the clips, confirm everything at once; any frame can still be unticked.
+                setChecked(animation.frames.map((_, index) => index));
+                setChecks([true, true, true]);
+              }}
+            >
+              全部确认
+            </button>
+            <button
+              type="button"
+              className="text-button"
+              disabled={disabled || (!checked.length && !checks.some(Boolean))}
+              onClick={() => {
+                setChecked([]);
+                setChecks([false, false, false]);
+              }}
+            >
+              清空
+            </button>
+          </span>
+        )}
       </div>
       <p>透明背景和尺寸检查无法判断多出一只手。请对照角色参考，检查全部姿势；肢体数量以该角色为准。</p>
       {failed && <p role="alert">图集无法加载，不能确认动画。</p>}

@@ -51,12 +51,15 @@ contextBridge.exposeInMainWorld('mori', {
   importReferences: invoke('import-references'),
   importStyleReference: invoke('import-style-reference'),
   discoverReferences: invoke('discover-references'),
+  focusReference: invoke('focus-reference'),
   useReferenceImage: invoke('use-reference-image'),
   startModelJob: invoke('start-model-job'),
   advanceModelJob: invoke('advance-model-job'),
   recoverModelJob: invoke('recover-model-job'),
   listModelJobs: invoke('list-model-jobs'),
   testConnection: invoke('test-connection'),
+  desktopScene: invoke('desktop-scene'),
+  stepPet: invoke('step-pet'),
   openPet: invoke('open-pet'),
   closePet: invoke('close-pet'),
   openWorkshop: invoke('open-workshop'),
@@ -69,4 +72,15 @@ contextBridge.exposeInMainWorld('mori', {
   onStateChanged: subscribe('state-changed'),
   onKeysChanged: subscribe('keys-changed'),
   onChatStatusChanged: subscribe('chat-status'),
+  // The main process asks before closing; the page replies once pending saves are written.
+  onBeforeClose: (callback) => {
+    const listener = () => {
+      Promise.resolve()
+        .then(callback)
+        .catch(() => {})
+        .finally(() => ipcRenderer.send('mori:close-ready'));
+    };
+    ipcRenderer.on('mori:before-close', listener);
+    return () => ipcRenderer.removeListener('mori:before-close', listener);
+  },
 });

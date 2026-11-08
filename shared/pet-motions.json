@@ -136,6 +136,17 @@
       "same sleeping pose with a very subtle authored breathing change"
     ],
     "poses8": [
+      "neutral standing, empty hands",
+      "bend knees and place hands down, preparing to lie down",
+      "lower the body and curl into a comfortable resting pose",
+      "curled sleeping, eyes closed, slow breathing",
+      "same sleeping body pose, gentle exhale",
+      "return to the same sleeping pose as frame 4",
+      "wake, push up with hands and rise through kneeling",
+      "return to exact neutral standing master pose"
+    ],
+    "staged": true,
+    "legacyPoses8": [
       "neutral resting pose, eyes open",
       "eyelids begin to relax",
       "head tilts gently, eyes half closed",
@@ -160,7 +171,7 @@
   {
     "id": "read",
     "name": "读书",
-    "description": "拿出书本、安静翻页，再合书收好；八帧含进入与退出",
+    "description": "拿出书本、安静翻页，再合书收好；包含进入、循环与退出",
     "activity": true,
     "poses": [
       "exact neutral standing master pose, empty hands and no book visible",
@@ -186,7 +197,7 @@
   {
     "id": "gaming",
     "name": "玩掌机",
-    "description": "拿出掌机、按键游玩，再收好；八帧含进入与退出",
+    "description": "拿出掌机、按键游玩，再收好；包含进入、循环与退出",
     "activity": true,
     "poses": [
       "exact neutral standing master pose, empty hands and no console visible",
@@ -207,6 +218,261 @@
       "release the buttons and return to the same relaxed gaming pose as frame 4",
       "lower the same console while keeping both hands connected to their arms",
       "put the console away and return to the exact original neutral empty-handed standing pose"
+    ]
+  },
+  {
+    "id": "snack",
+    "name": "吃点心",
+    "description": "拿出小点心、小口吃完，再收好盘子；包含进入、循环与退出",
+    "activity": true,
+    "poses": [
+      "exact neutral standing master pose, empty hands and no food visible",
+      "same standing body scale, take out one small dessert plate with a little cake and a fork, hands connected to their original arms",
+      "hold the same plate at chest height with one hand and lift the fork with the other",
+      "take a small bite of the cake from the fork, eyes softly closed, cheeks lightly full",
+      "chew happily with a small delighted smile, the same plate and fork held steady",
+      "return to the same bite-ready eating pose as frame 4 with the same plate and fork",
+      "lower the same plate with the fork resting on it, preparing to put it away",
+      "put the plate away and return to the exact original neutral empty-handed standing pose"
+    ],
+    "poses8": [
+      "exact neutral standing master pose, empty hands and no food visible",
+      "same standing body scale, take out one small dessert plate with a little cake and a fork, hands connected to their original arms",
+      "hold the same plate at chest height with one hand and lift the fork with the other",
+      "take a small bite of the cake from the fork, eyes softly closed, cheeks lightly full",
+      "chew happily with a small delighted smile, the same plate and fork held steady",
+      "return to the same bite-ready eating pose as frame 4 with the same plate and fork",
+      "lower the same plate with the fork resting on it, preparing to put it away",
+      "put the plate away and return to the exact original neutral empty-handed standing pose"
+    ]
+  },
+  {
+    "id": "music",
+    "name": "听音乐",
+    "description": "戴上耳机、随节奏轻轻晃动，再摘下；包含进入、循环与退出",
+    "activity": true,
+    "poses": [
+      "exact neutral standing master pose, no headphones visible",
+      "same standing body scale, raise one pair of headphones with both hands toward the head",
+      "settle the same headphones over the ears, hands still touching the ear cups",
+      "listen with eyes gently closed, hands relaxed, head tilted slightly to one side with the beat",
+      "sway the head and shoulders slightly to the other side with a small content smile, the same headphones on",
+      "return to the same listening pose as frame 4",
+      "lift the same headphones off the ears with both hands",
+      "put the headphones away and return to the exact original neutral empty-handed standing pose"
+    ],
+    "poses8": [
+      "exact neutral standing master pose, no headphones visible",
+      "same standing body scale, raise one pair of headphones with both hands toward the head",
+      "settle the same headphones over the ears, hands still touching the ear cups",
+      "listen with eyes gently closed, hands relaxed, head tilted slightly to one side with the beat",
+      "sway the head and shoulders slightly to the other side with a small content smile, the same headphones on",
+      "return to the same listening pose as frame 4",
+      "lift the same headphones off the ears with both hands",
+      "put the headphones away and return to the exact original neutral empty-handed standing pose"
+    ]
+  },
+  {
+    "id": "diary",
+    "name": "写日记",
+    "description": "拿出小本子写几行，再合上收好；包含进入、循环与退出",
+    "activity": true,
+    "poses": [
+      "exact neutral standing master pose, empty hands and no notebook visible",
+      "same standing body scale, take out one small closed notebook and a pen, hands connected to their original arms",
+      "hold the same notebook open at chest height with one hand, pen ready in the other",
+      "write in the same open notebook, eyes on the page, a thoughtful expression",
+      "pause writing and tap the pen lightly against the chin, smiling at an idea",
+      "return to the same writing pose as frame 4 in the same notebook",
+      "close the same notebook with the pen held against it",
+      "put the notebook and pen away and return to the exact original neutral empty-handed standing pose"
+    ],
+    "poses8": [
+      "exact neutral standing master pose, empty hands and no notebook visible",
+      "same standing body scale, take out one small closed notebook and a pen, hands connected to their original arms",
+      "hold the same notebook open at chest height with one hand, pen ready in the other",
+      "write in the same open notebook, eyes on the page, a thoughtful expression",
+      "pause writing and tap the pen lightly against the chin, smiling at an idea",
+      "return to the same writing pose as frame 4 in the same notebook",
+      "close the same notebook with the pen held against it",
+      "put the notebook and pen away and return to the exact original neutral empty-handed standing pose"
+    ]
+  },
+  {
+    "id": "walk_right",
+    "name": "向右跑",
+    "description": "独立方向跑动，准备、循环、停步；不镜像非对称服饰",
+    "staged": true,
+    "poses": [
+      "neutral standing, empty hands",
+      "turn to right profile, lean and prepare to step",
+      "right profile, begin first step",
+      "right profile, left leg forward and opposite arm forward",
+      "right profile, passing pose, feet crossing under the body",
+      "right profile, right leg forward and opposite arm forward",
+      "right profile, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ],
+    "poses8": [
+      "neutral standing, empty hands",
+      "turn to right profile, lean and prepare to step",
+      "right profile, begin first step",
+      "right profile, left leg forward and opposite arm forward",
+      "right profile, passing pose, feet crossing under the body",
+      "right profile, right leg forward and opposite arm forward",
+      "right profile, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ]
+  },
+  {
+    "id": "walk_left",
+    "name": "向左跑",
+    "description": "独立方向跑动，准备、循环、停步；不镜像非对称服饰",
+    "staged": true,
+    "poses": [
+      "neutral standing, empty hands",
+      "turn to left profile, lean and prepare to step",
+      "left profile, begin first step",
+      "left profile, left leg forward and opposite arm forward",
+      "left profile, passing pose, feet crossing under the body",
+      "left profile, right leg forward and opposite arm forward",
+      "left profile, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ],
+    "poses8": [
+      "neutral standing, empty hands",
+      "turn to left profile, lean and prepare to step",
+      "left profile, begin first step",
+      "left profile, left leg forward and opposite arm forward",
+      "left profile, passing pose, feet crossing under the body",
+      "left profile, right leg forward and opposite arm forward",
+      "left profile, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ]
+  },
+  {
+    "id": "walk_up",
+    "name": "向后跑",
+    "description": "独立方向跑动，准备、循环、停步；不镜像非对称服饰",
+    "staged": true,
+    "poses": [
+      "neutral standing, empty hands",
+      "turn to back view, lean and prepare to step",
+      "back view, begin first step",
+      "back view, left leg forward and opposite arm forward",
+      "back view, passing pose, feet crossing under the body",
+      "back view, right leg forward and opposite arm forward",
+      "back view, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ],
+    "poses8": [
+      "neutral standing, empty hands",
+      "turn to back view, lean and prepare to step",
+      "back view, begin first step",
+      "back view, left leg forward and opposite arm forward",
+      "back view, passing pose, feet crossing under the body",
+      "back view, right leg forward and opposite arm forward",
+      "back view, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ]
+  },
+  {
+    "id": "walk_down",
+    "name": "向前跑",
+    "description": "独立方向跑动，准备、循环、停步；不镜像非对称服饰",
+    "staged": true,
+    "poses": [
+      "neutral standing, empty hands",
+      "turn to front view, lean and prepare to step",
+      "front view, begin first step",
+      "front view, left leg forward and opposite arm forward",
+      "front view, passing pose, feet crossing under the body",
+      "front view, right leg forward and opposite arm forward",
+      "front view, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ],
+    "poses8": [
+      "neutral standing, empty hands",
+      "turn to front view, lean and prepare to step",
+      "front view, begin first step",
+      "front view, left leg forward and opposite arm forward",
+      "front view, passing pose, feet crossing under the body",
+      "front view, right leg forward and opposite arm forward",
+      "front view, decelerate with planted foot",
+      "return to exact neutral standing master pose"
+    ]
+  },
+  {
+    "id": "drag",
+    "name": "被拎起来",
+    "description": "被轻轻拎起时悬垂、摆腿；松手后回到原动作",
+    "poses": [
+      "lifted gently by clothing at upper back, feet dangling, preserve anatomy",
+      "same held pose, knees bend slightly and arms lift",
+      "same held pose, feet swing slightly to the other side",
+      "same held pose, settle near first pose"
+    ],
+    "poses8": [
+      "held by upper back clothing, feet dangling",
+      "arms begin to lift",
+      "knees bend slightly",
+      "left foot swings forward",
+      "feet return beneath body",
+      "right foot swings forward",
+      "arms relax",
+      "settle near first dangling pose"
+    ]
+  },
+  {
+    "id": "listen",
+    "name": "认真倾听",
+    "description": "转向你、侧耳倾听，再站好",
+    "staged": true,
+    "poses": [
+      "neutral standing",
+      "turn toward viewer",
+      "lean slightly to listen",
+      "attentive relaxed pose",
+      "small responsive nod",
+      "return to attentive pose",
+      "straighten and release hands",
+      "neutral standing"
+    ],
+    "poses8": [
+      "neutral standing",
+      "turn toward viewer",
+      "lean slightly to listen",
+      "attentive relaxed pose",
+      "small responsive nod",
+      "return to attentive pose",
+      "straighten and release hands",
+      "neutral standing"
+    ]
+  },
+  {
+    "id": "office",
+    "name": "办公",
+    "description": "拿出电脑、打字思考、收好电脑；八帧包含动作过渡",
+    "activity": true,
+    "poses": [
+      "exact neutral standing master, empty hands",
+      "bring out one compact closed laptop with both connected hands",
+      "open the same laptop at comfortable height",
+      "type on the same laptop with clear finger articulation",
+      "pause to think, looking at the same laptop screen",
+      "return to typing pose matching frame 4",
+      "close and lower the same laptop",
+      "put laptop away and return to neutral master"
+    ],
+    "poses8": [
+      "exact neutral standing master, empty hands",
+      "bring out one compact closed laptop with both connected hands",
+      "open the same laptop at comfortable height",
+      "type on the same laptop with clear finger articulation",
+      "pause to think, looking at the same laptop screen",
+      "return to typing pose matching frame 4",
+      "close and lower the same laptop",
+      "put laptop away and return to neutral master"
     ]
   }
 ]

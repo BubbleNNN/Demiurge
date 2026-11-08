@@ -2,16 +2,12 @@ import type { CSSProperties } from 'react';
 import type { ArtStyle, Character, Skin, ThemeName } from './types';
 import * as motionPack from '../shared/cyrene-motion-pack.json';
 export const styles: { id: ArtStyle; name: string; detail: string; color: string }[] = [
-  { id: 'original', name: '原作画风', detail: '复现原作线条、上色与比例 · 新绘图', color: '#f0dce9' },
-  { id: 'anime', name: '精绘立绘', detail: '细腻线稿与通透光影', color: '#eed7e8' },
-  { id: 'chibi', name: '软萌 Q 版', detail: '小小身形，生动表情', color: '#f5dee3' },
-  { id: 'sticker', name: '清爽贴纸', detail: '两头身 · 清晰轮廓 · 单层平涂', color: '#d7eceb' },
-  { id: 'powerpuff', name: '飞天小女警', detail: '超大圆眼 · 粗黑描边 · 扁平色块', color: '#f7c8e0' },
-  { id: 'pixel', name: '复古像素', detail: '利落像素与游戏质感', color: '#dfe5f3' },
-  { id: '8bit', name: '8-bit 游戏', detail: '粗像素 · 16 色 · 逐帧姿势', color: '#d7dbf0' },
-  { id: '3d', name: '低多边形 3D', detail: '几何体块、立体光照与折面', color: '#d6e4ef' },
+  { id: 'original', name: '原作', detail: '原作线条、上色与比例', color: '#f0dce9' },
+  { id: '8bit', name: '8bit', detail: '粗像素 · 16 色 · 逐帧姿势', color: '#d7dbf0' },
+  { id: '3d', name: '3D', detail: '立体造型与光照', color: '#d6e4ef' },
+  { id: 'chibi-pet', name: 'Q版', detail: '先搜索现成形象 · 无参考时用芙宁娜贴纸画风', color: '#d7eceb' },
 ];
-export const availableStyle = (style: ArtStyle) => styles.some((entry) => entry.id === style);
+export const availableStyle = (style: ArtStyle) => styles.some((entry) => entry.id === style) || ['anime','chibi','sticker','pastel','powerpuff','pixel','figure'].includes(style);
 export const themes: {
   id: ThemeName;
   name: string;
@@ -90,7 +86,7 @@ export function skinImage(skin?: Skin, emotion = 'neutral'): string | undefined 
       : undefined)
   );
 }
-export const styleName = (style: ArtStyle) => styles.find((s) => s.id === style)?.name || style;
+export const styleName = (style: ArtStyle) => styles.find((s) => s.id === style)?.name || ({anime:'旧版精绘',chibi:'旧版 Q 版',sticker:'旧版清爽贴纸',pastel:'旧版柔彩',powerpuff:'旧版飞天小女警',pixel:'旧版像素',figure:'旧版手办'} as Partial<Record<ArtStyle,string>>)[style] || style;
 export const engineName = (skin?: Skin) =>
   skin?.kind === 'glb'
     ? '生成的 3D 模型'

@@ -271,7 +271,7 @@ if (!process.versions.electron) {
     win.webContents.once('did-finish-load', async () => {
       try {
         if (phase === 'verify') {
-          await wait(`!!document.querySelector('.mori-symbol')`);
+          await wait(`!!document.querySelector('.room-rail')`);
           const loaded = await js('window.mori.load()');
           assert.deepEqual(loaded.state, expected.incoming);
           assert.equal(loaded.keys.imageKey, true);
@@ -320,7 +320,7 @@ if (!process.versions.electron) {
         await click('打开数据文件夹');
         await capture('startup-recovery.png');
         await click('恢复上一份有效存档');
-        await wait(`!!document.querySelector('.mori-symbol')`);
+        await wait(`!!document.querySelector('.room-rail')`);
         let loaded = await js('window.mori.load()');
         assert.deepEqual({ ...loaded.state, revision: expected.previous.revision }, expected.previous);
         assert.ok(loaded.state.revision > expected.previous.revision);

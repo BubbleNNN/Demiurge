@@ -18,12 +18,12 @@ pnpm test:package
 产物位于：
 
 ```text
-release/Mori-0.3.6-macOS-arm64/
+release/Mori-0.3.7-macOS-arm64/
   Mori.app
   package-manifest.json
   RELEASE_GUIDE.md
-release/Mori-0.3.6-macOS-arm64.zip
-release/Mori-0.3.6-macOS-arm64.zip.sha256
+release/Mori-0.3.7-macOS-arm64.zip
+release/Mori-0.3.7-macOS-arm64.zip.sha256
 ```
 
 可双击应用或拖入自己的「应用程序」文件夹。应用默认使用 `~/Library/Application Support/Mori` 保存角色、聊天、记忆和设置；开发版的 `.local/development-v2` 是另一份工作区。更新应用时保留用户数据目录即可。密钥按应用已有的系统安全存储策略保存，旧开发环境中的密钥不会随应用包迁移。迁移开发版的完整进度时，先在开发版「连接设置 → 工作区与备份」导出工作区 ZIP，再在打包应用中恢复；恢复成功后应用会重新启动。完整备份包含角色、聊天、记忆、模型和制作任务，不包含 API 密钥，恢复后需重新填写密钥。角色包导出和导入仍可用于单独分享角色与 2D 外观，它不携带完整工作区历史。

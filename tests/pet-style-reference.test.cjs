@@ -88,7 +88,7 @@ async function setup(t, overrides = {}) {
   };
   return { directory, root, options, calls, pipeline: createPetPipeline(options) };
 }
-const input = (extra = {}) => ({ styles: ['chibi'], motions: ['wave'], styleReference: guide, ...extra });
+const input = (extra = {}) => ({ styles: ['3d'], motions: ['wave'], styleReference: guide, ...extra });
 const checkpoint = (c, job) => path.join(c.root, `${job.id}.json`);
 const guideFile = (c, job) => path.join(c.root, `${job.id}.style-reference.json`);
 async function finish(c, job) {
@@ -123,7 +123,7 @@ test('style bytes are frozen separately from identity and metadata, and resume s
 test('legacy jobs need no guide artifact and incompatible source/original-only routes fail before requests', async (t) => {
   const c = await setup(t),
     p = c.pipeline;
-  const source = master({ style: 'chibi' }, 1);
+  const source = master({ style: '3d' }, 1);
   await assert.rejects(p.start(character, input({ sourceSkin: source }), settings, {}), /已有角色基准/);
   await assert.rejects(p.start(character, input({ styles: ['original'] }), settings, {}), /原作画风/);
   await assert.rejects(
@@ -146,7 +146,7 @@ test('legacy jobs need no guide artifact and incompatible source/original-only r
 test('mixed original and transformed styles use the guide only for non-original masters', async (t) => {
   const c = await setup(t),
     p = c.pipeline;
-  let job = await p.start(character, input({ styles: ['original', 'chibi'] }), settings, {});
+  let job = await p.start(character, input({ styles: ['original', '3d'] }), settings, {});
   const saved = await fs.readFile(guideFile(c, job));
   await fs.rm(guideFile(c, job));
   job = await p.advance(job.id, character, settings, {});
@@ -282,7 +282,7 @@ test('base edits use the frozen guide and local recovery ignores its missing fil
   const source = (await p.masters(job.id))[0];
   job = await p.refineBase(
     job.id,
-    { style: 'chibi', skinId: source.id, feedback: '线条柔和' },
+    { style: '3d', skinId: source.id, feedback: '线条柔和' },
     character,
     settings,
     {},
@@ -306,7 +306,7 @@ test('new edits and paid retries validate the guide before mutating their workin
   let job = await p.start(character, input(), settings, {});
   job = await p.advance(job.id, character, settings, {});
   const source = (await p.masters(job.id))[0],
-    edit = { style: 'chibi', skinId: source.id, feedback: '手臂自然' };
+    edit = { style: '3d', skinId: source.id, feedback: '手臂自然' };
   const saved = await fs.readFile(guideFile(c, job));
   await fs.rm(guideFile(c, job));
   await assert.rejects(p.refineBase(job.id, edit, character, settings, {}), { code: 'ENOENT' });
@@ -325,7 +325,7 @@ test('completed revisions copy the guide under the new job id and retain it afte
     p = c.pipeline;
   const original = await finish(c, await p.start(character, input(), settings, {}));
   const saved = await fs.readFile(guideFile(c, original));
-  let revision = await p.revise(original.id, { style: 'chibi', feedback: '眼睛清晰' }, character, settings);
+  let revision = await p.revise(original.id, { style: '3d', feedback: '眼睛清晰' }, character, settings);
   assert.notEqual(revision.id, original.id);
   assert.deepEqual(revision.styleReference, original.styleReference);
   assert.deepEqual(await fs.readFile(guideFile(c, revision)), saved);
@@ -356,18 +356,18 @@ test('missing guide prevents revision creation and failed metadata writes do not
   const saved = await fs.readFile(guideFile(c, original)),
     count = c.calls.length;
   await fs.rm(guideFile(c, original));
-  await assert.rejects(p.revise(original.id, { style: 'chibi', feedback: '清晰' }, character, settings), {
+  await assert.rejects(p.revise(original.id, { style: '3d', feedback: '清晰' }, character, settings), {
     code: 'ENOENT',
   });
   assert.equal((await p.list(character.id)).length, 1);
   await fs.writeFile(guideFile(c, original), saved);
   fail = true;
   await assert.rejects(
-    p.revise(original.id, { style: 'chibi', feedback: '清晰' }, character, settings),
+    p.revise(original.id, { style: '3d', feedback: '清晰' }, character, settings),
     /Revision checkpoint failed/,
   );
   assert.equal((await p.list(character.id)).length, 1);
-  await p.revise(original.id, { style: 'chibi', feedback: '清晰' }, character, settings);
+  await p.revise(original.id, { style: '3d', feedback: '清晰' }, character, settings);
   assert.equal(c.calls.length, count);
 });
 

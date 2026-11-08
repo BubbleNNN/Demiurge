@@ -5,12 +5,8 @@ const { randomUUID } = require('node:crypto');
 const { safePath } = require('./models.cjs');
 const CLIPS = new Set([
   'idle',
-  'read',
-  'gaming',
-  'enter_read',
-  'exit_read',
-  'enter_gaming',
-  'exit_gaming',
+  ...['walk_left','walk_right','walk_up','walk_down','drag','listen','sleep'].flatMap(id=>[id,`enter_${id}`,`exit_${id}`]),
+  ...require('../shared/activities.json').activities.flatMap(({ id }) => [id, `enter_${id}`, `exit_${id}`]),
   'wave',
   'nod',
   'shake',
@@ -132,7 +128,7 @@ function parseAseprite(input) {
     if (tag.direction === 'reverse' || tag.direction === 'pingpong_reverse') indices.reverse();
     if (tag.direction === 'pingpong' || tag.direction === 'pingpong_reverse')
       indices = [...indices, ...indices.slice(1, -1).reverse()];
-    clips[name] = { frames: indices, loop: ['idle', 'talk', 'sleep', 'read', 'gaming'].includes(name) };
+    clips[name] = { frames: indices, loop: ['idle', 'talk', 'sleep', ...require('../shared/activities.json').activities.map((a) => a.id)].includes(name) };
   }
   clips.idle ||= { frames: clips.neutral?.frames || [0], loop: true };
   return {

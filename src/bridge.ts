@@ -33,6 +33,7 @@ export const bridge: MoriBridge = window.mori ?? {
     return browserState;
   },
   saveSettings: desktopRequired,
+  focusReference: desktopRequired,
   resetCredentials: desktopRequired,
   getRecoveryStatus: desktopRequired,
   restorePreviousState: desktopRequired,
@@ -79,6 +80,8 @@ export const bridge: MoriBridge = window.mori ?? {
   importFrames: desktopRequired,
   speak: desktopRequired,
   testConnection: desktopRequired,
+  desktopScene: desktopRequired,
+  stepPet: desktopRequired,
   openPet: desktopRequired,
   async closePet() {
     window.close();
@@ -121,3 +124,12 @@ export const bridge: MoriBridge = window.mori ?? {
     };
   },
 };
+const closeFlushers = new Set<() => Promise<unknown>>();
+window.mori?.onBeforeClose?.(() => Promise.allSettled([...closeFlushers].map((flush) => flush())));
+// Register work that must reach disk before the window closes or the app quits.
+export function flushBeforeClose(flush: () => Promise<unknown>): () => void {
+  closeFlushers.add(flush);
+  return () => {
+    closeFlushers.delete(flush);
+  };
+}

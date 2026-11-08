@@ -93,6 +93,36 @@ function bound(value, max = 2 * 1024 * 1024) {
     throw new Error('请求内容无效或过大。');
   return value;
 }
+// Promotional splash art often shows a small figure inside large decorations. Crop a reference to
+// the character's own body, located by the configured chat model, before it guides image
+// generation. Returns null when there is nothing worth cropping or no chat service to ask.
+async function focusReference(reference, character, settings, credentials) {
+  const box = await services.locateCharacter(reference, character, settings, credentials).catch(() => null);
+  if (!box) return null;
+  const image = nativeImage.createFromDataURL(reference.image);
+  if (image.isEmpty()) return null;
+  const { width, height } = image.getSize();
+  const padX = (box.right - box.left) * 0.08,
+    padY = (box.bottom - box.top) * 0.05;
+  const x0 = Math.max(0, Math.floor((box.left - padX) * width)),
+    y0 = Math.max(0, Math.floor((box.top - padY) * height)),
+    x1 = Math.min(width, Math.ceil((box.right + padX) * width)),
+    y1 = Math.min(height, Math.ceil((box.bottom + padY) * height));
+  const w = x1 - x0,
+    h = y1 - y0;
+  // Already focused on the character, or too small to be a useful identity reference.
+  if (w * h > width * height * 0.8 || Math.min(w, h) < 320) return null;
+  const bytes = image.crop({ x: x0, y: y0, width: w, height: h }).toPNG();
+  return {
+    ...reference,
+    id: randomUUID(),
+    name: `${reference.name.replace(/（人物裁切）$/, '')}（人物裁切）`,
+    image: `data:image/png;base64,${bytes.toString('base64')}`,
+    width: w,
+    height: h,
+    createdAt: new Date().toISOString(),
+  };
+}
 async function getConfiguration() {
   const state = await store.loadState();
   if (!state) throw new Error('角色工坊尚未初始化，请先打开主窗口。');
@@ -149,6 +179,36 @@ function loadWindow(window, petMode = false) {
   }
   return window.loadFile(documentPath, { query });
 }
+let quitting = false;
+app.on('before-quit', () => {
+  quitting = true;
+});
+// Settings and drafts save a moment after each change. Closing the window or quitting first lets
+// the page finish those writes (bounded, so a stuck page can never block quitting).
+function finishSavesBeforeClose(window) {
+  let allowed = false;
+  window.on('close', (event) => {
+    const contents = window.webContents;
+    if (allowed || contents.isDestroyed() || contents.isLoading() || contents.isCrashed()) return;
+    event.preventDefault();
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      ipcMain.removeListener('mori:close-ready', ready);
+      allowed = true;
+      if (quitting) app.quit();
+      else if (!window.isDestroyed()) window.close();
+    };
+    const ready = (readyEvent) => {
+      if (readyEvent.sender === contents) finish();
+    };
+    ipcMain.on('mori:close-ready', ready);
+    const timer = setTimeout(finish, 2000);
+    contents.send('mori:before-close');
+  });
+}
 function createWorkshop() {
   if (workshop && !workshop.isDestroyed()) {
     if (workshop.isMinimized()) workshop.restore();
@@ -174,6 +234,7 @@ function createWorkshop() {
     },
   });
   secureWindow(workshop);
+  finishSavesBeforeClose(workshop);
   workshop.once('ready-to-show', () => workshop?.show());
   workshop.on('closed', () => {
     workshop = null;
@@ -518,22 +579,37 @@ app.whenReady().then(async () => {
       if (!character) throw new Error('请先保存角色档案。');
       const { settings, credentials } = await getConfiguration();
       // Configuration is checked before automatic collection or any billable work.
-      if (!settings.imageModel || !credentials.imageKey)
-        throw new Error('请先在连接设置中填写图像 API Key 和图像模型。Claude 聊天接口不能代替图像编辑服务。');
+      if (settings.imageProvider !== 'codex' && (!settings.imageModel || !credentials.imageKey))
+        throw new Error(
+          '请先在连接设置中选择本机 Codex，或填写图像 API Key 和图像模型。Claude 聊天接口不能代替图像编辑服务。',
+        );
       services.checkImageConfiguration(settings, credentials);
       if (!character.visualReferences?.length && input.autoCollect) {
         const result = await services.discoverReferences(character, settings, progress);
         const recommended = result.candidates.find(
           (c) => c.origin === 'catalog' && c.match === 'name' && /角色立绘/.test(c.name),
         );
+        progress({ stage: '整理参考图', detail: '正在把宣传立绘裁到人物本身，避免装饰被画成头发或服装…' });
+        const focused = recommended && (await focusReference(recommended, character, settings, credentials));
+        const closeUp = recommended
+          ? result.candidates.find(
+              (c) => c.origin === 'catalog' && c.match === 'name' && /角色预览/.test(c.name),
+            )
+          : undefined;
         const next = {
           ...state,
           characters: state.characters.map((c) =>
             c.id === character.id
               ? {
                   ...c,
-                  ...(recommended ? { visualReferences: [recommended] } : {}),
-                  referenceCandidates: result.candidates.filter((c) => c.id !== recommended?.id),
+                  // Cropped full figure for outfit and silhouette, plus the close-up for face and ornaments.
+                  ...(recommended
+                    ? { visualReferences: [focused || recommended, ...(closeUp ? [closeUp] : [])] }
+                    : {}),
+                  // The uncropped original stays available as a candidate.
+                  referenceCandidates: result.candidates.filter(
+                    (c) => (c.id !== recommended?.id || focused) && c.id !== closeUp?.id,
+                  ),
                   referenceWarnings: result.warnings,
                 }
               : c,
@@ -801,17 +877,64 @@ app.whenReady().then(async () => {
             (c) => c.origin === 'catalog' && c.match === 'name' && /角色立绘/.test(c.name),
           )
         : undefined;
+      if (recommended)
+        progress({ stage: '整理参考图', detail: '正在把宣传立绘裁到人物本身，避免装饰被画成头发或服装…' });
+      const focused =
+        recommended &&
+        (await focusReference(recommended, character, base.settings, await store.getCredentials()));
+      const closeUp = recommended
+        ? result.candidates.find(
+            (c) => c.origin === 'catalog' && c.match === 'name' && /角色预览/.test(c.name),
+          )
+        : undefined;
       const next = {
         ...base,
         characters: base.characters.map((c) =>
           c.id === characterId
             ? {
                 ...c,
-                ...(recommended ? { visualReferences: [recommended] } : {}),
+                // Cropped full figure for outfit and silhouette, plus the close-up for face and ornaments.
+                ...(recommended
+                  ? { visualReferences: [focused || recommended, ...(closeUp ? [closeUp] : [])] }
+                  : {}),
+                // The uncropped original stays available as a candidate.
                 referenceCandidates: result.candidates.filter(
-                  (candidate) => candidate.id !== recommended?.id,
+                  (candidate) =>
+                    (candidate.id !== recommended?.id || focused) && candidate.id !== closeUp?.id,
                 ),
                 referenceWarnings: result.warnings,
+              }
+            : c,
+        ),
+      };
+      const saved = await store.saveMergedState(next, base);
+      broadcast(saved);
+      return saved;
+    }),
+  );
+  handle('focus-reference', (event, input) =>
+    job(event, 'references', async (progress) => {
+      const { characterId, referenceId } = input || {};
+      if (typeof characterId !== 'string' || typeof referenceId !== 'string')
+        throw new Error('参考图标识无效。');
+      const base = await store.loadState();
+      const character = base?.characters.find((c) => c.id === characterId);
+      const reference = character?.visualReferences?.find((r) => r.id === referenceId);
+      if (!reference) throw new Error('参考图不存在。');
+      const { settings, credentials } = await getConfiguration();
+      if (settings.llmProtocol !== 'codex' && !(credentials.llmKey && settings.llmModel))
+        throw new Error('识别人物位置需要聊天服务。请先在连接设置中选择本机 Codex，或配置可看图的聊天模型。');
+      progress({ stage: '整理参考图', detail: '正在识别人物位置并裁掉宣传装饰…' });
+      const focused = await focusReference(reference, character, settings, credentials);
+      if (!focused) throw new Error('这张图已经以人物为主，或没能识别出单一人物，未做裁切。');
+      const next = {
+        ...base,
+        characters: base.characters.map((c) =>
+          c.id === characterId
+            ? {
+                ...c,
+                visualReferences: c.visualReferences.map((r) => (r.id === referenceId ? focused : r)),
+                referenceCandidates: [reference, ...(c.referenceCandidates || [])].slice(0, 12),
               }
             : c,
         ),
@@ -966,6 +1089,19 @@ app.whenReady().then(async () => {
   handle('test-connection', async () => {
     const { settings, credentials } = await getConfiguration();
     return services.testConnection(settings, credentials);
+  });
+  handle('desktop-scene', async (event, icons) => {
+    if(!pet || event.sender!==pet.webContents)throw Error('请在桌宠窗口中探索桌面。');
+    const bounds=pet.getBounds(),area=screen.getDisplayMatching(bounds).workArea;
+    const windows=await require('./desktop-surfaces.cjs').desktopSurfaces({x:0,y:0});
+    const targets=icons===true?await require('./desktop-icons.cjs').desktopIcons({x:0,y:0}):{icons:[],supported:true};
+    return {bounds,area,surfaces:windows.surfaces,icons:targets.icons,supported:windows.supported,reason:windows.reason||targets.reason};
+  });
+  handle('step-pet',(event,target)=>{
+    if(!pet || event.sender!==pet.webContents || !Number.isFinite(target?.x)||!Number.isFinite(target?.y))throw Error('桌宠位置无效');
+    const bounds=pet.getBounds(),area=screen.getDisplayMatching(bounds).workArea;
+    const x=bounds.x+Math.max(-150,Math.min(150,target.x-bounds.x)),y=bounds.y+Math.max(-150,Math.min(150,target.y-bounds.y));
+    const p=require('./pet-layout.cjs').clampPetPosition(x,y,bounds,area);pet.setPosition(p.x,p.y);return pet.getBounds();
   });
   handle('open-pet', () => createPet());
   handle('close-pet', () => {

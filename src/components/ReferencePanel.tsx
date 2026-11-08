@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ImagePlus, LoaderCircle, Trash2, Search, Download } from 'lucide-react';
+import { ImagePlus, LoaderCircle, Trash2, Search, Download, Scissors } from 'lucide-react';
 import { bridge } from '../bridge';
 import type { Character, VisualReference } from '../types';
 
@@ -225,6 +225,26 @@ export function ReferencePanel({
                 />
               </label>
               <div className="reference-actions">
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={locked}
+                  aria-label={`裁出人物：${ref.name}`}
+                  title="把宣传立绘裁到人物本身，去掉框饰与特效"
+                  onClick={() =>
+                    void update(async () => {
+                      setDetail('正在识别人物位置并裁掉宣传装饰…');
+                      try {
+                        await bridge.focusReference({ characterId: character.id, referenceId: ref.id });
+                      } finally {
+                        setDetail('');
+                      }
+                    })
+                  }
+                >
+                  <Scissors size={13} />
+                  裁出人物
+                </button>
                 {index > 0 && (
                   <button
                     type="button"

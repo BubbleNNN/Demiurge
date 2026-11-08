@@ -7,7 +7,8 @@ const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const f = require('../tests/fixtures/pet-images.cjs');
 const motions = require('../shared/pet-motions.json');
-const style = require('../shared/art-styles.json').sticker;
+const style = require('../shared/art-styles.json')['chibi-pet'];
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 const dir = path.resolve(__dirname, '../.local/pet-sticker-desktop-' + randomUUID());
 fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
@@ -38,6 +39,7 @@ fs.writeFileSync(
       chatMode: 'local',
       imageBaseUrl: 'https://sticker.mori.example/v1',
       imageModel: '',
+      searchProvider: 'wiki',
       demoMode: false,
       proactiveEnabled: false,
       voiceEnabled: false,
@@ -63,14 +65,24 @@ for (let row = 0; row < 2; row++)
     );
 const rawSheet = f.encode(bitmap, 256, 264);
 const calls = [];
+const wikiSearches = [];
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://sticker.mori.example/v1/images/edits');
   const prompt = init.body.get('prompt'),
     sheet = prompt.includes('regular 2-by-2 grid');
   assert.ok(prompt.includes(style.prompt));
   const input = init.body.getAll('image[]').length ? init.body.getAll('image[]') : [init.body.get('image')];
   const images = await Promise.all(input.map(async (blob) => Buffer.from(await blob.arrayBuffer())));
-  assert.deepEqual(images, sheet ? [f.image(), f.image()] : [f.image()]);
+  // Base: identity original, then the Furina sticker as a style guide only. Sheets: master plus identity.
+  assert.deepEqual(images, sheet ? [f.image(), f.image()] : [f.image(), furina]);
+  if (!sheet) assert.ok(prompt.includes('FURINA sticker, a STYLE GUIDE ONLY'));
   calls.push(sheet ? 'sheet' : 'base');
   return new Response(
     JSON.stringify({ data: [{ b64_json: (sheet ? rawSheet : f.image()).toString('base64') }] }),
@@ -119,15 +131,18 @@ app.on('browser-window-created', (_event, created) => {
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'sticker-fixture'},{imageKey:'isolated-key'}))`,
       );
-      await click('外观工作台');
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
       await click('自动制作多画风桌宠');
-      await wait(`!!document.querySelector('[aria-label="桌宠画风：清爽贴纸"]')`);
-      await click('桌宠画风：软萌 Q 版');
-      await click('桌宠画风：清爽贴纸');
+      await wait(`!!document.querySelector('[aria-label="桌宠画风：Q版"]')`);
+      assert.equal(await js(`document.querySelectorAll('[aria-label^="桌宠画风："]').length`), 4, 'four looks only');
+      // The chibi look is the default selection; a second look would add its own requests.
+      assert.equal(await js(`document.querySelector('[aria-label="桌宠画风：Q版"]').getAttribute('aria-pressed')`), 'true');
       for (const motion of motions) {
         const pressed = await js(
           `document.querySelector('[aria-label=${JSON.stringify('制作动作：' + motion.name)}]').getAttribute('aria-pressed')==='true'`,
@@ -147,10 +162,13 @@ app.on('browser-window-created', (_event, created) => {
       assert.deepEqual(calls, ['base', 'sheet']);
       const [job] = await js(`window.mori.listPetJobs('sticker-test')`);
       assert.equal(job.status, 'ready');
-      assert.deepEqual(job.styles, ['sticker']);
+      assert.deepEqual(job.styles, ['chibi-pet']);
       assert.ok(job.results[0].warnings.some((w) => w.includes('补透明留白')));
       const [skin] = await js(`window.mori.petJobResults(${JSON.stringify(job.id)})`);
-      assert.equal(skin.style, 'sticker');
+      assert.equal(skin.style, 'chibi-pet');
+      assert.deepEqual(wikiSearches.map((q) => /Q版|chibi/.test(q)), [true], 'one chibi search, before the first image request');
+      assert.equal(skin.generation.chibiResearch.status, 'fallback');
+      assert.match(skin.generation.chibiResearch.reason, /芙宁娜/);
       assert.equal(skin.review.status, 'pending');
       assert.ok(skin.sprite.clips.wave);
       const raw = JSON.parse(fs.readFileSync(path.join(dir, 'pet-jobs', `${job.id}-1.asset.json`), 'utf8'));

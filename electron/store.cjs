@@ -9,7 +9,8 @@ const MAX_FILE_BYTES = 128 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 96 * 1024 * 1024;
 const EMOTIONS = ['neutral', 'happy', 'thinking', 'sad', 'sleepy', 'surprised'];
-const ACTIONS = ['idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', 'read', 'gaming'];
+const ACTIVITIES = require('../shared/activities.json').activities.map((activity) => activity.id);
+const ACTIONS = ['walk_left','walk_right','walk_up','walk_down','drag','listen','idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', ...ACTIVITIES];
 const KEY_NAMES = ['llmKey', 'searchKey', 'imageKey', 'ttsKey', 'modelKey'];
 
 function invalid(label, detail) {
@@ -308,6 +309,7 @@ function validateGeneration(value, label) {
     invalid(label, 'expected unique reference identifiers');
   return {
     referenceIds,
+    ...(g.chibiResearch !== undefined ? { chibiResearch: require('./chibi-references.cjs').validateChibiResearch(g.chibiResearch) } : {}),
     referenceDigest: digest(g.referenceDigest, label),
     model: string(g.model, label, 300, false),
     prompt: string(g.prompt, label, 12000, false),
@@ -410,7 +412,10 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
         'original',
         'anime',
         'chibi',
+        'chibi-pet',
         'sticker',
+        'pastel',
+        'figure',
         'powerpuff',
         'pixel',
         '8bit',
@@ -505,7 +510,11 @@ function validateModel(value, label) {
 
 function validateSettings(value) {
   const s = record(value, 'settings');
+  if (s.codexHome !== undefined && (typeof s.codexHome !== 'string' || s.codexHome.length > 1024 || s.codexHome.includes('\0') || (s.codexHome && !path.isAbsolute(s.codexHome))))
+    throw new Error('Codex 账号目录必须是绝对路径，留空使用默认登录。');
   return {
+    ...(s.codexHome !== undefined ? { codexHome: s.codexHome } : {}),
+    ...(s.desktopLifeEnabled !== undefined ? {desktopLifeEnabled:boolean(s.desktopLifeEnabled,'settings.desktopLifeEnabled')} : {}),
     ...(s.petSize !== undefined
       ? { petSize: enumValue(s.petSize, ['small', 'medium', 'large'], 'settings.petSize') }
       : {}),
@@ -514,7 +523,7 @@ function validateSettings(value) {
       : {}),
     llmBaseUrl: webUrl(s.llmBaseUrl, 'settings.llmBaseUrl', true),
     ...(s.llmProtocol !== undefined
-      ? { llmProtocol: enumValue(s.llmProtocol, ['openai', 'anthropic'], 'settings.llmProtocol') }
+      ? { llmProtocol: enumValue(s.llmProtocol, ['openai', 'anthropic', 'codex'], 'settings.llmProtocol') }
       : {}),
     ...(s.llmAuthMode !== undefined
       ? { llmAuthMode: enumValue(s.llmAuthMode, ['api-key', 'bearer'], 'settings.llmAuthMode') }
@@ -527,7 +536,7 @@ function validateSettings(value) {
       ? {
           searchProvider: enumValue(
             s.searchProvider,
-            ['none', 'claude', 'searxng', 'wiki', 'tavily'],
+            ['none', 'claude', 'codex', 'searxng', 'wiki', 'tavily'],
             'settings.searchProvider',
           ),
         }
@@ -552,6 +561,9 @@ function validateSettings(value) {
       : {}),
     ...(s.modelVersion !== undefined
       ? { modelVersion: string(s.modelVersion, 'settings.modelVersion', 100) }
+      : {}),
+    ...(s.imageProvider !== undefined
+      ? { imageProvider: enumValue(s.imageProvider, ['api', 'codex'], 'settings.imageProvider') }
       : {}),
     ...(s.imageInputFidelity !== undefined
       ? {

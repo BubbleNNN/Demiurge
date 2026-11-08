@@ -85,7 +85,7 @@ async function setup(t, overrides = {}) {
   return { root, calls, options, pipeline: createPetPipeline(options) };
 }
 const input = (extra = {}) => ({
-  styles: ['chibi'],
+  styles: ['3d'],
   motions: ['wave'],
   candidateCount: 3,
   candidateVariation: 'explore',
@@ -103,7 +103,7 @@ test('old options keep subtle variation while explore is explicit and validated'
   assert.equal(productionOptions({ candidateVariation: 'explore' }).candidateVariation, 'explore');
   for (const value of ['unknown', 'EXPLORE', true, [], {}])
     assert.throws(() => productionOptions({ candidateVariation: value }), /候选变化/);
-  assert.equal(candidateRecipe('chibi', undefined), null);
+  assert.equal(candidateRecipe('3d', undefined), null);
   assert.equal(candidateRecipe('original', 3, { candidateVariation: 'subtle' }), null);
 });
 
@@ -111,23 +111,23 @@ test('explore recipes have stable named order independent of candidateCount', ()
   for (const count of [1, 2, 3])
     for (const [index, id] of ['balanced', 'bold', 'soft'].entries())
       assert.deepEqual(
-        candidateRecipe('chibi', index + 1, { candidateCount: count, candidateVariation: 'explore' }),
+        candidateRecipe('3d', index + 1, { candidateCount: count, candidateVariation: 'explore' }),
         { id, ...directions[id] },
       );
   const original = candidateRecipe('original', 2, { candidateVariation: 'explore' });
   assert.equal(original.originalPrompt, directions.bold.originalPrompt);
   assert.notEqual(original.originalPrompt, original.prompt);
-  const changed = candidateRecipe('chibi', 1, { candidateVariation: 'explore' });
+  const changed = candidateRecipe('3d', 1, { candidateVariation: 'explore' });
   changed.label = 'local override';
   assert.equal(
-    candidateRecipe('chibi', 1, { candidateVariation: 'explore' }).label,
+    candidateRecipe('3d', 1, { candidateVariation: 'explore' }).label,
     directions.balanced.label,
   );
 });
 
 test('explore rejects unknown styles and invalid indices rather than silently choosing a direction', () => {
   for (const index of [undefined, null, 0, 4, -1, 1.5, '1', NaN])
-    assert.throws(() => candidateRecipe('chibi', index, { candidateVariation: 'explore' }), /方向编号/);
+    assert.throws(() => candidateRecipe('3d', index, { candidateVariation: 'explore' }), /方向编号/);
   assert.throws(() => candidateRecipe('unknown', 1, { candidateVariation: 'explore' }), /画风/);
 });
 
@@ -152,7 +152,7 @@ test('restart preserves explore and each base uses its stable index before selec
         JSON.stringify(call.input.character.visualReferences) === JSON.stringify(character.visualReferences),
     ),
   );
-  assert.equal(job.awaitingSelection, 'chibi');
+  assert.equal(job.awaitingSelection, '3d');
   await assert.rejects(restarted.advance(job.id, character, settings, {}), /先选择/);
   assert.equal(c.calls.length, 3);
   const candidates = await restarted.masters(job.id);
@@ -160,7 +160,7 @@ test('restart preserves explore and each base uses its stable index before selec
     candidates.map((skin) => skin.generation.candidateDirection),
     ['balanced', 'bold', 'soft'],
   );
-  job = await restarted.selectBase(job.id, 'chibi', candidates[2].id);
+  job = await restarted.selectBase(job.id, '3d', candidates[2].id);
   await restarted.advance(job.id, character, settings, {});
   assert.equal(c.calls.at(-1).input.skin.id, candidates[2].id);
   assert.equal(c.calls.at(-1).input.skin.generation.candidateDirection, 'soft');
@@ -180,7 +180,7 @@ test('legacy jobs with no variation field retain unnamed subtle candidates', asy
   const restarted = createPetPipeline(c.options);
   await restarted.advance(job.id, character, settings, {});
   assert.equal(c.calls[0].input.candidateVariation, undefined);
-  assert.equal(candidateRecipe('chibi', c.calls[0].input.candidateIndex, c.calls[0].input), null);
+  assert.equal(candidateRecipe('3d', c.calls[0].input.candidateIndex, c.calls[0].input), null);
   assert.equal((await restarted.masters(job.id))[0].generation.candidateDirection, undefined);
 });
 
@@ -200,7 +200,7 @@ test('invalid variation stops new and resumed jobs before a paid request', async
 
 test('sourceSkin keeps its existing direction and does not generate a replacement candidate', async (t) => {
   const c = await setup(t),
-    source = master('chibi', 'soft');
+    source = master('3d', 'soft');
   let job = await c.pipeline.start(character, input({ sourceSkin: source }), settings, {});
   assert.equal(job.candidateCount, 1);
   assert.equal(job.steps[0].status, 'done');
@@ -219,7 +219,7 @@ test('refinement and completed base revision inherit the chosen direction withou
   const original = (await p.masters(job.id))[2];
   job = await p.refineBase(
     job.id,
-    { style: 'chibi', skinId: original.id, feedback: '只修正手指' },
+    { style: '3d', skinId: original.id, feedback: '只修正手指' },
     character,
     settings,
     {},
@@ -227,11 +227,11 @@ test('refinement and completed base revision inherit the chosen direction withou
   const revised = (await p.masters(job.id)).at(-1);
   assert.equal(revised.generation.candidateDirection, 'soft');
   assert.equal(c.calls.at(-1).input.candidateVariation, undefined);
-  job = await p.selectBase(job.id, 'chibi', revised.id);
+  job = await p.selectBase(job.id, '3d', revised.id);
   job = await p.advance(job.id, character, settings, {});
   job = await p.advance(job.id, character, settings, {});
   assert.equal(job.status, 'ready');
-  let followup = await p.revise(job.id, { style: 'chibi', feedback: '只修正嘴角' }, character, settings);
+  let followup = await p.revise(job.id, { style: '3d', feedback: '只修正嘴角' }, character, settings);
   followup = await p.advance(followup.id, character, settings, {});
   assert.equal(followup.steps[0].status, 'done');
   const edit = c.calls.at(-1);

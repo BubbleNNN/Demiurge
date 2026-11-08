@@ -1,5 +1,6 @@
 'use strict';
 const motions = require('../shared/pet-motions.json');
+const stages = require('../shared/pet-motion-stages.json');
 const candidateDirections = require('../shared/pet-candidate-directions.json');
 const artStyles = require('../shared/art-styles.json');
 const temperaments = {
@@ -17,6 +18,8 @@ const temperaments = {
 };
 
 function productionOptions(input = {}) {
+  if (input.transitionVersion !== undefined && ![1, 2, 3].includes(input.transitionVersion))
+    throw Error('动作流程版本无效');
   const frameCount = input.frameCount ?? 4;
   const candidateCount = input.candidateCount ?? 1;
   const candidateVariation = input.candidateVariation ?? 'subtle';
@@ -28,7 +31,14 @@ function productionOptions(input = {}) {
   if (!Object.hasOwn(temperaments, temperament)) throw new Error('动作气质无效。');
   if (typeof artDirection !== 'string' || artDirection.length > 600)
     throw new Error('外观要求需为不超过 600 字的文字。');
-  return { candidateCount, candidateVariation, frameCount, temperament, artDirection: artDirection.trim() };
+  return {
+    candidateCount,
+    candidateVariation,
+    frameCount,
+    temperament,
+    artDirection: artDirection.trim(),
+    ...(input.transitionVersion !== undefined ? { transitionVersion: input.transitionVersion } : {}),
+  };
 }
 
 function candidateRecipe(style, index, input = {}) {
@@ -44,14 +54,24 @@ function motionRecipe(id, input = {}) {
   const motion = motions.find((m) => m.id === id);
   if (!motion) throw new Error('桌宠动作无效。');
   // Expressions are four independent portraits, never padded into eight frames.
-  const count = id === 'emotions' ? 4 : motion.activity ? 8 : options.frameCount;
+  const staged = !!motion.staged && (id !== 'sleep' || options.transitionVersion >= 2);
+  const aligned = options.transitionVersion === 3 && !!stages[id];
+  const count = aligned ? 12 : id === 'emotions' ? 4 : motion.activity || staged ? 8 : options.frameCount;
   return {
     ...motion,
+    staged,
+    aligned,
     count,
-    columns: count === 8 ? 4 : 2,
-    rows: 2,
+    columns: count >= 8 ? 4 : 2,
+    rows: aligned ? 3 : 2,
     size: count === 8 ? '1536x1024' : '1024x1024',
-    poses: count === 8 ? motion.poses8 : motion.poses,
+    poses: aligned
+      ? stages[id]
+      : count === 8
+        ? id === 'sleep' && !staged
+          ? motion.legacyPoses8
+          : motion.poses8
+        : motion.poses,
     direction: temperaments[options.temperament].prompt,
     tempo: temperaments[options.temperament].scale,
   };
@@ -61,6 +81,23 @@ function motionClip(name, indices, input = {}) {
   const recipe = motionRecipe(name, input);
   const count = indices.length;
   const time = (values) => values.map((ms) => Math.round(ms * recipe.tempo));
+  if (recipe.aligned) {
+    const durations = name.startsWith('walk_')
+      ? [180, 180, 180, 180]
+      : name === 'sleep'
+        ? [1500, 1100, 1500, 1100]
+        : name === 'listen'
+          ? [1200, 600, 900, 600]
+          : [1500, 500, 1100, 500];
+    return { frames: indices.slice(4, 8), durations: time(durations), loop: true };
+  }
+  if (recipe.staged && name !== 'sleep')
+    return {
+      frames: indices.slice(3, 6),
+      durations: time(indices.slice(3, 6).map(() => (name.startsWith('walk_') ? 180 : 650))),
+      loop: true,
+    };
+  if (name === 'drag') return { frames: indices, durations: time(indices.map(() => 320)), loop: true };
   if (recipe.activity)
     return {
       frames: [indices[3], indices[4], indices[5], indices[4]],
@@ -68,7 +105,7 @@ function motionClip(name, indices, input = {}) {
       loop: true,
     };
   if (name === 'sleep') {
-    const sleeping = count === 8 ? indices.slice(4) : indices.slice(2);
+    const sleeping = recipe.staged ? indices.slice(3, 6) : count === 8 ? indices.slice(4) : indices.slice(2);
     return { frames: sleeping, durations: time(sleeping.map(() => (count === 8 ? 650 : 1300))), loop: true };
   }
   if (name === 'talk')
@@ -89,12 +126,14 @@ function motionClip(name, indices, input = {}) {
 
 function activityTransitions(name, indices, input = {}) {
   const recipe = motionRecipe(name, input);
-  if (!recipe.activity) return {};
+  if (!recipe.activity && !recipe.staged) return {};
   const clip = (frames) => ({
     frames: frames.map((i) => indices[i]),
     durations: [280, 400, 400, 280].map((ms) => Math.round(ms * recipe.tempo)),
     loop: false,
   });
+  if (recipe.aligned)
+    return { [`enter_${name}`]: clip([0, 1, 2, 3]), [`exit_${name}`]: clip([8, 9, 10, 11]) };
   return { [`enter_${name}`]: clip([0, 1, 2, 3]), [`exit_${name}`]: clip([5, 6, 7, 0]) };
 }
 module.exports = { productionOptions, candidateRecipe, motionRecipe, motionClip, activityTransitions };

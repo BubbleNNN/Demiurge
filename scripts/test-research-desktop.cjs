@@ -218,6 +218,8 @@ app.on('browser-window-created', (_, win) => {
       assert.doesNotMatch(current.sources[0].snippet, /广告|不应该执行/);
       const characterId = current.id;
       await click('稍后补充素材，保留角色档案');
+      await click('Mori 首页');
+      await click('角色工作室');
       await click('角色档案');
       await js(
         `window.mori.load().then(r=>window.mori.save({...r.state,characters:r.state.characters.map(c=>c.id===${JSON.stringify(characterId)}?{...c,behavior:{...c.behavior,energy:17},roleplay:{timeline:'初见',relationship:'朋友',voiceRules:['短句'],avoid:[],customFacts:[],spoilerPolicy:'avoid'}}:c)},r.state))`,
@@ -273,7 +275,7 @@ app.on('browser-window-created', (_, win) => {
         win.webContents.once('did-finish-load', resolve);
         win.webContents.reload();
       });
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await click('连接与设置');
       await wait(`document.querySelector('[aria-label="搜索提供商"]')?.value==='claude'`);
       assert.equal((await js(`window.mori.load().then(r=>r.keys)`)).llmKey, true);
@@ -282,6 +284,8 @@ app.on('browser-window-created', (_, win) => {
       await wait(`window.mori.load().then(r=>r.state.settings.searchProvider==='searxng')`);
       refuseSearch = true;
       refuseSearchStatus = 567;
+      await click('Mori 首页');
+      await click('角色工作室');
       await click('角色档案');
       const beforeBlockedUpdate = await load();
       const beforeBlockedCharacter = beforeBlockedUpdate.characters.find(

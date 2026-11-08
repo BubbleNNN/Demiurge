@@ -117,19 +117,13 @@ app.on('browser-window-created', (_event, created) => {
     );
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
-      await click('外观工作台');
+      await wait(`!!document.querySelector('.room-rail')`);
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
       await click('画风与素材制作');
-      await wait(`document.querySelectorAll('.art-style-picker button').length===7`);
-      for (const name of [
-        '原作画风',
-        '精绘立绘',
-        '软萌 Q 版',
-        '飞天小女警',
-        '复古像素',
-        '8-bit 游戏',
-        '低多边形 3D',
-      ]) {
+      await wait(`document.querySelectorAll('.art-style-picker button').length===4`);
+      for (const name of ['原作', '8bit', '3D', 'Q版']) {
         await click('素材画风：' + name);
         assert.ok(
           await js(
@@ -137,7 +131,7 @@ app.on('browser-window-created', (_event, created) => {
           ),
         );
       }
-      await click('素材画风：原作画风');
+      await click('素材画风：原作');
       await click('复制角色制作说明');
       await wait(`!!document.querySelector('[role="status"]')`);
       assert.ok(clipboard.readText().includes('粉色头发'));
@@ -186,7 +180,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.deepEqual(skin.sprite.clips.wave.frames, [1, 2, 3]);
       assert.deepEqual(skin.sprite.clips.wave.durations, [100, 300, 100]);
       await click('画风与素材制作');
-      await click('素材画风：原作画风');
+      await click('素材画风：原作');
       await click('PNG 动作文件夹');
       await wait(`!!document.querySelector('.art-import-preview canvas[data-frame]')`);
       await click('保存并使用此外观');
@@ -209,7 +203,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(pet);
       assert.ok(await pet.webContents.executeJavaScript(`!!document.querySelector('canvas[data-frame]')`));
       win.webContents.reload();
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       state = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(state.skins.length, 2);
       assert.equal(state.skins[1].style, 'original');

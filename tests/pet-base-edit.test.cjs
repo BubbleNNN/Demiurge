@@ -85,7 +85,7 @@ async function setup(t, overrides = {}) {
   const pipeline = createPetPipeline(options);
   return { root, options, pipeline, calls, installed };
 }
-async function bases(context, count = 1, styles = ['chibi']) {
+async function bases(context, count = 1, styles = ['3d']) {
   let job = await context.pipeline.start(
     character,
     { styles, motions: ['wave'], candidateCount: count },
@@ -114,8 +114,8 @@ for (const count of [1, 3]) {
     job = await p.refineBase(job.id, editInput(originals.at(-1)), character, settings, {});
     assert.deepEqual(job.steps, originalSteps);
     assert.equal(job.baseEdits[0].status, 'done');
-    assert.equal(job.awaitingSelection, 'chibi');
-    assert.equal(job.selectedBases.chibi, undefined);
+    assert.equal(job.awaitingSelection, '3d');
+    assert.equal(job.selectedBases['3d'], undefined);
     assert.equal(editCalls(c)[0].input.skin.images.neutral, originals.at(-1).images.neutral);
     await assert.rejects(p.advance(job.id, character, settings, {}), /先选择/);
     assert.equal(c.calls.filter((call) => call.kind === 'sheet').length, 0);
@@ -124,10 +124,10 @@ for (const count of [1, 3]) {
       revised = candidates.at(-1);
     assert.equal(candidates.length, count + 1);
     assert.equal(revised.generation.parentSkinId, originals.at(-1).id);
-    assert.equal((await restarted.load(job.id)).awaitingSelection, 'chibi');
+    assert.equal((await restarted.load(job.id)).awaitingSelection, '3d');
     for (let i = 0; i < count; i++)
       assert.deepEqual(await fs.readFile(path.join(c.root, `${job.id}-${i}.asset.json`)), originalBytes[i]);
-    job = await restarted.selectBase(job.id, 'chibi', revised.id);
+    job = await restarted.selectBase(job.id, '3d', revised.id);
     job = await restarted.advance(job.id, character, settings, {});
     const sheet = c.calls.find((call) => call.kind === 'sheet');
     assert.equal(sheet.input.skin.id, revised.id);
@@ -136,7 +136,7 @@ for (const count of [1, 3]) {
     assert.equal(job.status, 'ready');
     const revision = await restarted.revise(
       job.id,
-      { style: 'chibi', feedback: '肩膀放松' },
+      { style: '3d', feedback: '肩膀放松' },
       character,
       settings,
     );
@@ -172,10 +172,10 @@ test('failed edit leaves the old candidate selectable and never runs implicitly 
   const original = (await p.masters(job.id))[0];
   job = await p.refineBase(job.id, editInput(original), character, settings, {});
   assert.equal(job.baseEdits[0].status, 'uncertain');
-  assert.equal(job.awaitingSelection, 'chibi');
+  assert.equal(job.awaitingSelection, '3d');
   assert.equal((await p.masters(job.id)).length, 1);
   await assert.rejects(p.advance(job.id, character, settings, {}), /先选择/);
-  job = await p.selectBase(job.id, 'chibi', original.id);
+  job = await p.selectBase(job.id, '3d', original.id);
   assert.equal(job.status, 'queued');
   job = await p.advance(job.id, character, settings, {});
   assert.equal(c.calls.at(-1).input.skin.id, original.id);
@@ -202,7 +202,7 @@ test('technical rejection preserves evidence and only explicit retry makes one n
   const evidence = (await fs.readdir(c.root)).find((name) => name.includes(`.edit-${edit.id}.rejected-`));
   assert.ok(evidence);
   assert.deepEqual(await fs.readFile(path.join(c.root, evidence)), rejected);
-  assert.equal(job.awaitingSelection, 'chibi');
+  assert.equal(job.awaitingSelection, '3d');
 });
 
 test('acknowledged pixels recover locally after write failure without keys or current configuration', async (t) => {
@@ -299,7 +299,7 @@ for (const stage of ['source', 'working checkpoint']) {
     );
     assert.equal(editCalls(c).length, 0);
     assert.equal((await p.load(job.id)).baseEdits, undefined);
-    assert.equal((await p.load(job.id)).selectedBases.chibi, original.id);
+    assert.equal((await p.load(job.id)).selectedBases['3d'], original.id);
     assert.deepEqual(await fs.readFile(checkpoint(c, job)), saved);
     assert.equal((await createPetPipeline(c.options).load(job.id)).baseEdits, undefined);
   });
@@ -351,11 +351,11 @@ test('same-job requests serialize and readers never mistake an active edit for a
   await started;
   assert.equal((await p.load(job.id)).baseEdits[0].status, 'working');
   const advance = assert.rejects(p.advance(job.id, character, settings, {}), /先选择/);
-  const selection = p.selectBase(job.id, 'chibi', original.id);
+  const selection = p.selectBase(job.id, '3d', original.id);
   release();
   await edit;
   await advance;
-  assert.equal((await selection).selectedBases.chibi, original.id);
+  assert.equal((await selection).selectedBases['3d'], original.id);
   assert.equal(editCalls(c).length, 1);
   assert.equal(c.calls.filter((call) => call.kind === 'sheet').length, 0);
 });
@@ -383,7 +383,7 @@ test('invalid source, feedback, character or configuration is rejected without i
 test('later styles cannot be edited before the preceding style finishes', async (t) => {
   const c = await setup(t),
     p = c.pipeline;
-  let job = await bases(c, 1, ['chibi', '8bit']);
+  let job = await bases(c, 1, ['3d', '8bit']);
   const original = (await p.masters(job.id))[0];
   await assert.rejects(
     p.refineBase(job.id, { ...editInput(original), style: '8bit' }, character, settings, {}),

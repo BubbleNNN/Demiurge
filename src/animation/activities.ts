@@ -1,9 +1,12 @@
-import type { PetAction, SpriteAnimation } from '../types';
+import type { Activity, PetAction, SpriteAnimation } from '../types';
+import * as activityData from '../../shared/activities.json';
 import { clipDuration, clipFrame } from './timeline';
 
-export const isActivity = (action: PetAction) => action === 'read' || action === 'gaming';
+export const activities = activityData.activities as { id: Activity; name: string; doing: string; prop: string }[];
+export const isActivity = (action: PetAction | string): action is Activity =>
+  activities.some((activity) => activity.id === action);
 export const activityDuration = 60000;
-type Transition = 'enter_read' | 'exit_read' | 'enter_gaming' | 'exit_gaming';
+type Transition = `enter_${PetAction}` | `exit_${PetAction}`;
 export interface ActivityPlayback {
   current: PetAction;
   since: number;
@@ -47,9 +50,9 @@ export function advanceActivityPlayback(
     const exit = `exit_${state.current}` as Transition;
     const enter = `enter_${target}` as Transition;
     const name =
-      isActivity(state.current) && animation.clips[exit]
+      state.current !== 'idle' && state.current !== 'drag' && target !== 'drag' && animation.clips[exit]
         ? exit
-        : isActivity(target) && animation.clips[enter]
+        : target !== 'drag' && animation.clips[enter]
           ? enter
           : undefined;
     if (name && !paused && !interrupt) {
@@ -59,7 +62,7 @@ export function advanceActivityPlayback(
       state.since = nextStart;
     }
   }
-  const clip = isActivity(state.current) ? animation.clips[state.current] : undefined;
+  const clip = state.current !== 'idle' ? animation.clips[state.current] : undefined;
   return clip
     ? { frame: clipFrame(animation, clip, paused ? 0 : time - state.since), clip: state.current }
     : null;

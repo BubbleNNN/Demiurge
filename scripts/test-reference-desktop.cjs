@@ -41,7 +41,9 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 async function evaluate(code) {
-  return window.webContents.executeJavaScript(code, true);
+  return window.webContents.executeJavaScript(code, true).catch((error) => {
+    throw new Error(code.slice(0, 300) + ': ' + error.message);
+  });
 }
 async function waitFor(code) {
   for (let n = 0; n < 120; n++) {
@@ -53,7 +55,7 @@ async function waitFor(code) {
 }
 async function click(text) {
   await evaluate(
-    `(() => { const button = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === ${JSON.stringify(text)} && !b.disabled); if (!button) throw new Error('Enabled button not found: ' + ${JSON.stringify(text)}); button.click(); })()`,
+    `(() => { const button = [...document.querySelectorAll('button')].find((b) => (b.textContent.trim() === ${JSON.stringify(text)} || b.getAttribute('aria-label') === ${JSON.stringify(text)}) && !b.disabled); if (!button) throw new Error('Enabled button not found: ' + ${JSON.stringify(text)}); button.click(); })()`,
   );
 }
 async function loadedState() {
@@ -61,11 +63,13 @@ async function loadedState() {
 }
 
 async function run() {
-  await waitFor(`!!document.querySelector('.mori-symbol')`);
+  await waitFor(`!!document.querySelector('.room-rail')`);
   await evaluate(
     `(async () => { const s = (await window.mori.load()).state; await window.mori.saveSettings(s.settings, {imageKey:'local-transport-fixture'}); })()`,
   );
-  await click('外观工作台');
+  await click('Mori 首页');
+  await click('角色工作室');
+  await click('外观与动作');
   await click('制作立绘与像素动画');
   await waitFor(`document.querySelector('.generation-studio')`);
   assert.equal(
@@ -133,7 +137,7 @@ async function run() {
   assert.equal(staleBlocked, true);
   assert.equal(requests, 7);
   window.webContents.reload();
-  await waitFor(`!!document.querySelector('.mori-symbol')`);
+  await waitFor(`!!document.querySelector('.room-rail')`);
   const restored = await loadedState();
   assert.equal(restored.characters[0].visualReferences.length, 2);
   assert.equal(restored.skins.length, 2);

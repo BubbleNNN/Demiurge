@@ -55,7 +55,7 @@ export function hitCharacter(root: Element, clientX: number, clientY: number): '
       const localY = bounds ? (y - bounds.y) / bounds.height : y / canvas.height;
       const style = root.querySelector<HTMLElement>('[data-art-style]')?.dataset.artStyle;
       const head =
-        style === 'powerpuff' ? 0.6 : ['chibi', 'sticker', '8bit', 'pixel'].includes(style || '') ? 0.42 : 0.28;
+        style === 'powerpuff' ? 0.6 : ['chibi-pet', 'chibi', 'sticker', 'pastel', 'figure', '8bit', 'pixel'].includes(style || '') ? 0.42 : 0.28;
       return localY < head ? 'headpat' : 'poke';
     } catch {
       return null;

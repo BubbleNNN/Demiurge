@@ -38,7 +38,7 @@ async function finish(error) {
       console.error((await win.webContents.executeJavaScript('document.body.innerText')).slice(-2200));
   } else
     console.log(
-      'Native companion layout passed: composer below character, history collapsed with latest speech only, separate head/body input, no fake unavailable actions or saved touch messages, cooldown, rest/wake, collapsed settings with preserved drafts, expanded history, compact save-failure retry, responsive layout, seven labeled modules, focused startup, shared composer drafts, native pet controls and zero API calls.',
+      'Native companion layout passed: composer below character, history collapsed with latest speech only, separate head/body input, no fake unavailable actions or saved touch messages, cooldown, rest/wake, collapsed settings with preserved drafts, expanded history, compact save-failure retry, responsive layout, studio tabs and settings navigation, chat deep link to the history drawer, shared composer drafts, native pet controls and zero API calls.',
     );
   console.log('Artifacts: ' + dir);
   app.exit(error ? 1 : 0);
@@ -46,7 +46,10 @@ async function finish(error) {
 app.on('browser-window-created', (_event, created) => {
   if (win) return;
   win = created;
-  const js = (code) => win.webContents.executeJavaScript(code, true);
+  const js = (code) =>
+    win.webContents.executeJavaScript(code, true).catch((error) => {
+      throw new Error(`Renderer command failed: ${code}\n${error.message}`);
+    });
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const wait = async (code) => {
     for (let n = 0; n < 160; n++) {
@@ -60,6 +63,9 @@ app.on('browser-window-created', (_event, created) => {
       `(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')===${JSON.stringify(label)}||b.textContent.trim()===${JSON.stringify(label)})&&!b.disabled);if(!b)throw new Error('Missing '+${JSON.stringify(label)});b.click()})()`,
     );
   const physicalClick = async (label) => {
+    await wait(
+      `(()=>{const b=document.querySelector('[aria-label='+${JSON.stringify(JSON.stringify(label))}+']');return b&&!b.disabled})()`,
+    );
     const rect = await js(
       `(()=>{const b=document.querySelector('[aria-label='+${JSON.stringify(JSON.stringify(label))}+']');if(!b||b.disabled)throw new Error('Unavailable target');const r=b.getBoundingClientRect();return{x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`,
     );
@@ -77,22 +83,20 @@ app.on('browser-window-created', (_event, created) => {
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
-      assert.equal(await js(`document.querySelector('main').dataset.feature`), 'chat');
+      // The old chat page is now the home screen with its history drawer open.
+      await wait(`!!document.querySelector('.room-rail')`);
+      await wait(`document.querySelector('main').dataset.feature==='home'`);
       assert.equal(await js(`new URL(location.href).searchParams.get('view')`), 'chat');
-      assert.ok(await js(`!!document.querySelector('.conversation-workspace .chat-history')`));
-      await click('陪伴空间');
+      assert.ok(await js(`!!document.querySelector('.history-drawer .chat-history')`));
+      await click('关闭对话记录');
       await js(
         `window.mori.load().then(r=>{const s=r.state;return window.mori.save({...s,activeSkinId:'cyrene-8bit-v5',messages:{...s.messages,[s.activeCharacterId]:[{id:'old-user',role:'user',content:'更早的问候',createdAt:new Date().toISOString()},{id:'old-reply',role:'assistant',content:'较早的回复应当保持折叠',createdAt:new Date().toISOString()},{id:'recent-user',role:'user',content:'最近的问候',createdAt:new Date().toISOString()},{id:'recent-reply',role:'assistant',content:'最近一次回复显示在人物气泡里',createdAt:new Date().toISOString()}]}},s)})`,
       );
       await wait(
-        `document.querySelector('.scene-artwork canvas[data-clip]')&&document.querySelector('.scene-reply-bubble')?.textContent.includes('最近一次回复')&&!document.querySelector('.head-zone').disabled`,
+        `document.querySelector('.room-figure canvas[data-clip]')&&document.querySelector('.room-bubble')?.textContent.includes('最近一次回复')&&!document.querySelector('.head-zone').disabled`,
       );
       const initial = await state();
-      assert.equal(
-        await js(`!!document.querySelector('.chat-panel')||!!document.querySelector('.chat-history')`),
-        false,
-      );
+      assert.equal(await js(`!!document.querySelector('.chat-history')`), false);
       assert.equal(await js(`document.querySelector('.chat-preferences').open`), false);
       assert.equal(
         await js(`document.querySelector('[aria-label="展开人物设置"]').getAttribute('aria-expanded')`),
@@ -100,8 +104,9 @@ app.on('browser-window-created', (_event, created) => {
       );
       assert.ok(
         await js(
-          `document.querySelector('.inline-conversation').getBoundingClientRect().top>=document.querySelector('.character-scene').getBoundingClientRect().bottom`,
+          `document.querySelector('.room-composer').getBoundingClientRect().top>=document.querySelector('.room-figure').getBoundingClientRect().bottom`,
         ),
+        'Composer sits below the character',
       );
       assert.equal(await js(`document.body.textContent.includes('较早的回复应当保持折叠')`), false);
       await screenshot('compact-home');
@@ -120,33 +125,29 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(await js(`document.querySelector('.chat-preferences').open`), false);
       await physicalClick('摸摸角色的头');
       await wait(`!!document.querySelector('.touch-feedback.headpat')`);
-      const pat = await js(`document.querySelector('.scene-reply-bubble').textContent`);
+      const pat = await js(`document.querySelector('.room-bubble .room-line').textContent`);
       assert.match(pat, /关心|舒服/);
-      assert.equal(await js(`document.querySelector('.scene-artwork canvas').dataset.clip==='nod'`), false);
+      // The current 8-bit pack has an authored nod clip, unlike the original fixture.
+      await wait(`document.querySelector('.room-figure canvas').dataset.clip==='nod'`);
       await physicalClick('戳一戳角色');
       assert.equal(
-        await js(`document.querySelector('.scene-reply-bubble').textContent`),
+        await js(`document.querySelector('.room-bubble .room-line').textContent`),
         pat,
         'Rapid taps share a cooldown',
       );
       await delay(1850);
       await physicalClick('戳一戳角色');
       await wait(`!!document.querySelector('.touch-feedback.poke')`);
-      assert.notEqual(await js(`document.querySelector('.scene-reply-bubble').textContent`), pat);
+      assert.notEqual(await js(`document.querySelector('.room-bubble .room-line').textContent`), pat);
       assert.deepEqual(
         (await state()).messages,
         initial.messages,
         'Physical interactions do not write conversation history',
       );
-      assert.equal(
-        await js(
-          `!!document.querySelector('.local-interaction-bar')||!!document.querySelector('.scene-bottom .toolbar')`,
-        ),
-        false,
-      );
+      assert.equal(await js(`!!document.querySelector('.local-interaction-bar')`), false);
       await click('展开人物设置');
       await click('让角色休息');
-      await wait(`document.querySelector('.scene-artwork canvas').dataset.clip==='sleep'`);
+      await wait(`document.querySelector('.room-figure canvas').dataset.clip==='sleep'`);
       assert.ok(
         await js(
           `document.querySelector('.head-zone').disabled&&document.querySelector('.poke-zone').disabled`,
@@ -154,44 +155,35 @@ app.on('browser-window-created', (_event, created) => {
       );
       await click('唤醒角色');
       await click('收起人物设置');
-      await click('展开对话栏');
-      await wait(`document.querySelectorAll('.chat-message').length===4`);
+      await click('查看对话记录');
+      await wait(`document.querySelectorAll('.history-drawer .chat-message').length===4`);
       assert.ok(
         await js(`document.querySelector('.chat-history').textContent.includes('较早的回复应当保持折叠')`),
       );
-      await click('收起对话栏');
+      await click('收起对话记录');
       await wait(`!document.querySelector('.chat-history')`);
       assert.deepEqual((await state()).messages, initial.messages);
       await fill('聊天消息', '切换模块后继续输入的草稿');
-      await click('对话与语音');
-      await wait(`document.querySelectorAll('.conversation-workspace .chat-message').length===4`);
-      assert.equal(
-        await js(`document.querySelector('[aria-label="聊天消息"]').value`),
-        '切换模块后继续输入的草稿',
-      );
-      assert.equal(await js(`!!document.querySelector('[aria-label="收起对话栏"]')`), false);
-      await js(`document.querySelector('.chat-preferences summary').click()`);
-      assert.ok(
-        await js(
-          `(()=>{const b=document.querySelector('.chat-mode-picker button');const r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()`,
-        ),
-        'Full-page chat options must not be clipped',
-      );
-      await js(`document.querySelector('.chat-preferences summary').click()`);
-      await screenshot('conversation-module');
-      for (const feature of require('../shared/features.json')) {
-        await click(feature.title);
-        await wait(`document.querySelector('main').dataset.feature===${JSON.stringify(feature.id)}`);
+      // Studio tabs and settings replace the old seven-page sidebar.
+      await click('角色工作室');
+      for (const [tab, feature] of [
+        ['外观与动作', 'wardrobe'],
+        ['相处记忆', 'memories'],
+        ['角色档案', 'characters'],
+      ]) {
+        await click(tab);
+        await wait(`document.querySelector('main').dataset.feature===${JSON.stringify(feature)}`);
         assert.equal(
-          await js(`document.querySelector('.breadcrumb strong').textContent.trim()`),
-          feature.title,
-        );
-        assert.equal(
-          await js(`document.querySelector('.icon-rail [aria-current="page"]').getAttribute('aria-label')`),
-          feature.title,
+          await js(`document.querySelector('.studio-tabs [aria-selected="true"]').textContent.trim()`),
+          tab,
         );
       }
-      await click('桌宠窗口');
+      await click('连接与设置');
+      await wait(`document.querySelector('main').dataset.feature==='settings'`);
+      assert.equal(
+        await js(`document.querySelector('.room-rail [aria-current="page"]').getAttribute('aria-label')`),
+        '连接与设置',
+      );
       await screenshot('desktop-module');
       await click('打开桌宠');
       await wait(`window.mori.load().then(()=>true)`);
@@ -207,11 +199,11 @@ app.on('browser-window-created', (_event, created) => {
       const pet = require('electron')
         .BrowserWindow.getAllWindows()
         .find((w) => w.webContents.getURL().includes('pet=1'));
-      assert.ok(pet, 'Dedicated desktop module opens a native pet');
+      assert.ok(pet, 'Settings opens a native pet');
       await click('收起桌宠');
       await delay(200);
-      assert.ok(pet.isDestroyed(), 'Desktop module closes its pet');
-      await click('陪伴空间');
+      assert.ok(pet.isDestroyed(), 'Settings closes its pet');
+      await click('Mori 首页');
       assert.equal(
         await js(`document.querySelector('[aria-label="聊天消息"]').value`),
         '切换模块后继续输入的草稿',
@@ -229,7 +221,7 @@ app.on('browser-window-created', (_event, created) => {
       ])
         assert.deepEqual(afterNavigation[field], initial[field], 'Module navigation preserves ' + field);
       await click('连接与设置');
-      await wait(`document.querySelectorAll('.settings-group').length===6`);
+      await wait(`document.querySelectorAll('.settings-group').length===7`);
       assert.equal(await js(`document.querySelectorAll('.settings-group[open]').length`), 0);
       await js(`document.querySelector('.settings-group summary').click()`);
       await fill('对话模型 ID', 'temporary-draft');
@@ -239,7 +231,7 @@ app.on('browser-window-created', (_event, created) => {
       await fill('对话模型 ID', initial.settings.llmModel);
       await js(`document.querySelector('.settings-group summary').click()`);
       await screenshot('collapsed-settings');
-      await click('返回我的空间');
+      await click('回到昔涟身边');
       failReplySave = true;
       await fill('聊天消息', '你好');
       await click('发送消息');
@@ -249,7 +241,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(await js(`!!document.querySelector('.chat-history')`), false);
       await click('仅重试本机保存');
       await wait(`window.mori.load().then(r=>r.state.messages[r.state.activeCharacterId].length===6)`);
-      await wait(`document.querySelector('.scene-reply-bubble')?.textContent.includes('本地台词')`);
+      await wait(`document.querySelector('.room-bubble')?.textContent.includes('本地台词')`);
       const replied = await state();
       assert.equal(replied.messages[replied.activeCharacterId].at(-1).origin, 'script');
       assert.equal(await js(`document.querySelectorAll('.chat-message').length`), 0);
@@ -259,14 +251,14 @@ app.on('browser-window-created', (_event, created) => {
         `window.mori.load().then(r=>{const s=r.state;const messages=s.messages[s.activeCharacterId].map((m,i,list)=>i===list.length-1?{...m,content:'这是一条较长的回复，用来检查气泡的阅读宽度、滚动和人物遮挡。'.repeat(35)}:m);return window.mori.save({...s,messages:{...s.messages,[s.activeCharacterId]:messages}},s)})`,
       );
       await wait(
-        `(()=>{const p=document.querySelector('.scene-reply-bubble>p');return p&&p.scrollHeight>p.clientHeight})()`,
+        `(()=>{const p=document.querySelector('.room-bubble>p');return p&&p.scrollHeight>p.clientHeight})()`,
       );
       win.setSize(1100, 800);
       await delay(200);
       assert.ok(await js(`document.documentElement.scrollWidth<=document.documentElement.clientWidth+1`));
       assert.ok(
         await js(
-          `document.querySelector('.scene-reply-bubble').getBoundingClientRect().bottom<document.querySelector('.scene-bottom').getBoundingClientRect().top`,
+          `document.querySelector('.room-bubble').getBoundingClientRect().bottom<document.querySelector('.room-composer').getBoundingClientRect().top`,
         ),
       );
       await screenshot('long-reply');
@@ -275,7 +267,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(await js(`document.documentElement.scrollWidth<=document.documentElement.clientWidth+1`));
       assert.ok(
         await js(
-          `document.querySelector('.inline-conversation').getBoundingClientRect().top>=document.querySelector('.character-scene').getBoundingClientRect().bottom`,
+          `document.querySelector('.room-composer').getBoundingClientRect().top>=document.querySelector('.room-figure').getBoundingClientRect().bottom`,
         ),
       );
       await screenshot('compact-window');

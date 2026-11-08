@@ -763,18 +763,103 @@ test('TTS fails honestly on missing key/model and redacts voice secrets in servi
     (error) => error.message.includes('401') && !error.message.includes('secret-tts'),
   );
 });
+const chibiContext = (status, image = reference.image) => {
+  const { referencePack, imageDigest } = require('../electron/references.cjs');
+  return {
+    referenceDigest: referencePack(character).digest,
+    image,
+    imageDigest: imageDigest(image),
+    summary: {
+      status,
+      checkedAt: '2026-11-07T00:00:00.000Z',
+      reason: status === 'found' ? 'verified existing chibi' : 'nothing verified; Furina sticker style',
+      sources: status === 'found' ? [{ title: 'gallery', url: 'https://example.com/gallery' }] : [],
+      warnings: [],
+    },
+  };
+};
 test('all art styles reach image generation with independent style constraints', async () => {
   for (const style of Object.keys(require('../shared/art-styles.json'))) {
-    let calls = 0;
-    const service = createServices(async () => {
-      calls++;
-      return jsonResponse({ data: [{ b64_json: png.toString('base64') }] });
-    });
+    let calls = 0,
+      searches = 0;
+    const service = createServices(
+      async () => {
+        calls++;
+        return jsonResponse({ data: [{ b64_json: png.toString('base64') }] });
+      },
+      {
+        discoverChibiReferences: async () => {
+          searches++;
+          return chibiContext('fallback');
+        },
+      },
+    );
     const result = await service.generateSkin({ character, style }, settings, credentials, () => {});
     assert.equal(result.style, style);
     assert.equal(calls, 1);
+    assert.equal(searches, style === 'chibi-pet' ? 1 : 0, 'only the chibi look searches for an existing design');
     assert.equal(result.review.status, 'pending');
   }
+});
+test('the chibi look adapts a verified existing design, otherwise borrows only the Furina sticker style', async () => {
+  const requests = [];
+  const service = createServices(async (_url, init) => {
+    const images = init.body.getAll('image[]').length ? init.body.getAll('image[]') : [init.body.get('image')];
+    requests.push({
+      prompt: init.body.get('prompt'),
+      images: await Promise.all(images.map(async (blob) => Buffer.from(await blob.arrayBuffer()))),
+    });
+    return jsonResponse({ data: [{ b64_json: png.toString('base64') }] });
+  });
+  const foundPng = Buffer.concat([png, Buffer.from([0])]);
+  const found = chibiContext('found', `data:image/png;base64,${foundPng.toString('base64')}`);
+  const adapted = await service.generateSkin(
+    { character, style: 'chibi-pet', chibiContext: found },
+    settings,
+    credentials,
+  );
+  assert.deepEqual(adapted.generation.chibiResearch, found.summary, 'provenance records what was adapted');
+  assert.deepEqual(requests[0].images, [png, foundPng], 'identity first, the found chibi last');
+  assert.match(requests[0].prompt, /existing CHIBI DESIGN of the SAME character/);
+  assert.doesNotMatch(requests[0].prompt, /FURINA/);
+
+  const fallback = await service.generateSkin(
+    { character, style: 'chibi-pet', chibiContext: chibiContext('fallback') },
+    settings,
+    credentials,
+  );
+  assert.equal(fallback.generation.chibiResearch.status, 'fallback');
+  assert.match(requests[1].prompt, /FURINA sticker, a STYLE GUIDE ONLY/);
+  assert.match(requests[1].prompt, /NEVER borrow Furina identity/);
+  assert.equal(requests[1].images.length, 2);
+
+  // A context prepared for different originals, or a swapped image, never reaches generation.
+  await assert.rejects(
+    service.generateSkin(
+      { character, style: 'chibi-pet', chibiContext: { ...found, referenceDigest: '0'.repeat(64) } },
+      settings,
+      credentials,
+    ),
+    /不匹配/,
+  );
+  await assert.rejects(
+    service.generateSkin(
+      { character, style: 'chibi-pet', chibiContext: { ...found, image: reference.image } },
+      settings,
+      credentials,
+    ),
+    /不匹配/,
+  );
+  assert.equal(requests.length, 2);
+
+  // Without a usable search provider the look fails loudly instead of silently falling back.
+  const unsearchable = createServices(async () => {
+    throw new Error('no network expected');
+  });
+  await assert.rejects(
+    unsearchable.generateSkin({ character, style: 'chibi-pet' }, settings, { imageKey: credentials.imageKey }),
+    /Q版参考搜索未完成/,
+  );
 });
 test('original style preserves the source rendering language and removed styles fail before any image request', async () => {
   let calls = 0,

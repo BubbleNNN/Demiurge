@@ -7,7 +7,8 @@ const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const f = require('../tests/fixtures/pet-images.cjs');
 const motions = require('../shared/pet-motions.json');
-const style = require('../shared/art-styles.json').sticker;
+const style = require('../shared/art-styles.json')['chibi-pet'];
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 const dir = path.resolve(__dirname, '../.local/pet-activities-desktop-' + randomUUID());
 fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
@@ -38,6 +39,7 @@ fs.writeFileSync(
       chatMode: 'local',
       imageBaseUrl: 'https://sticker.mori.example/v1',
       imageModel: '',
+      searchProvider: 'wiki',
       demoMode: false,
       proactiveEnabled: false,
       voiceEnabled: false,
@@ -51,16 +53,27 @@ fs.writeFileSync(
     memories: [],
   }),
 );
-const rawSheet = f.image(true, { frames: 8 });
+const rawSheet = require('../tests/fixtures/pet-stages.cjs').stageSheet();
 const calls = [];
+const wikiSearches = [];
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://sticker.mori.example/v1/images/edits');
   const prompt = init.body.get('prompt'),
-    sheet = prompt.includes('regular 4-by-2 grid');
+    sheet = prompt.includes('regular 4-by-3 grid');
   assert.ok(prompt.includes(style.prompt));
   const input = init.body.getAll('image[]').length ? init.body.getAll('image[]') : [init.body.get('image')];
   const images = await Promise.all(input.map(async (blob) => Buffer.from(await blob.arrayBuffer())));
-  assert.deepEqual(images, sheet ? [f.image(), f.image()] : [f.image()]);
+  // Base: identity original, then the Furina sticker as a style guide only. Sheets: master plus identity.
+  assert.deepEqual(images.slice(0, 2), sheet ? [f.image(), f.image()] : [f.image(), furina]);
+  if (!sheet) assert.ok(prompt.includes('FURINA sticker, a STYLE GUIDE ONLY'));
+  if (sheet && calls.length === 2) assert.deepEqual(images[2], rawSheet);
   calls.push(sheet ? 'sheet' : 'base');
   return new Response(
     JSON.stringify({ data: [{ b64_json: (sheet ? rawSheet : f.image()).toString('base64') }] }),
@@ -77,12 +90,15 @@ async function finish(error) {
   clearTimeout(deadline);
   if (error && win && !win.isDestroyed())
     fs.writeFileSync(path.join(dir, 'failure.png'), (await win.webContents.capturePage()).toPNG());
-  const report = { passed: !error, calls, paidRequests: 0, exceptions, error: error?.stack, artifacts: dir };
+  const diagnostics = error && win && !win.isDestroyed() ? await win.webContents.executeJavaScript(`({hidden:document.hidden,canvases:[...document.querySelectorAll('canvas[data-clip]')].map(c=>({...c.dataset}))})`) : undefined;
+  const report = { diagnostics, passed: !error, calls, paidRequests: 0, exceptions, error: error?.stack, artifacts: dir };
   fs.writeFileSync(path.join(dir, 'checks.json'), JSON.stringify(report, null, 2));
   console[error ? 'error' : 'log'](JSON.stringify(report, null, 2));
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, created) => {
+  // Keep native animation assertions independent of which app owns OS focus.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   win.webContents.on('console-message', (_event, level, message) => {
@@ -109,15 +125,19 @@ app.on('browser-window-created', (_event, created) => {
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'sticker-fixture'},{imageKey:'isolated-key'}))`,
       );
-      await click('外观工作台');
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
       await click('自动制作多画风桌宠');
-      await wait(`!!document.querySelector('[aria-label="桌宠画风：清爽贴纸"]')`);
-      await click('桌宠画风：软萌 Q 版');
-      await click('桌宠画风：清爽贴纸');
+      await wait(`!!document.querySelector('[aria-label="桌宠画风：Q版"]')`);
+      assert.equal(await js(`document.querySelector('[aria-label="桌宠画风：Q版"]').getAttribute('aria-pressed')`), 'true');
+      assert.equal(await js(`document.querySelectorAll('[aria-label^="桌宠画风："]').length`), 4, 'four looks only');
+      for (const direction of ['向右跑','向左跑','向后跑','向前跑'])
+        assert.equal(await js(`document.querySelector('[aria-label="制作动作：${direction}"]').getAttribute('aria-pressed')`), 'true');
       for (const motion of motions) {
         const pressed = await js(
           `document.querySelector('[aria-label=${JSON.stringify('制作动作：' + motion.name)}]').getAttribute('aria-pressed')==='true'`,
@@ -137,10 +157,15 @@ app.on('browser-window-created', (_event, created) => {
       assert.deepEqual(calls, ['base', 'sheet', 'sheet']);
       const [job] = await js(`window.mori.listPetJobs('sticker-test')`);
       assert.equal(job.status, 'ready');
-      assert.deepEqual(job.styles, ['sticker']);
+      assert.equal(job.transitionVersion, 3);
+
+      assert.deepEqual(job.styles, ['chibi-pet']);
       assert.deepEqual(job.motions, ['read', 'gaming']);
       const [skin] = await js(`window.mori.petJobResults(${JSON.stringify(job.id)})`);
-      assert.equal(skin.style, 'sticker');
+      assert.equal(skin.style, 'chibi-pet');
+      assert.deepEqual(wikiSearches.map((q) => /Q版|chibi/.test(q)), [true], 'one chibi search, before the first image request');
+      assert.equal(skin.generation.chibiResearch.status, 'fallback');
+      assert.match(skin.generation.chibiResearch.reason, /芙宁娜/);
       assert.equal(skin.review.status, 'pending');
       assert.ok(skin.sprite.clips.read && skin.sprite.clips.enter_read && skin.sprite.clips.exit_read);
       assert.ok(skin.sprite.clips.gaming);
@@ -150,6 +175,8 @@ app.on('browser-window-created', (_event, created) => {
       await js(
         `document.querySelector('.candidate-animation-stage').scrollIntoView({block:'center',behavior:'instant'})`,
       );
+      win.show();
+      win.focus();
       await click('预览读书动作');
       await wait(`!!document.querySelector('.candidate-animation canvas[data-clip="enter_read"]')`);
       await wait(`!!document.querySelector('.candidate-animation canvas[data-clip="read"]')`);
@@ -162,7 +189,7 @@ app.on('browser-window-created', (_event, created) => {
       await wait(`!!document.querySelector('.candidate-animation canvas[data-clip="idle"]')`);
       // Approve synthetic test pixels only inside this disposable workspace.
       const count = await js(`document.querySelectorAll('.production-review input[type="checkbox"]').length`);
-      assert.equal(count, 23);
+      assert.equal(count, 31);
       for (let i = 0; i < count; i++) {
         await js(`document.querySelectorAll('.production-review input[type="checkbox"]')[${i}].click()`);
       }
@@ -210,7 +237,7 @@ app.on('browser-window-created', (_event, created) => {
       await petWait(`!!document.querySelector('canvas[data-clip="exit_read"]')`);
       await petWait(`!!document.querySelector('canvas[data-clip="idle"]')`);
       // Accelerate only the 60-second activity deadline, leaving animation timing intact.
-      await petJS(`window.activityTestTimeout=window.setTimeout; window.setTimeout=(fn,ms,...args)=>window.activityTestTimeout(fn,ms===60000?100:ms,...args); true`);
+      await petJS(`window.activityTestTimeout=window.setTimeout; window.setTimeout=(fn,ms,...args)=>window.activityTestTimeout(fn,ms>=59000&&ms<=60000?100:ms,...args); true`);
       await petJS(`document.querySelector('[aria-label="桌宠玩掌机"]').click()`);
       await petWait(`!document.querySelector('[aria-label="停止桌宠活动"]')`);
       await petWait(`!!document.querySelector('canvas[data-clip="idle"]')`);

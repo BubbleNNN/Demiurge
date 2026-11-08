@@ -22,6 +22,7 @@ fs.writeFileSync(
       llmModel: '',
       imageBaseUrl: 'https://images.mori.example/v1',
       imageModel: 'batch-fixture',
+      searchProvider: 'wiki',
       demoMode: false,
       proactiveEnabled: false,
     },
@@ -68,18 +69,29 @@ fs.promises.rename = async (from, to) => {
 const tokens = Object.fromEntries(
   Object.entries(require('../shared/art-styles.json')).map(([id, guide]) => [id, guide.prompt]),
 );
-const styleIds = Object.keys(tokens);
+const styleIds = require('../shared/creation-styles.json');
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const wikiSearches = [];
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://images.mori.example/v1/images/edits');
   assert.equal(init.method, 'POST');
   assert.equal(init.headers.Authorization, 'Bearer batch-test-key');
   const form = init.body,
     prompt = String(form.get('prompt'));
-  const style = Object.keys(tokens).find((style) => prompt.includes(tokens[style]));
+  // Offered looks first: the chibi look shares its medium text with the retired sticker look.
+  const style = [...styleIds, ...Object.keys(tokens)].find((style) => prompt.includes(tokens[style]));
   assert.ok(style, 'Each request has a distinct supported rendering medium');
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
-  assert.equal(images.length, 1, 'Unreviewed outputs cannot become the next style reference');
+  assert.equal(images.length, style === 'chibi-pet' ? 2 : 1, 'Unreviewed outputs cannot become the next style reference');
   assert.deepEqual(Buffer.from(await images[0].arrayBuffer()), png);
+  if (style === 'chibi-pet') assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina, 'Furina style guide only');
   calls.push(style);
   maximum = Math.max(maximum, ++active);
   try {
@@ -89,7 +101,7 @@ global.fetch = async (url, init) => {
         releaseImage = resolve;
       });
     }
-    if (style === 'chibi' && failChibi) {
+    if (style === '8bit' && failChibi) {
       failChibi = false;
       return new Response(JSON.stringify({ error: { message: 'Intentional style failure' } }), {
         status: 502,
@@ -151,11 +163,13 @@ app.on('browser-window-created', (_event, created) => {
     );
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings(r.state.settings,{imageKey:'batch-test-key'}))`,
       );
-      await click('外观工作台');
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
       await click('制作立绘与像素动画');
       await wait(`document.querySelectorAll('.style-option').length===${styleIds.length}`);
       await click('全选画风');
@@ -172,7 +186,7 @@ app.on('browser-window-created', (_event, created) => {
         true,
       );
       assert.equal(calls.length, 0);
-      for (const name of ['精绘立绘', '软萌 Q 版', '低多边形 3D']) await click('选择画风：' + name);
+      for (const name of ['原作', '8bit', '3D']) await click('选择画风：' + name);
       await js(`document.querySelector('.generation-step').scrollIntoView({block:'start'})`);
       await capture('multi-selection.png');
       await click('用 1 张原图生成 3 张候选');
@@ -180,7 +194,7 @@ app.on('browser-window-created', (_event, created) => {
         `document.querySelectorAll('.generation-batch-item.saved').length===2 && document.querySelectorAll('.generation-batch-item.failed').length===1`,
       );
       await idle();
-      assert.deepEqual(calls, ['anime', 'chibi', '3d']);
+      assert.deepEqual(calls, ['original', '8bit', '3d']);
       let state = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(state.skins.length, 2);
       assert.equal(state.activeSkinId, '');
@@ -190,14 +204,14 @@ app.on('browser-window-created', (_event, created) => {
         ),
       );
       await capture('partial-results.png');
-      await click('重试软萌 Q 版');
+      await click('重试8bit');
       await wait(`document.querySelectorAll('.generation-batch-item.saved').length===3`);
       await idle();
-      assert.deepEqual(calls, ['anime', 'chibi', '3d', 'chibi']);
-      await click('核对精绘立绘候选');
-      const anime = (await js(`window.mori.load().then(r=>r.state.skins)`)).find((s) => s.style === 'anime');
+      assert.deepEqual(calls, ['original', '8bit', '3d', '8bit']);
+      await click('核对原作候选');
+      const anime = (await js(`window.mori.load().then(r=>r.state.skins)`)).find((s) => s.style === 'original');
       assert.equal(await js(`document.querySelector('[aria-label="选择基准候选"]').value`), anime.id);
-      await select(['精绘立绘', '8-bit 游戏']);
+      await select(['原作', '8bit']);
       failNextSave = true;
       await click('用 1 张原图生成 2 张候选');
       await wait(
@@ -216,7 +230,7 @@ app.on('browser-window-created', (_event, created) => {
       await wait(`document.querySelectorAll('.generation-batch-item.saved').length===2`);
       await idle();
       assert.equal(calls.length, 6);
-      await select(['精绘立绘', '软萌 Q 版', '低多边形 3D']);
+      await select(['原作', '8bit', '3D']);
       holdNext = true;
       await click('用 1 张原图生成 3 张候选');
       await wait(`document.querySelectorAll('.generation-batch-item.generating').length===1`);
@@ -238,6 +252,9 @@ app.on('browser-window-created', (_event, created) => {
       await idle();
       assert.deepEqual(calls.slice(-styleIds.length), styleIds);
       assert.equal(maximum, 1);
+      assert.equal(wikiSearches.length, 1, 'only the chibi look searched, once');
+      const chibi = (await js(`window.mori.load().then(r=>r.state.skins)`)).find((s) => s.style === 'chibi-pet');
+      assert.equal(chibi.generation.chibiResearch.status, 'fallback');
       state = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(state.skins.length, 8 + styleIds.length);
       assert.ok(state.skins.every((s) => s.review.status === 'pending'));
@@ -246,7 +263,7 @@ app.on('browser-window-created', (_event, created) => {
       await js(`document.querySelector('.generation-batch').scrollIntoView({block:'start'})`);
       await capture('all-styles-ready.png');
       win.webContents.reload();
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       assert.equal((await js(`window.mori.load().then(r=>r.state.skins)`)).length, 8 + styleIds.length);
       await finish();
     } catch (error) {

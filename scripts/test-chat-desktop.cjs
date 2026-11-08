@@ -138,7 +138,7 @@ app.on('browser-window-created', (_, win) => {
         `window.mori.load().then(({state})=>window.mori.saveSettings({...state.settings,chatMode:'model',llmBaseUrl:${JSON.stringify(address)},llmModel:'local-transport-fixture'},{llmKey:'fixture-no-paid-service'}))`,
       );
       await wait(`document.querySelector('.connection-text')?.textContent.includes('已配置')`);
-      await click('展开对话栏');
+      await click('查看对话记录');
       await waitPet(`document.querySelector('.connection-text')?.textContent.includes('已配置')`);
       assert.ok(
         await petJS(`document.querySelector('.connection-text')?.textContent.includes('已配置')`),
@@ -215,6 +215,8 @@ app.on('browser-window-created', (_, win) => {
       const merged = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(merged.characters[0].summary, '两个窗口的独立更新');
       assert.ok(merged.memories.some((m) => m.id === 'native-pet-memory'));
+      await click('Mori 首页');
+      await click('角色工作室');
       await click('角色档案');
       await click('编辑档案');
       const originalRules = await js(`document.querySelector('[aria-label="语气习惯"]').value`);
@@ -250,7 +252,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(final.characters[0].behavior.energy, 25);
       await click('Mori 首页');
       respondNext = true;
-      if (await js(`!!document.querySelector('[aria-label="展开对话栏"]')`)) await click('展开对话栏');
+      if (await js(`!!document.querySelector('[aria-label="查看对话记录"]')`)) await click('查看对话记录');
       await fill('聊天消息', '仅测试本机保存恢复');
       await click('发送消息');
       await wait(`document.querySelector('.inline-error')?.textContent.includes('回复已生成')`);
@@ -261,6 +263,8 @@ app.on('browser-window-created', (_, win) => {
       const restored = await js(`window.mori.load().then(r=>r.state.messages[r.state.activeCharacterId])`);
       assert.equal(restored.filter((m) => m.content === '本机保存恢复验证完成').length, 1);
       const beforePreview = await js(`window.mori.load().then(r=>r.state)`);
+      await click('Mori 首页');
+      await click('角色工作室');
       await click('角色档案');
       await click('角色试聊');
       failNextReplyWrite = false;
@@ -350,15 +354,15 @@ app.on('browser-window-created', (_, win) => {
         ['从新的日常话题开始'],
         'Earlier conversation must not enter the new topic request',
       );
-      if (await js(`!!document.querySelector('[aria-label="展开对话栏"]')`)) await click('展开对话栏');
+      if (await js(`!!document.querySelector('[aria-label="查看对话记录"]')`)) await click('查看对话记录');
       await wait(`!!document.querySelector('.topic-divider')`);
       fs.writeFileSync(path.join(dir, 'new-topic.png'), (await win.webContents.capturePage()).toPNG());
       await new Promise((resolve) => {
         win.webContents.once('did-finish-load', resolve);
         win.webContents.reload();
       });
-      await wait(`!!document.querySelector('[aria-label="展开对话栏"]')`);
-      await click('展开对话栏');
+      await wait(`!!document.querySelector('[aria-label="查看对话记录"]')`);
+      await click('查看对话记录');
       await wait(`!!document.querySelector('.topic-divider')`);
       respondNext = true;
       await fill('聊天消息', '继续这个话题');
@@ -449,7 +453,7 @@ app.on('browser-window-created', (_, win) => {
         win.webContents.once('did-finish-load', resolve);
         win.webContents.reload();
       });
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await click('连接与设置');
       assert.equal(await js(`document.querySelector('[aria-label="对话接口协议"]').value`), 'anthropic');
       assert.equal(await js(`document.querySelector('[aria-label="Claude 密钥发送方式"]').value`), 'bearer');
@@ -463,7 +467,7 @@ app.on('browser-window-created', (_, win) => {
       await fill('聊天消息', 'Claude 接入方式验证');
       await click('发送消息');
       await wait(
-        `document.querySelector('.scene-reply-bubble')?.textContent.includes('Claude 原生协议回复验证完成')`,
+        `document.querySelector('.room-bubble')?.textContent.includes('Claude 原生协议回复验证完成')`,
       );
       assert.equal(requests, callsBeforeDrafts + 1);
       assert.equal(requestPaths.at(-1), '/v1/messages');

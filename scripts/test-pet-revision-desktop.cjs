@@ -38,6 +38,7 @@ fs.writeFileSync(
       llmBaseUrl: 'https://never-call.example/v1',
       llmModel: '',
       imageBaseUrl: 'https://revision.mori.example/v1',
+      searchProvider: 'wiki',
       imageModel: '',
       demoMode: false,
       proactiveEnabled: false,
@@ -64,15 +65,26 @@ function tinted(sheet, number) {
 }
 const masters = [tinted(false, 1), tinted(false, 2)],
   calls = [];
+const wikiSearches = [];
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://revision.mori.example/v1/images/edits');
   assert.equal(init.headers.Authorization, 'Bearer isolated-revision-key');
   const form = init.body,
     prompt = String(form.get('prompt'));
   const isSheet = prompt.includes('regular 2-by-2 grid');
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
-  assert.deepEqual(Buffer.from(await images.at(-1).arrayBuffer()), originalBytes);
-  assert.equal(images.length, isSheet ? 2 : 1);
+  // A chibi base carries the Furina sticker last, as a style guide only.
+  assert.deepEqual(Buffer.from(await images[isSheet ? 1 : 0].arrayBuffer()), originalBytes);
+  assert.equal(images.length, 2);
+  if (!isSheet) assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina);
   if (isSheet)
     assert.deepEqual(
       Buffer.from(await images[0].arrayBuffer()),
@@ -127,7 +139,9 @@ app.on('browser-window-created', (_event, created) => {
       `(()=>{const e=document.querySelector('[aria-label=${JSON.stringify(label)}]');if(!e)throw new Error('Missing control');Object.getOwnPropertyDescriptor(${textarea ? 'HTMLTextAreaElement' : 'HTMLSelectElement'}.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('${textarea ? 'input' : 'change'}',{bubbles:true}));})()`,
     );
   const open = async () => {
-    await click('外观工作台');
+    await click('Mori 首页');
+    await click('角色工作室');
+    await click('外观与动作');
     await click('自动制作多画风桌宠');
     await wait(`!!document.querySelector('[aria-label="角色候选数量"]')`);
   };
@@ -142,7 +156,7 @@ app.on('browser-window-created', (_event, created) => {
   const state = () => js('window.mori.load().then(result=>result.state)');
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(result=>window.mori.saveSettings({...result.state.settings,imageModel:'revision-fixture'},{imageKey:'isolated-revision-key'}))`,
       );
@@ -151,7 +165,7 @@ app.on('browser-window-created', (_event, created) => {
       await change('角色候选数量', '2');
       // Labels come from the shared catalogue; keep only the initially selected wave/talk.
       const motionNames = require('../shared/pet-motions.json')
-        .filter((m) => !['wave', 'talk', 'shake', 'bounce'].includes(m.id))
+        .filter((m) => !['wave', 'talk'].includes(m.id))
         .map((m) => m.name);
       for (const name of motionNames) await click('制作动作：' + name);
       assert.match(await js(`document.querySelector('.production-start').textContent`), /预计 4 次图像请求/);
@@ -169,7 +183,7 @@ app.on('browser-window-created', (_event, created) => {
       const originalJobId = jobs[0].id;
       const candidates = await js(`window.mori.petJobMasters(${JSON.stringify(originalJobId)})`);
       assert.notEqual(candidates[0].images.neutral, candidates[1].images.neutral);
-      await click('放大核对软萌 Q 版候选 2');
+      await click('放大核对Q版候选 2');
       await wait(`!!document.querySelector('[aria-label="角色候选放大核对"]')`);
       assert.equal(
         await js(`document.querySelector('[alt="当前查看的角色候选"]').src`),
@@ -199,7 +213,7 @@ app.on('browser-window-created', (_event, created) => {
         `document.querySelector('[alt="当前查看的角色候选"]').src===${JSON.stringify(candidates[0].images.neutral)}`,
       );
       assert.equal(calls.length, 2, 'Zoom, background and inspection selection must never generate images');
-      assert.equal((await js(`window.mori.listPetJobs('revision-desktop')`))[0].awaitingSelection, 'chibi');
+      assert.equal((await js(`window.mori.listPetJobs('revision-desktop')`))[0].awaitingSelection, 'chibi-pet');
       await click('收起放大核对');
       await js(
         `document.querySelector('[aria-label="角色基准预览"]').scrollIntoView({block:'center',behavior:'instant'})`,
@@ -208,16 +222,16 @@ app.on('browser-window-created', (_event, created) => {
       const loaded = new Promise((resolve) => win.webContents.once('did-finish-load', resolve));
       win.webContents.reload();
       await loaded;
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await open();
       await wait(`document.querySelectorAll('[aria-label="角色基准预览"] img').length===2`);
       assert.equal(calls.length, 2, 'Reload must not resume generation');
-      await click('选择软萌 Q 版候选 2 并继续');
+      await click('选择Q版候选 2 并继续');
       await wait(`!!document.querySelector('[aria-label="修正桌宠成品"]')`);
       await idle();
       assert.equal(calls.length, 4);
       jobs = await js(`window.mori.listPetJobs('revision-desktop')`);
-      assert.equal(jobs[0].selectedBases.chibi, candidates[1].id);
+      assert.equal(jobs[0].selectedBases['chibi-pet'], candidates[1].id);
       assert.equal(jobs[0].status, 'ready');
       const originalOutput = (await js(`window.mori.petJobResults(${JSON.stringify(originalJobId)})`))[0];
       const originalTaskBytes = fs.readFileSync(path.join(dir, 'pet-jobs', originalJobId + '.json'));
@@ -239,7 +253,7 @@ app.on('browser-window-created', (_event, created) => {
       const revised = jobs.find((job) => job.id !== originalJobId);
       assert.equal(revised.status, 'ready');
       assert.equal(revised.revision.motion, 'wave');
-      assert.equal(revised.selectedBases.chibi, candidates[1].id);
+      assert.equal(revised.selectedBases['chibi-pet'], candidates[1].id);
       assert.match(
         await js(`document.querySelector('.production-job-tabs button[aria-pressed="true"]').textContent`),
         /修正招手/,

@@ -99,7 +99,7 @@ async function complete(pipeline, job) {
 async function finished(context, motions = ['wave', 'talk', 'blink']) {
   return complete(
     context.pipeline,
-    await context.pipeline.start(character, { styles: ['chibi'], motions }, settings, {}),
+    await context.pipeline.start(character, { styles: ['3d'], motions }, settings, {}),
   );
 }
 const artifactPath = (root, job, motion) =>
@@ -114,26 +114,26 @@ for (const candidateCount of [2, 3])
       p = context.pipeline;
     let job = await p.start(
       character,
-      { styles: ['chibi'], motions: ['wave', 'talk'], candidateCount },
+      { styles: ['3d'], motions: ['wave', 'talk'], candidateCount },
       settings,
       {},
     );
     for (let i = 0; i < candidateCount; i++) job = await p.advance(job.id, character, settings, {});
-    assert.equal(job.awaitingSelection, 'chibi');
+    assert.equal(job.awaitingSelection, '3d');
     assert.equal(context.calls.length, candidateCount);
     await assert.rejects(p.advance(job.id, character, settings, {}), /选择角色候选/);
     assert.equal(context.calls.length, candidateCount);
     const candidates = await p.masters(job.id);
     assert.equal(candidates.length, candidateCount);
     assert.notEqual(candidates[0].images.neutral, candidates[1].images.neutral);
-    await assert.rejects(p.selectBase(job.id, 'chibi', randomUUID()), /不属于/);
+    await assert.rejects(p.selectBase(job.id, '3d', randomUUID()), /不属于/);
     const reloaded = createPetPipeline(context.options);
-    assert.equal((await reloaded.load(job.id)).awaitingSelection, 'chibi');
-    job = await reloaded.selectBase(job.id, 'chibi', candidates[1].id);
+    assert.equal((await reloaded.load(job.id)).awaitingSelection, '3d');
+    job = await reloaded.selectBase(job.id, '3d', candidates[1].id);
     assert.equal(job.awaitingSelection, undefined);
     const restarted = createPetPipeline(context.options);
     job = await restarted.load(job.id);
-    assert.equal(job.selectedBases.chibi, candidates[1].id);
+    assert.equal(job.selectedBases['3d'], candidates[1].id);
     await complete(restarted, job);
     assert.equal(context.calls.length, candidateCount + 2);
     for (const call of context.calls.filter((c) => c.kind === 'sheet')) {
@@ -153,7 +153,7 @@ test('a single-motion revision spends one image request, copies other sheet byte
   const requestsBefore = context.calls.length;
   let revision = await p.revise(
     source.id,
-    { style: 'chibi', motion: 'wave', feedback: '手掌保持五指，动作更轻柔。' },
+    { style: '3d', motion: 'wave', feedback: '手掌保持五指，动作更轻柔。' },
     character,
     settings,
   );
@@ -171,7 +171,7 @@ test('a single-motion revision spends one image request, copies other sheet byte
   assert.equal(call.kind, 'sheet');
   assert.equal(call.input.motion, 'wave');
   assert.equal(call.input.feedback, '手掌保持五指，动作更轻柔。');
-  assert.equal(call.input.skin.id, source.selectedBases.chibi);
+  assert.equal(call.input.skin.id, source.selectedBases['3d']);
   assert.notDeepEqual(
     await fs.readFile(artifactPath(context.root, revision, 'wave')),
     await fs.readFile(artifactPath(context.root, source, 'wave')),
@@ -191,7 +191,7 @@ test('a character revision edits the chosen master and regenerates every action 
   const requestsBefore = context.calls.length;
   let revision = await p.revise(
     source.id,
-    { style: 'chibi', feedback: '眼睛更清晰，保留发饰。' },
+    { style: '3d', feedback: '眼睛更清晰，保留发饰。' },
     character,
     settings,
   );
@@ -201,15 +201,15 @@ test('a character revision edits the chosen master and regenerates every action 
   const calls = context.calls.slice(requestsBefore);
   assert.equal(calls.length, 1 + source.motions.length);
   assert.equal(calls[0].kind, 'revision');
-  assert.equal(calls[0].input.skin.id, source.selectedBases.chibi);
+  assert.equal(calls[0].input.skin.id, source.selectedBases['3d']);
   assert.equal(calls[0].input.feedback, '眼睛更清晰，保留发饰。');
   assert.equal(calls.filter((call) => call.kind === 'base').length, 0);
   assert.deepEqual(
     calls.slice(1).map((call) => call.input.motion),
     source.motions,
   );
-  assert.ok(calls.slice(1).every((call) => call.input.skin.id === revision.selectedBases.chibi));
-  assert.notEqual(revision.selectedBases.chibi, source.selectedBases.chibi);
+  assert.ok(calls.slice(1).every((call) => call.input.skin.id === revision.selectedBases['3d']));
+  assert.notEqual(revision.selectedBases['3d'], source.selectedBases['3d']);
   assert.equal((await restarted.load(source.id)).status, 'ready');
 });
 
@@ -217,7 +217,7 @@ test('unfinished duplicate revisions, changed references/configuration and inval
   const context = await setup(t),
     source = await finished(context),
     p = context.pipeline;
-  const input = { style: 'chibi', motion: 'wave', feedback: '动作放缓。' },
+  const input = { style: '3d', motion: 'wave', feedback: '动作放缓。' },
     before = context.calls.length;
   for (const change of [
     { feedback: '' },
@@ -267,7 +267,7 @@ test('acknowledged revision pixels survive a failed local save and retry without
     p = context.pipeline;
   let revision = await p.revise(
     source.id,
-    { style: 'chibi', motion: 'wave', feedback: '手指更清晰。' },
+    { style: '3d', motion: 'wave', feedback: '手指更清晰。' },
     character,
     settings,
   );
@@ -302,7 +302,7 @@ test('a revision checkpoint write failure prevents payment and a restart safely 
     before = context.calls.length;
   const revision = await p.revise(
     source.id,
-    { style: 'chibi', feedback: '缩小后脸部更清楚。' },
+    { style: '3d', feedback: '缩小后脸部更清楚。' },
     character,
     settings,
   );
@@ -331,7 +331,7 @@ test('failed candidate selection remains selectable and does not silently accept
   const p = context.pipeline;
   let job = await p.start(
     character,
-    { styles: ['chibi'], motions: ['wave'], candidateCount: 2 },
+    { styles: ['3d'], motions: ['wave'], candidateCount: 2 },
     settings,
     {},
   );
@@ -339,11 +339,11 @@ test('failed candidate selection remains selectable and does not silently accept
   job = await p.advance(job.id, character, settings, {});
   const candidates = await p.masters(job.id);
   failedCheckpoint = path.join(context.root, `${job.id}.json`);
-  await assert.rejects(p.selectBase(job.id, 'chibi', candidates[1].id), /selection checkpoint failure/);
-  assert.equal((await p.load(job.id)).awaitingSelection, 'chibi');
+  await assert.rejects(p.selectBase(job.id, '3d', candidates[1].id), /selection checkpoint failure/);
+  assert.equal((await p.load(job.id)).awaitingSelection, '3d');
   assert.equal(context.calls.length, 2);
-  job = await p.selectBase(job.id, 'chibi', candidates[1].id);
-  assert.equal(job.selectedBases.chibi, candidates[1].id);
+  job = await p.selectBase(job.id, '3d', candidates[1].id);
+  assert.equal(job.selectedBases['3d'], candidates[1].id);
   const restarted = createPetPipeline(context.options);
-  assert.equal((await restarted.load(job.id)).selectedBases.chibi, candidates[1].id);
+  assert.equal((await restarted.load(job.id)).selectedBases['3d'], candidates[1].id);
 });

@@ -22,6 +22,7 @@ export function prepareSpriteFrame(image: HTMLImageElement, animation: SpriteAni
   if (x + width > image.naturalWidth || y + height > image.naturalHeight)
     throw new Error('动画帧超出图集边界');
   context.imageSmoothingEnabled = !animation.pixelated;
+  if (!animation.pixelated) context.imageSmoothingQuality = 'high';
   const scale = Math.min(canvas.width / width, canvas.height / height);
   context.drawImage(
     image,
@@ -92,6 +93,8 @@ export function drawSpriteFrame(
   }
   context.clearRect(0, 0, width, height);
   context.imageSmoothingEnabled = !pixelated;
+  // Frames are usually enlarged on the stage; the high-quality filter keeps edges cleaner.
+  if (!pixelated) context.imageSmoothingQuality = 'high';
   const placement = spritePlacement(
     width,
     height,

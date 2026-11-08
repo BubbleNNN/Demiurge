@@ -45,7 +45,7 @@ function master(number = 3) {
     id: randomUUID(),
     characterId: character.id,
     name: '候选',
-    style: 'chibi',
+    style: '3d',
     kind: 'image',
     images: { neutral: image },
     generated: true,
@@ -200,7 +200,7 @@ test('last-candidate checkpoint recovery does not force premature selection or r
   const pipeline = createPetPipeline(options);
   let job = await pipeline.start(
     character,
-    { styles: ['chibi'], motions: ['wave'], candidateCount: 2 },
+    { styles: ['3d'], motions: ['wave'], candidateCount: 2 },
     settings,
     credentials,
   );
@@ -211,12 +211,12 @@ test('last-candidate checkpoint recovery does not force premature selection or r
   const restarted = createPetPipeline(options);
   job = await restarted.advance(job.id, character, settings, credentials);
   assert.equal(count, 2, 'Recovery must not issue another base request');
-  assert.equal(job.awaitingSelection, 'chibi');
+  assert.equal(job.awaitingSelection, '3d');
   const candidates = await restarted.masters(job.id);
   assert.equal(candidates.length, 2);
-  job = await restarted.selectBase(job.id, 'chibi', candidates[0].id);
+  job = await restarted.selectBase(job.id, '3d', candidates[0].id);
   job = await restarted.advance(job.id, character, settings, credentials);
-  assert.equal(job.selectedBases.chibi, candidates[0].id);
+  assert.equal(job.selectedBases['3d'], candidates[0].id);
   assert.deepEqual(sheets, [candidates[0].id]);
 });
 
@@ -237,7 +237,7 @@ test('normalizing an older cancelled candidate failure cannot revive its task', 
   const pipeline = createPetPipeline(options);
   let job = await pipeline.start(
     character,
-    { styles: ['chibi'], motions: ['wave'], candidateCount: 2 },
+    { styles: ['3d'], motions: ['wave'], candidateCount: 2 },
     settings,
     credentials,
   );

@@ -69,6 +69,7 @@ function allowedPayloadPath(relative) {
       'LICENSE',
       'dist/index.html',
       'dist/favicon.svg',
+      'electron/native/desktop-bounds',
       'dist/vendor/live2dcubismcore.min.js',
     ].includes(normalized) ||
     /^electron\/[\w/-]+\.cjs$/.test(normalized) ||
@@ -310,37 +311,45 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
         2,
       ) + '\n',
     );
+    run(process.execPath,[path.join(root,'scripts/build-desktop-helper.cjs')]);
     copyDirectory(
       path.join(root, 'electron'),
       path.join(payload, 'electron'),
-      (file) => fs.statSync(file).isDirectory() || file.endsWith('.cjs'),
+      (file) => fs.statSync(file).isDirectory() || file.endsWith('.cjs') || file===path.join(root,'electron/native/desktop-bounds'),
     );
     copyDirectory(
       path.join(root, 'shared'),
       path.join(payload, 'shared'),
       (file) => fs.statSync(file).isDirectory() || file.endsWith('.json'),
     );
-    for (const name of ['index.html', 'favicon.svg', 'assets', 'art'])
+    for (const name of ['index.html', 'favicon.svg', 'assets'])
       copyDirectory(path.join(root, 'dist', name), path.join(payload, 'dist', name));
+    const artwork = path.join(root, 'dist/art');
+    const pngOnly = (file) => fs.statSync(file).isDirectory() || file.endsWith('.png');
+    copyDirectory(artwork, path.join(payload, 'dist/art'), pngOnly);
     copyDirectory(
       path.join(root, 'dist/vendor/live2dcubismcore.min.js'),
       path.join(payload, 'dist/vendor/live2dcubismcore.min.js'),
     );
-    copyDirectory(path.join(root, 'dist/art'), path.join(payload, 'public/art'));
+    copyDirectory(artwork, path.join(payload, 'public/art'), pngOnly);
     copyDirectory(path.join(root, 'LICENSE'), path.join(payload, 'LICENSE'));
     const runtime = installRuntimeDependencies(root, payload, imports);
     collectNotices(root, path.join(payload, 'licenses'), Object.keys(info.dependencies));
     fs.copyFileSync(path.join(root, 'docs/THIRD_PARTY.md'), path.join(payload, 'licenses/THIRD_PARTY.md'));
+    const artNotice = path.join(root, 'public/art/README.md');
+    if (fs.existsSync(artNotice)) fs.copyFileSync(artNotice, path.join(payload, 'licenses/ARTWORK.md'));
     fs.copyFileSync(path.join(root, 'docs/MACOS_RELEASE.md'), path.join(temporary, 'RELEASE_GUIDE.md'));
     for (const file of ['LICENSE', 'LICENSES.chromium.html']) {
       const original = path.join(path.dirname(electronApp), file);
       if (fs.existsSync(original))
         fs.copyFileSync(original, path.join(payload, 'licenses', `Electron-${file}`));
     }
+    fs.copyFileSync(path.join(root,'docs/licenses/anime-codex-MIT.txt'),path.join(payload,'licenses/anime-codex-MIT.txt'));
     const bundleId = 'com.mori.companion';
     editPlist(
       path.join(contents, 'Info.plist'),
       {
+        NSAppleEventsUsageDescription: '桌宠通过 Finder 获取桌面图标位置，寻找藏身处；不会读取文件内容。',
         CFBundleDisplayName: 'Mori',
         CFBundleName: 'Mori',
         CFBundleExecutable: 'Mori',

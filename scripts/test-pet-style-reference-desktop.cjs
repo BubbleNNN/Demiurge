@@ -51,7 +51,7 @@ const source = {
   characterId: character.id,
   name: '已确认角色图',
   kind: 'image',
-  style: 'chibi',
+  style: '3d',
   images: { neutral: fixture.url(tinted(1)) },
   createdAt: timestamp,
   generated: true,
@@ -121,7 +121,7 @@ pipelineModule.createPetPipeline = (options) => {
   return pipeline;
 };
 const calls = [],
-  masterBytes = new Map([['chibi', tinted(1)]]);
+  masterBytes = new Map([['3d', tinted(1)]]);
 let expectedGuide = guideA;
 global.fetch = async (url, init) => {
   assert.equal(url, 'https://style-reference.mori.example/v1/images/edits');
@@ -133,7 +133,7 @@ global.fetch = async (url, init) => {
       ? 'edit'
       : 'base';
   const style =
-    kind === 'edit' ? 'chibi' : Object.keys(artStyles).find((id) => prompt.includes(artStyles[id].prompt));
+    kind === 'edit' ? '3d' : Object.keys(artStyles).find((id) => prompt.includes(artStyles[id].prompt));
   assert.ok(style);
   const items = init.body.getAll('image[]').length ? init.body.getAll('image[]') : [init.body.get('image')];
   const images = await Promise.all(items.map(async (item) => Buffer.from(await item.arrayBuffer())));
@@ -201,7 +201,9 @@ app.on('browser-window-created', (_event, created) => {
   const taskImage = () =>
     js(`document.querySelector('[aria-label="本任务使用的画风参考"] summary img')?.src`);
   const open = async () => {
-    await click('外观工作台');
+    await click('Mori 首页');
+    await click('角色工作室');
+    await click('外观与动作');
     await click('自动制作多画风桌宠');
     await wait(`!!document.querySelector('[aria-label="添加画风参考图"]')`);
   };
@@ -215,7 +217,7 @@ app.on('browser-window-created', (_event, created) => {
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       const initial = await state();
       await open();
       assert.equal(await js(`document.querySelector('[aria-label="开始自动制作桌宠"]').disabled`), true);
@@ -258,14 +260,14 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal((await tasks())[0].styleReference, undefined);
       await change('桌宠制作基准', '');
       await idle();
-      await click('桌宠画风：软萌 Q 版');
-      await click('桌宠画风：原作画风');
+      await click('桌宠画风：3D');
+      await click('桌宠画风：原作');
       assert.equal(await js(`document.querySelector('[aria-label="开始自动制作桌宠"]').disabled`), true);
       assert.match(
         await js(`document.querySelector('[aria-label="画风参考适用范围"]').textContent`),
         /移除画风参考/,
       );
-      await click('桌宠画风：软萌 Q 版');
+      await click('桌宠画风：3D');
       await click('开始自动制作桌宠');
       await wait(
         `document.querySelectorAll('.production-job-tabs button').length===2&&document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===1`,
@@ -283,7 +285,7 @@ app.on('browser-window-created', (_event, created) => {
       );
       await idle();
       assert.equal(calls.length, 4);
-      const beforeEdit = (await bases(mixed.id)).find((skin) => skin.style === 'chibi');
+      const beforeEdit = (await bases(mixed.id)).find((skin) => skin.style === '3d');
       assert.equal(beforeEdit.generation.styleReference.digest, mixed.styleReference.digest);
       importFile = guideBFile;
       await click('更换画风参考图');
@@ -294,7 +296,7 @@ app.on('browser-window-created', (_event, created) => {
         `document.querySelector('[aria-label="本任务使用的画风参考"]').scrollIntoView({block:'center',behavior:'instant'})`,
       );
       await capture('task-style-reference.png');
-      await click('修正软萌 Q 版候选 1');
+      await click('修正3D候选 1');
       await change('角色候选修正要求', '轮廓更清楚，沿用本任务画风。', 'textarea');
       await click('生成角色候选修正版');
       await wait(
@@ -320,7 +322,7 @@ app.on('browser-window-created', (_event, created) => {
           assert.ok(Math.abs(image.width / image.height - image.ratio) < 0.02);
         }
         assert.equal(calls.length, 5);
-        assert.equal((await tasks()).find((task) => task.id === mixed.id).awaitingSelection, 'chibi');
+        assert.equal((await tasks()).find((task) => task.id === mixed.id).awaitingSelection, '3d');
       }
       await change('候选预览高度', '160');
       await click('深色');
@@ -335,13 +337,13 @@ app.on('browser-window-created', (_event, created) => {
         ),
         true,
       );
-      await click('选择软萌 Q 版候选 2 并继续');
+      await click('选择3D候选 2 并继续');
       await wait(`!!document.querySelector('.production-review')`);
       await idle();
       assert.equal(calls.length, 6);
-      await click('桌宠画风：原作画风');
-      await click('桌宠画风：软萌 Q 版');
-      await click('桌宠画风：精绘立绘');
+      await click('桌宠画风：原作');
+      await click('桌宠画风：3D');
+      await click('桌宠画风：8bit');
       expectedGuide = guideB;
       await click('开始自动制作桌宠');
       await wait(
@@ -351,11 +353,11 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(calls.length, 7);
       assert.equal(await taskImage(), fixture.url(guideB));
       delayedGuideJob = mixed.id;
-      await selectTask('原作画风');
+      await selectTask('原作');
       for (let attempt = 0; attempt < 100 && !releaseGuide; attempt++)
         await new Promise((resolve) => setTimeout(resolve, 20));
       assert.ok(releaseGuide);
-      await selectTask('精绘立绘');
+      await selectTask('8bit');
       await wait(
         `document.querySelector('[aria-label="本任务使用的画风参考"] summary img')?.src===${JSON.stringify(fixture.url(guideB))}`,
       );
@@ -364,17 +366,17 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(await taskImage(), fixture.url(guideB));
       assert.match(
         await js(`document.querySelector('.production-job-tabs button[aria-pressed="true"]').textContent`),
-        /精绘立绘/,
+        /8bit/,
       );
       const loaded = new Promise((resolve) => win.webContents.once('did-finish-load', resolve));
       win.webContents.reload();
       await loaded;
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await open();
       await wait(`!!document.querySelector('[aria-label="本任务使用的画风参考"] summary img')`);
       assert.equal(await draftImage(), undefined, 'A new modal has no draft guide');
       assert.equal(await taskImage(), fixture.url(guideB));
-      await selectTask('原作画风');
+      await selectTask('原作');
       await wait(
         `document.querySelector('[aria-label="本任务使用的画风参考"] summary img')?.src===${JSON.stringify(fixture.url(guideA))}`,
       );

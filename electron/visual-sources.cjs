@@ -265,7 +265,12 @@ function createVisualSources({ publicResource, inspectImage }) {
                 httpsOnly: true,
               });
         const inspected = await inspectImage(response.bytes);
-        if (Math.min(inspected.width, inspected.height) < 384 || inspected.width * inspected.height < 300000)
+        // Catalog close-ups are small but sharp face/ornament references; full images need more pixels.
+        const closeUp = candidate.origin === 'catalog' && /角色预览/.test(candidate.name);
+        if (
+          Math.min(inspected.width, inspected.height) < (closeUp ? 320 : 384) ||
+          inspected.width * inspected.height < (closeUp ? 150000 : 300000)
+        )
           throw new Error('图片尺寸过小，已排除。');
         const digest = createHash('sha256').update(response.bytes).digest('hex');
         if (seenBytes.has(digest)) continue;

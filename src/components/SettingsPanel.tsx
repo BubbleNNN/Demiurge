@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   KeyRound,
   Trash2,
-  Sprout,
   MessageCircle,
   Search,
   WandSparkles,
@@ -17,7 +16,7 @@ import {
   FolderOpen,
   Archive,
 } from 'lucide-react';
-import { bridge, isDesktop } from '../bridge';
+import { bridge, flushBeforeClose, isDesktop } from '../bridge';
 import { userError } from '../errors';
 import { selectedSearchProvider, searchProviderNames } from '../research';
 import type { Settings, KeyStatus, Credentials } from '../types';
@@ -30,7 +29,7 @@ export function SettingsPanel({
 }: {
   settings: Settings;
   keys: KeyStatus;
-  onSaved: (settings: Settings, keys: KeyStatus) => void;
+  onSaved: (settings: Settings, keys: KeyStatus, manual: boolean) => void;
   notify: (text: string) => void;
 }) {
   const [draft, setDraft] = useState(settings);
@@ -38,39 +37,95 @@ export function SettingsPanel({
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const [credentials, setCredentials] = useState<Credentials>({});
+  const credentialsRef = useRef(credentials);
+  credentialsRef.current = credentials;
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'pending' | 'saving' | 'error'>('saved');
+  const inflight = useRef<Promise<boolean> | null>(null);
+  const queued = useRef(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [searchResult, setSearchResult] = useState<{ ok: boolean; message: string } | null>(null);
   const provider = selectedSearchProvider(draft, keys);
+  const codex = draft.llmProtocol === 'codex';
   const settingsSignature = JSON.stringify(settings);
+  const unsaved = () =>
+    JSON.stringify(draftRef.current) !== JSON.stringify(baseSettings.current) ||
+    Object.keys(credentialsRef.current).length > 0;
   useEffect(() => {
     if (JSON.stringify(draftRef.current) === JSON.stringify(baseSettings.current)) {
       baseSettings.current = settings;
       setDraft(settings);
     }
   }, [settingsSignature]);
+  // Settings save themselves: each change is written shortly after it is made, so leaving the
+  // page or quitting never discards it. API keys are written when their field loses focus.
+  async function persist(manual = false): Promise<boolean> {
+    if (!isDesktop) return false;
+    if (inflight.current) {
+      queued.current = true;
+      return inflight.current;
+    }
+    const sentDraft = draftRef.current,
+      sentCredentials = credentialsRef.current;
+    setSaveStatus('saving');
+    inflight.current = (async () => {
+      try {
+        const value = await bridge.saveSettings(sentDraft, sentCredentials, baseSettings.current);
+        const loaded = await bridge.load();
+        const saved = loaded.state?.settings || sentDraft;
+        baseSettings.current = saved;
+        // Edits made while this save was in flight stay in the form and are saved next.
+        if (draftRef.current === sentDraft) setDraft(saved);
+        setCredentials((current) => {
+          const next = { ...current };
+          for (const key of Object.keys(sentCredentials) as (keyof Credentials)[])
+            if (next[key] === sentCredentials[key]) delete next[key];
+          return next;
+        });
+        onSaved(saved, value, manual);
+        setError('');
+        setSaveStatus('saved');
+        return true;
+      } catch (err) {
+        setError(errorText(err));
+        setSaveStatus('error');
+        return false;
+      } finally {
+        inflight.current = null;
+        if (queued.current) {
+          queued.current = false;
+          void persist();
+        }
+      }
+    })();
+    return inflight.current;
+  }
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
   async function save(event?: FormEvent) {
     event?.preventDefault();
-    setBusy(true);
-    setError('');
-    try {
-      const value = await bridge.saveSettings(draft, credentials, baseSettings.current);
-      const loaded = await bridge.load();
-      const saved = loaded.state?.settings || draft;
-      baseSettings.current = saved;
-      setDraft(saved);
-      onSaved(saved, value);
-      setCredentials({});
-      return true;
-    } catch (err) {
-      setError(errorText(err));
-      return false;
-    } finally {
-      setBusy(false);
-    }
+    return persist(Boolean(event));
   }
+  useEffect(() => {
+    if (JSON.stringify(draft) === JSON.stringify(baseSettings.current)) return;
+    setSaveStatus('pending');
+    const timer = setTimeout(() => void persistRef.current(), 600);
+    return () => clearTimeout(timer);
+  }, [draft]);
+  useEffect(() => {
+    // Leaving the page, closing the window or quitting writes whatever is still pending.
+    const flush = async () => {
+      await inflight.current;
+      if (unsaved()) await persistRef.current();
+    };
+    const release = flushBeforeClose(flush);
+    return () => {
+      release();
+      void flush();
+    };
+  }, []);
   async function manageData(operation: () => Promise<void>) {
     if (busy || testing) return;
     setBusy(true);
@@ -95,6 +150,9 @@ export function SettingsPanel({
           aria-label={label}
           value={credentials[key] ?? ''}
           onChange={(e) => setCredentials({ ...credentials, [key]: e.target.value })}
+          onBlur={() => {
+            if (credentialsRef.current[key] !== undefined) void persist();
+          }}
           placeholder={keys[key] ? '已保存 · 留空保持原密钥' : '粘贴 API Key，仅保存在本机'}
           disabled={!isDesktop}
         />
@@ -102,8 +160,9 @@ export function SettingsPanel({
           <button
             type="button"
             onClick={() => {
-              setCredentials({ ...credentials, [key]: '' });
-              notify('此密钥将在点击「保存设置」后删除。');
+              credentialsRef.current = { ...credentialsRef.current, [key]: '' };
+              setCredentials(credentialsRef.current);
+              void persist().then((ok) => ok && notify('密钥已删除。'));
             }}
             title="删除已存密钥"
             aria-label={`删除${label}`}
@@ -112,16 +171,11 @@ export function SettingsPanel({
           </button>
         )}
       </div>
-      {credentials[key] === '' && keys[key] && <small className="field-warning">保存后将清除此密钥。</small>}
+      {credentials[key] === '' && keys[key] && <small className="field-warning">正在删除此密钥…</small>}
     </label>
   );
   return (
     <>
-      <section className="page-heading">
-        <div className="eyebrow">服务连接</div>
-        <h1>接通她的声音与想法</h1>
-        <p>接入自己的 API，让角色拥有更自由的表达。</p>
-      </section>
       {!isDesktop && (
         <div className="notice">
           当前为界面预览。真实 API、模型导入和密钥存储在桌面开发版运行：pnpm desktop。
@@ -129,13 +183,7 @@ export function SettingsPanel({
       )}
       <form className="settings-form" onSubmit={save}>
         <fieldset className="settings-fields-lock" disabled={busy || testing}>
-          <section className="settings-card developer-note">
-            <Sprout size={23} />
-            <div>
-              <h2>你的服务，你的角色</h2>
-              <p>角色包、本地台词和日常互动无需 API。自由聊天、绘图与语音合成按需连接各自服务。</p>
-            </div>
-          </section>
+          <p className="settings-intro">本地台词和日常互动无需任何服务。自由聊天、绘图与语音按需连接。</p>
           {keys.credentialError && (
             <section className="settings-card" aria-label="密钥存储恢复">
               <div className="inline-error" role="alert">
@@ -154,8 +202,8 @@ export function SettingsPanel({
                   void manageData(async () => {
                     const status = await bridge.resetCredentials();
                     setCredentials({});
-                    onSaved(settings, status);
-                    notify('原密钥文件已保留，失效凭据已清除。请填写需要的密钥并保存设置。');
+                    onSaved(settings, status, false);
+                    notify('原密钥文件已保留，失效凭据已清除。请填写需要的密钥，离开输入框后自动保存。');
                   })
                 }
               >
@@ -171,10 +219,10 @@ export function SettingsPanel({
               </div>
               <div>
                 <h2>对话与角色理解</h2>
-                <p>支持 OpenAI 兼容接口与 Claude / Anthropic Messages 接口。</p>
+                <p>本机 Codex（ChatGPT 登录）、OpenAI 兼容接口或 Claude / Anthropic Messages。</p>
               </div>
-              <span className={`small-badge ${keys.llmKey ? 'green' : ''}`}>
-                {keys.llmKey ? '密钥已配置' : '自由聊天可选'}
+              <span className={`small-badge ${codex || keys.llmKey ? 'green' : ''}`}>
+                {codex ? '本机 Codex' : keys.llmKey ? '密钥已配置' : '自由聊天可选'}
               </span>
             </summary>
             <div className="settings-fields">
@@ -185,25 +233,29 @@ export function SettingsPanel({
                   value={draft.chatMode || 'model'}
                   onChange={(e) => setDraft({ ...draft, chatMode: e.target.value as 'model' | 'local' })}
                 >
-                  <option value="model">模型对话 · 使用 API</option>
+                  <option value="model">模型对话 · 使用所选模型服务</option>
                   <option value="local">本地台词 · 不调用模型</option>
                 </select>
                 <small>本地台词按场景和关键词选择，不回答开放问题，也不会自动调用语音服务。</small>
               </label>
-              {keyField('llmKey', '对话 API Key')}
               <label>
                 接口协议
                 <select
                   aria-label="对话接口协议"
                   value={draft.llmProtocol || 'openai'}
                   onChange={(e) =>
-                    setDraft({ ...draft, llmProtocol: e.target.value as 'openai' | 'anthropic' })
+                    setDraft({
+                      ...draft,
+                      llmProtocol: e.target.value as NonNullable<Settings['llmProtocol']>,
+                    })
                   }
                 >
+                  <option value="codex">本机 Codex · 使用 ChatGPT 订阅，无需 API Key</option>
                   <option value="openai">OpenAI 兼容 · Chat Completions</option>
                   <option value="anthropic">Claude / Anthropic · Messages（Claude Code 接入方式）</option>
                 </select>
               </label>
+              {!codex && keyField('llmKey', '对话 API Key')}
               {draft.llmProtocol === 'anthropic' && (
                 <label>
                   密钥发送方式
@@ -219,56 +271,89 @@ export function SettingsPanel({
                   </select>
                 </label>
               )}
-              <label>
-                地址形式
-                <select
-                  aria-label="对话地址形式"
-                  value={draft.llmEndpointMode || 'base'}
-                  onChange={(e) =>
-                    setDraft({ ...draft, llmEndpointMode: e.target.value as 'base' | 'exact' })
-                  }
-                >
-                  <option value="base">
-                    {draft.llmProtocol === 'anthropic'
-                      ? '服务基础地址 · 与 Claude Code 的 Base URL 相同'
-                      : '基础地址 · 追加 /chat/completions'}
-                  </option>
-                  <option value="exact">完整请求地址 · 直接使用填写的 URL</option>
-                </select>
-              </label>
-              <div className="form-row">
+              {(codex || draft.imageProvider === 'codex' || draft.searchProvider === 'codex') && (
                 <label>
-                  {draft.llmEndpointMode === 'exact' ? '完整请求 URL' : 'Base URL'}
+                  Codex 账号目录
                   <input
-                    aria-label="对话服务地址"
-                    value={draft.llmBaseUrl}
-                    onChange={(e) => setDraft({ ...draft, llmBaseUrl: e.target.value })}
-                    placeholder={
-                      draft.llmEndpointMode === 'exact'
-                        ? '填写服务商提供的完整请求地址'
-                        : draft.llmProtocol === 'anthropic'
-                          ? 'https://api.anthropic.com'
-                          : 'https://api.example.com/v1'
-                    }
+                    aria-label="Codex 账号目录"
+                    value={draft.codexHome || ''}
+                    onChange={(e) => setDraft({ ...draft, codexHome: e.target.value.trim() })}
+                    placeholder="留空使用默认登录；也可填写另一个账号目录的完整路径"
                   />
+                  <span className="form-hint">聊天、资料搜索与图片生成共用此账号。目录需已登录 ChatGPT；只影响 Mori，保存后新请求生效。</span>
                 </label>
-                <label>
-                  模型 ID
-                  <input
-                    value={draft.llmModel}
-                    aria-label="对话模型 ID"
-                    onChange={(e) => setDraft({ ...draft, llmModel: e.target.value })}
-                    placeholder="填写服务商支持的模型名称"
-                  />
-                </label>
-              </div>
-              <p className="form-hint">
-                {draft.llmEndpointMode === 'exact'
-                  ? `直接向填写的 URL 发送请求，不追加任何路径。请求内容使用所选的${draft.llmProtocol === 'anthropic' ? ' Anthropic Messages' : ' OpenAI Chat Completions'} 格式，模型需要能够输出 JSON。`
-                  : draft.llmProtocol === 'anthropic'
-                    ? '填写与 Claude Code 的 ANTHROPIC_BASE_URL 相同的服务地址；程序使用 /v1/messages 接口，地址已包含 /v1 时不会重复追加。无需填写 chat/completions。'
-                    : '基础地址按服务商文档填写，程序会追加 /chat/completions。模型需要能够输出 JSON。'}
-              </p>
+              )}
+              {codex ? (
+                <>
+                  <label>
+                    模型 ID
+                    <input
+                      value={draft.llmModel}
+                      aria-label="对话模型 ID"
+                      onChange={(e) => setDraft({ ...draft, llmModel: e.target.value })}
+                      placeholder="留空使用 Codex 默认模型"
+                    />
+                  </label>
+                  <p className="form-hint">
+                    通过本机 codex 命令和它的 ChatGPT
+                    登录调用，用量计入你的订阅额度。每次请求都是只读的临时会话，不开放命令行、文件、插件或图像工具；角色建档时可以使用
+                    Codex 网页搜索。图像、语音和 3D 仍需各自的服务。每次回复通常需要几秒钟。
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label>
+                    地址形式
+                    <select
+                      aria-label="对话地址形式"
+                      value={draft.llmEndpointMode || 'base'}
+                      onChange={(e) =>
+                        setDraft({ ...draft, llmEndpointMode: e.target.value as 'base' | 'exact' })
+                      }
+                    >
+                      <option value="base">
+                        {draft.llmProtocol === 'anthropic'
+                          ? '服务基础地址 · 与 Claude Code 的 Base URL 相同'
+                          : '基础地址 · 追加 /chat/completions'}
+                      </option>
+                      <option value="exact">完整请求地址 · 直接使用填写的 URL</option>
+                    </select>
+                  </label>
+                  <div className="form-row">
+                    <label>
+                      {draft.llmEndpointMode === 'exact' ? '完整请求 URL' : 'Base URL'}
+                      <input
+                        aria-label="对话服务地址"
+                        value={draft.llmBaseUrl}
+                        onChange={(e) => setDraft({ ...draft, llmBaseUrl: e.target.value })}
+                        placeholder={
+                          draft.llmEndpointMode === 'exact'
+                            ? '填写服务商提供的完整请求地址'
+                            : draft.llmProtocol === 'anthropic'
+                              ? 'https://api.anthropic.com'
+                              : 'https://api.example.com/v1'
+                        }
+                      />
+                    </label>
+                    <label>
+                      模型 ID
+                      <input
+                        value={draft.llmModel}
+                        aria-label="对话模型 ID"
+                        onChange={(e) => setDraft({ ...draft, llmModel: e.target.value })}
+                        placeholder="填写服务商支持的模型名称"
+                      />
+                    </label>
+                  </div>
+                  <p className="form-hint">
+                    {draft.llmEndpointMode === 'exact'
+                      ? `直接向填写的 URL 发送请求，不追加任何路径。请求内容使用所选的${draft.llmProtocol === 'anthropic' ? ' Anthropic Messages' : ' OpenAI Chat Completions'} 格式，模型需要能够输出 JSON。`
+                      : draft.llmProtocol === 'anthropic'
+                        ? '填写与 Claude Code 的 ANTHROPIC_BASE_URL 相同的服务地址；程序使用 /v1/messages 接口，地址已包含 /v1 时不会重复追加。无需填写 chat/completions。'
+                        : '基础地址按服务商文档填写，程序会追加 /chat/completions。模型需要能够输出 JSON。'}
+                  </p>
+                </>
+              )}
               <label>
                 近期对话回顾
                 <select
@@ -395,47 +480,76 @@ export function SettingsPanel({
               </div>
               <div>
                 <h2>外观与表情生成</h2>
-                <p>多画风立绘使用图像编辑接口；程序像素动画可使用上方聊天模型。</p>
+                <p>本机 Codex（ChatGPT 登录）或图像编辑接口；程序像素动画可使用上方聊天模型。</p>
               </div>
-              <span className="small-badge">生成外观时使用</span>
+              <span className={`small-badge ${draft.imageProvider === 'codex' ? 'green' : ''}`}>
+                {draft.imageProvider === 'codex' ? '本机 Codex' : '生成外观时使用'}
+              </span>
             </summary>
             <div className="settings-fields">
-              {keyField('imageKey', '图像 API Key')}
-              <div className="form-row">
-                <label>
-                  图像 Base URL
-                  <input
-                    value={draft.imageBaseUrl}
-                    onChange={(e) => setDraft({ ...draft, imageBaseUrl: e.target.value })}
-                  />
-                </label>
-                <label>
-                  图像模型 ID
-                  <input
-                    value={draft.imageModel}
-                    onChange={(e) => setDraft({ ...draft, imageModel: e.target.value })}
-                    placeholder="需支持透明 PNG 与图片编辑"
-                  />
-                </label>
-              </div>
-              <p className="form-hint">
-                可多选画风，逐张制作候选，核对通过后扩展表情。图像路线需要支持原图输入的 Images Edits
-                接口，多图需要支持 image[] 文件数组。程序像素路线使用聊天 Key
-                和支持图片输入的聊天模型，不需要此处的图像 Key。
-              </p>
               <label>
-                原图细节保留
+                图像服务
                 <select
-                  value={draft.imageInputFidelity || 'auto'}
+                  aria-label="图像服务"
+                  value={draft.imageProvider || 'api'}
                   onChange={(e) =>
-                    setDraft({ ...draft, imageInputFidelity: e.target.value as 'auto' | 'high' })
+                    setDraft({
+                      ...draft,
+                      imageProvider: e.target.value as NonNullable<Settings['imageProvider']>,
+                    })
                   }
                 >
-                  <option value="auto">使用模型默认能力</option>
-                  <option value="high">高保真（服务商须支持 input_fidelity）</option>
+                  <option value="codex">本机 Codex · 使用 ChatGPT 订阅，无需 API Key</option>
+                  <option value="api">图像编辑 API · Images Edits</option>
                 </select>
-                <small>仅对支持该参数的模型开启；两种选项都会传入完整参考原图。</small>
               </label>
+              {draft.imageProvider === 'codex' ? (
+                <p className="form-hint">
+                  通过本机 codex 命令的图像生成工具绘制，用量计入你的 ChatGPT
+                  订阅额度。每张图会附上角色原图作为参考，通常需要约一分钟；一整套桌宠动作约需 7
+                  张以上。会话保持只读，不开放命令行或文件工具，生成的图片取回后从 Codex
+                  文件夹删除。每张结果仍需你核对后才会启用。
+                </p>
+              ) : (
+                <>
+                  {keyField('imageKey', '图像 API Key')}
+                  <div className="form-row">
+                    <label>
+                      图像 Base URL
+                      <input
+                        value={draft.imageBaseUrl}
+                        onChange={(e) => setDraft({ ...draft, imageBaseUrl: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      图像模型 ID
+                      <input
+                        value={draft.imageModel}
+                        onChange={(e) => setDraft({ ...draft, imageModel: e.target.value })}
+                        placeholder="需支持透明 PNG 与图片编辑"
+                      />
+                    </label>
+                  </div>
+                  <p className="form-hint">
+                    可多选画风，逐张制作候选，核对通过后扩展表情。图像路线需要支持原图输入的 Images Edits
+                    接口，多图需要支持 image[] 文件数组。程序像素路线使用聊天 Key
+                    和支持图片输入的聊天模型，不需要此处的图像 Key。
+                  </p>
+                  <label>
+                    原图细节保留
+                    <select
+                      value={draft.imageInputFidelity || 'auto'}
+                      onChange={(e) =>
+                        setDraft({ ...draft, imageInputFidelity: e.target.value as 'auto' | 'high' })
+                      }
+                    >
+                      <option value="auto">使用模型默认能力</option>
+                      <option value="high">高保真（服务商须支持 input_fidelity）</option>
+                    </select>
+                    <small>仅对支持该参数的模型开启；两种选项都会传入完整参考原图。</small>
+                  </label>
+                </>
+              )}
             </div>
           </details>
           <details className="settings-card settings-group">
@@ -667,8 +781,23 @@ export function SettingsPanel({
               {testing ? <LoaderCircle className="spin" size={16} /> : <KeyRound size={16} />}
               保存并测试对话连接
             </button>
+            <span className={`settings-status ${saveStatus}`} role="status" data-status={saveStatus}>
+              {saveStatus === 'saving' ? (
+                <LoaderCircle className="spin" size={14} />
+              ) : saveStatus === 'saved' ? (
+                <Check size={14} />
+              ) : null}
+              {saveStatus === 'saving'
+                ? '正在保存…'
+                : saveStatus === 'pending'
+                  ? '有更改，即将自动保存'
+                  : saveStatus === 'error'
+                    ? '未保存，请检查上方提示'
+                    : '更改会自动保存'}
+            </span>
             <button className="button primary" disabled={busy || testing}>
-              {busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}保存设置
+              <Check size={16} />
+              保存设置
             </button>
           </div>
         </fieldset>

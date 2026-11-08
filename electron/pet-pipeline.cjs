@@ -7,6 +7,8 @@ const { validateSkin, validateStyleReference } = require('./store.cjs');
 const { inspectMaster, inspectSheet, packFrames } = require('./pet-frames.cjs');
 const { productionOptions } = require('./pet-recipes.cjs');
 const styles = Object.keys(require('../shared/art-styles.json'));
+// New tasks offer four looks only; earlier looks keep resuming and revising from their saved files.
+const creationStyles = require('../shared/creation-styles.json');
 // Old task files remain readable; retired styles cannot start or resume generation.
 const recognizedStyles = [...styles, 'realistic', 'watercolor', 'plush', 'figurine'];
 const motions = require('../shared/pet-motions.json').map((m) => m.id);
@@ -18,7 +20,12 @@ function validId(id) {
 function configDigest(settings) {
   return createHash('sha256')
     .update(
-      JSON.stringify([settings.imageBaseUrl, settings.imageModel, settings.imageInputFidelity || 'auto']),
+      JSON.stringify(
+        // Unchanged for image APIs, so existing jobs keep their digest.
+        settings.imageProvider === 'codex'
+          ? ['codex']
+          : [settings.imageBaseUrl, settings.imageModel, settings.imageInputFidelity || 'auto'],
+      ),
     )
     .digest('hex');
 }
@@ -235,6 +242,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       !input.styles.length ||
       input.styles.length > styles.length ||
       input.styles.some((s) => !styles.includes(s)) ||
+      input.styles.some((s) => !creationStyles.includes(s) && s !== input.sourceSkin?.style) ||
       !Array.isArray(input.motions) ||
       !input.motions.length ||
       input.motions.length > motions.length ||
@@ -631,6 +639,16 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       if (!returned && before === 'unsaved')
         throw new Error('本机暂存素材不可恢复，请核对上次请求后明确重试。');
       if (!returned) {
+        let chibiContext;
+        if (step.kind === 'base' && step.style === 'chibi-pet' && !job.revision) {
+          const saved = path.join(root, `${id}.chibi-reference.json`);
+          try { chibiContext = await readJson(saved, 12 * 1024 * 1024); }
+          catch(error) { if(error.code !== 'ENOENT') throw error; }
+          if (!chibiContext) {
+            chibiContext = await services.discoverChibiReferences(character, settings, credentials, progress);
+            await writeJson(saved, chibiContext);
+          }
+        }
         if (step.kind === 'base')
           returned = {
             skin: validateSkin(
@@ -638,6 +656,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
                 {
                   character,
                   style: step.style,
+                  ...(chibiContext ? { chibiContext } : {}),
                   mode: 'image',
                   referenceDigest: job.referenceDigest,
                   artDirection: job.artDirection,
@@ -662,12 +681,31 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         else {
           const master = await chosenMaster(job, step.style);
           if (!master) throw new Error('基准素材缺失，不能继续生成或打包。');
-          if (step.kind === 'sheet')
+          if (step.kind === 'sheet') {
+            // Persisted sheets only, same style and chosen master. Retrying a failed
+            // step uses the same preceding artifacts; no extra image-model calls.
+            const continuityReferences = [];
+            if (job.transitionVersion === 3) {
+              for (let i = 0; i < index && continuityReferences.length < 2; i++) {
+                const previous = job.steps[i];
+                if (
+                  previous.kind === 'sheet' &&
+                  previous.style === step.style &&
+                  previous.status === 'done' &&
+                  require('./pet-recipes.cjs').motionRecipe(previous.motion, job).aligned
+                ) {
+                  const asset = await pixels(job, i);
+                  if (asset?.image)
+                    continuityReferences.push({ motion: previous.motion, image: asset.image });
+                }
+              }
+            }
             returned = await services.generatePetSheet(
               {
                 character,
                 skin: master,
                 motion: step.motion,
+                continuityReferences,
                 referenceDigest: job.referenceDigest,
                 ...productionOptions(job),
                 ...(job.revision?.kind === 'motion' && job.revision.motion === step.motion
@@ -678,7 +716,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
               credentials,
               progress,
             );
-          else {
+          } else {
             progress({
               stage: '整理桌宠动画',
               detail: '检查透明留白、对齐待机位置并写入动作时序；本阶段不调用模型。',

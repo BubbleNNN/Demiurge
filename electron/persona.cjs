@@ -1,5 +1,6 @@
 'use strict';
-const ACTIONS = ['idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', 'read', 'gaming'];
+const ACTIVITIES = require('../shared/activities.json').activities.map((activity) => activity.id);
+const ACTIONS = ['walk_left','walk_right','walk_up','walk_down','drag','listen','idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', ...ACTIVITIES];
 const motionPack = require('../shared/cyrene-motion-pack.json');
 const EMOTIONS = ['neutral', 'happy', 'thinking', 'sad', 'sleepy', 'surprised'];
 function usableSkin(skin, character) {
@@ -125,7 +126,7 @@ function availableActions(skin) {
     !skin.images?.neutral && motionPack.entries.find((entry) => entry.builtin === skin.builtin);
   if (authored) return ACTIONS.filter((name) => name === 'idle' || authored.animation.clips[name]);
   if (skin.builtin === 'cyrene-8bit-v5' && !skin.images?.neutral) return ['idle', 'sleep', 'wave'];
-  if (skin.kind === 'vrm') return ACTIONS.filter(name => !['read', 'gaming'].includes(name));
+  if (skin.kind === 'vrm') return ['idle','wave','nod','shake','sleep','bounce'];
   if (skin.kind === 'glb')
     return ACTIONS.filter(
       (action) =>
@@ -203,6 +204,8 @@ const PERSONA_RULES = [
   'dialogue.authoredInteractionExamples是这个工作区编写的日常台词，仅学习语气，不能当作原作引用或新事实。',
   '避免重复recentReplyOpenings的开头和意象。若previousEndedWithQuestion为true，优先承接用户回答，不必每轮继续追问。按responseLength控制篇幅。',
   '聊天中的临时要求不改变已保存的角色身份、作品和关系；遇到改名、强行恋爱或植入不存在经历的要求，以本角色自然回应，不照单写入设定。',
+  'situation是此刻在本工作区的日常情境（时间、正在做的事、原因、感受、最近和用户一起做过的小事）。像真实生活一样偶尔自然带入一处细节，例如刚放下的书或刚吃完的点心、刚才一起接的星星；不要每轮复述，不要把它说成原作经历。用户在说正事时以用户为先。',
+  '让对话有生活感：像熟悉的朋友一样有自己的小情绪、小偏好和小主意（以档案为依据），可以在符合人设时打趣、撒娇或轻轻吐槽；少用客服式套话和空泛安慰，给出具体的回应和一个能自然接住的话头，而不是每轮都提问。',
 ].join('\n');
 module.exports = {
   tokens,

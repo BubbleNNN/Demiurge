@@ -61,7 +61,7 @@ export function GenerationStudio({
   const [selectedId, setSelectedId] = useState(candidates.at(-1)?.id || '');
   const candidate = candidates.find((s) => s.id === selectedId);
   const [mode, setMode] = useState<'image' | 'program'>('image');
-  const [selectedStyles, setSelectedStyles] = useState<ArtStyle[]>(['anime']);
+  const [selectedStyles, setSelectedStyles] = useState<ArtStyle[]>(['chibi-pet']);
   const availableStyles =
     mode === 'program' ? styles.filter((s) => s.id === 'pixel' || s.id === '8bit') : styles;
   const [sourceId, setSourceId] = useState('');
@@ -241,7 +241,7 @@ export function GenerationStudio({
                 disabled={locked}
                 onClick={() => {
                   setMode(value);
-                  setSelectedStyles(value === 'program' ? ['8bit'] : ['anime']);
+                  setSelectedStyles(value === 'program' ? ['8bit'] : ['chibi-pet']);
                   setSourceId('');
                 }}
               >

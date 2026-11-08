@@ -1,5 +1,8 @@
 export type Emotion = 'neutral' | 'happy' | 'thinking' | 'sad' | 'sleepy' | 'surprised';
-export type PetAction = 'idle' | 'bounce' | 'nod' | 'shake' | 'sleep' | 'wave' | 'read' | 'gaming';
+// Life activities (shared/activities.json): take out a prop, loop, put it away.
+export type Activity = 'office' | 'read' | 'gaming' | 'snack' | 'music' | 'diary';
+export type DesktopAction = 'walk_left' | 'walk_right' | 'walk_up' | 'walk_down' | 'drag' | 'listen';
+export type PetAction = DesktopAction | 'idle' | 'bounce' | 'nod' | 'shake' | 'sleep' | 'wave' | Activity;
 export type CompanionEvent =
   | 'greet'
   | 'touch'
@@ -20,8 +23,11 @@ export interface CompanionProfile {
 export type ArtStyle =
   | 'original'
   | 'anime'
+  | 'chibi-pet'
   | 'chibi'
   | 'sticker'
+  | 'pastel'
+  | 'figure'
   | 'powerpuff'
   | 'pixel'
   | '8bit'
@@ -53,7 +59,15 @@ export interface StyleReferenceInfo {
   name: string;
   digest: string;
 }
+export interface ChibiResearch {
+  status: 'found' | 'fallback';
+  checkedAt: string;
+  reason: string;
+  sources: {title: string; url: string; imageUrl?: string}[];
+  warnings: string[];
+}
 export interface ImageProvenance {
+  chibiResearch?: ChibiResearch;
   mode?: 'image' | 'program';
   referenceIds: string[];
   referenceDigest: string;
@@ -186,7 +200,7 @@ export interface SpriteAnimation {
   frames: SpriteFrame[];
   clips: Partial<
     Record<
-      PetAction | 'enter_read' | 'exit_read' | 'enter_gaming' | 'exit_gaming' | 'blink' | 'talk' | Emotion,
+      PetAction | `enter_${PetAction}` | `exit_${PetAction}` | 'blink' | 'talk' | Emotion,
       SpriteClip
     >
   > & { idle: SpriteClip };
@@ -216,19 +230,22 @@ export interface Memory {
   excluded?: boolean;
 }
 export interface Settings {
+  codexHome?: string;
+  desktopLifeEnabled?: boolean;
   petSize?: 'small' | 'medium' | 'large';
   chatMode?: 'model' | 'local';
   llmBaseUrl: string;
-  llmProtocol?: 'openai' | 'anthropic';
+  llmProtocol?: 'openai' | 'anthropic' | 'codex';
   llmAuthMode?: 'api-key' | 'bearer';
   llmEndpointMode?: 'base' | 'exact';
   llmModel: string;
-  searchProvider?: 'none' | 'claude' | 'searxng' | 'wiki' | 'tavily';
+  searchProvider?: 'none' | 'claude' | 'codex' | 'searxng' | 'wiki' | 'tavily';
   searxngBaseUrl?: string;
   wikiApiUrl?: string;
   chatHistoryBudget?: 6000 | 12000 | 24000;
   imageBaseUrl: string;
   imageModel: string;
+  imageProvider?: 'api' | 'codex';
   imageInputFidelity?: 'auto' | 'high';
   modelBaseUrl?: string;
   modelVersion?: string;
@@ -259,6 +276,14 @@ export interface AppState {
   activeSkinId: string;
   messages: Record<string, ChatMessage[]>;
   memories: Memory[];
+}
+// What the character is doing right now, from the local daily-life routine (never canon).
+export interface LifeSituation {
+  timeOfDay: string;
+  doing: string;
+  reason: string;
+  feeling: string[];
+  recentMoments: string[];
 }
 export interface ChatReply {
   interaction?: CompanionEvent;
@@ -312,7 +337,7 @@ export interface ModelJob {
   error?: string;
   skin?: Skin;
 }
-export type PetMotion =
+export type PetMotion = DesktopAction | 'office'
   | 'blink'
   | 'talk'
   | 'wave'
@@ -322,8 +347,12 @@ export type PetMotion =
   | 'sleep'
   | 'emotions'
   | 'read'
-  | 'gaming';
+  | 'gaming'
+  | 'snack'
+  | 'music'
+  | 'diary';
 export interface PetProductionOptions {
+  transitionVersion?: 1 | 2 | 3;
   candidateCount?: 1 | 2 | 3;
   candidateVariation?: 'subtle' | 'explore';
   frameCount?: 4 | 8;
@@ -403,6 +432,7 @@ export interface MoriBridge {
     messages: ChatMessage[];
     memories: Memory[];
     skinId?: string;
+    situation?: LifeSituation;
   }): Promise<ChatReply>;
   cancelChat(): Promise<void>;
   previewPersona(input: {
@@ -470,6 +500,7 @@ export interface MoriBridge {
   importReferences(): Promise<VisualReference[]>;
   importStyleReference(): Promise<VisualReference | null>;
   discoverReferences(characterId: string): Promise<AppState>;
+  focusReference(input: { characterId: string; referenceId: string }): Promise<AppState>;
   useReferenceImage(characterId: string): Promise<Skin>;
   startModelJob(characterId: string): Promise<ModelJob>;
   advanceModelJob(jobId: string): Promise<ModelJob>;
@@ -481,6 +512,8 @@ export interface MoriBridge {
   importFrames(characterId: string, style: ArtStyle): Promise<Skin | null>;
   speak(text: string): Promise<string>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
+  desktopScene(icons?: boolean): Promise<DesktopScene>;
+  stepPet(target: {x:number;y:number}): Promise<DesktopRect>;
   openPet(): Promise<void>;
   closePet(): Promise<void>;
   movePet(delta: { x: number; y: number }): void;
@@ -493,9 +526,13 @@ export interface MoriBridge {
   onStateChanged(callback: (state: AppState) => void): () => void;
   onKeysChanged(callback: (keys: KeyStatus) => void): () => void;
   onChatStatusChanged(callback: (status: ChatStatus) => void): () => void;
+  onBeforeClose?(callback: () => Promise<unknown>): () => void;
 }
 declare global {
   interface Window {
     mori?: MoriBridge;
   }
 }
+
+export interface DesktopRect {x:number;y:number;width:number;height:number}
+export interface DesktopScene {bounds:DesktopRect;area:DesktopRect;surfaces:(DesktopRect & {id:string})[];icons:(DesktopRect & {id:string})[];supported:boolean;reason?:string}

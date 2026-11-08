@@ -107,11 +107,13 @@ app.on('browser-window-created', (_event, created) => {
     );
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings(r.state.settings,{llmKey:'program-fixture-key'}))`,
       );
-      await click('外观工作台');
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
       await click('制作立绘与像素动画');
       await click('聊天模型 · 程序像素动画');
       await wait(`document.querySelectorAll('.style-option').length===2`);
@@ -206,7 +208,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(pet);
       assert.ok(await pet.webContents.executeJavaScript(`!!document.querySelector('canvas[data-frame]')`));
       win.webContents.reload();
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       state = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(state.skins.length, 3);
       assert.equal(state.characters[0].visualReferences[0].image, original);

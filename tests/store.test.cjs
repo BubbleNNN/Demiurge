@@ -478,3 +478,11 @@ test('serialized snapshot merges retain simultaneous windows and increment the s
   assert.equal(final.settings.llmModel, 'updated-model');
   assert.equal(final.revision, 5);
 });
+
+test('Codex account directory survives settings validation and rejects ambiguous relative paths', () => {
+  const {validateSettings}=require('../electron/store.cjs');
+  assert.equal(validateSettings({...settings(),codexHome:'/fixture/codex-b'}).codexHome,'/fixture/codex-b');
+  assert.equal(validateSettings({...settings(),codexHome:''}).codexHome,'');
+  for(const codexHome of ['~/.codex-b','relative',42,'/tmp/b\0'])
+    assert.throws(()=>validateSettings({...settings(),codexHome}),/Codex 账号目录/);
+});

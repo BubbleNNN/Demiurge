@@ -47,7 +47,7 @@ const source = {
   characterId: character.id,
   name: '已有角色图',
   kind: 'image',
-  style: 'chibi',
+  style: 'chibi-pet',
   images: { neutral: fixture.url(tinted(1)) },
   generated: true,
   createdAt: timestamp,
@@ -72,6 +72,7 @@ fs.writeFileSync(
       llmModel: '',
       chatMode: 'local',
       imageBaseUrl: 'https://directions.mori.example/v1',
+      searchProvider: 'wiki',
       imageModel: '',
       demoMode: false,
       proactiveEnabled: false,
@@ -95,8 +96,17 @@ fs.writeFileSync(
 let expectedMaster = tinted(1),
   expectedDirection = null,
   expectedKind = 'sheet';
+const wikiSearches = [];
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 const calls = [];
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://directions.mori.example/v1/images/edits');
   assert.equal(init.headers.Authorization, 'Bearer isolated-direction-key');
   const prompt = String(init.body.get('prompt'));
@@ -107,12 +117,14 @@ global.fetch = async (url, init) => {
       : 'base';
   assert.equal(kind, expectedKind);
   const style =
-    kind === 'edit' ? 'chibi' : Object.keys(artStyles).find((id) => prompt.includes(artStyles[id].prompt));
+    kind === 'edit' ? 'chibi-pet' : [...require('../shared/creation-styles.json'), ...Object.keys(artStyles)].find((id) => prompt.includes(artStyles[id].prompt));
   assert.ok(style);
   const items = init.body.getAll('image[]').length ? init.body.getAll('image[]') : [init.body.get('image')];
   const images = await Promise.all(items.map(async (image) => Buffer.from(await image.arrayBuffer())));
-  assert.equal(images.length, kind === 'base' ? 1 : 2);
-  assert.deepEqual(images.at(-1), originalBytes);
+  // A chibi base carries the Furina sticker last, as a style guide only.
+  assert.equal(images.length, kind === 'base' ? (style === 'chibi-pet' ? 2 : 1) : 2);
+  assert.deepEqual(images[kind === 'base' ? 0 : images.length - 1], originalBytes);
+  if (kind === 'base' && style === 'chibi-pet') assert.deepEqual(images[1], furina);
   if (kind !== 'base')
     assert.deepEqual(
       images[0],
@@ -182,7 +194,9 @@ app.on('browser-window-created', (_event, created) => {
   const cardDirections = () =>
     js(`[...document.querySelectorAll('[aria-label="候选表现方向"]')].map(e=>e.textContent.trim())`);
   const open = async () => {
-    await click('外观工作台');
+    await click('Mori 首页');
+    await click('角色工作室');
+    await click('外观与动作');
     await click('自动制作多画风桌宠');
     await wait(`!!document.querySelector('[aria-label="角色候选数量"]')`);
   };
@@ -199,7 +213,7 @@ app.on('browser-window-created', (_event, created) => {
   };
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'direction-fixture'},{imageKey:'isolated-direction-key'}))`,
       );
@@ -241,7 +255,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.deepEqual(expectedDirection, []);
       assert.equal(calls.length, 4);
       let explore = (await tasks()).find((task) => task.candidateVariation === 'explore');
-      assert.equal(explore.awaitingSelection, 'chibi');
+      assert.equal(explore.awaitingSelection, 'chibi-pet');
       const originalBases = await bases(explore.id);
       assert.deepEqual(
         originalBases.map((skin) => skin.generation.candidateDirection),
@@ -252,7 +266,7 @@ app.on('browser-window-created', (_event, created) => {
         order.map((id) => directions[id].label),
       );
       await capture('candidate-directions-comparison.png', '.production-base-grid');
-      await click('放大核对软萌 Q 版候选 2');
+      await click('放大核对Q版候选 2');
       const options = await js(
         `[...document.querySelector('[aria-label="查看角色候选"]').options].map(e=>e.textContent)`,
       );
@@ -263,7 +277,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(calls.length, 4);
       expectedMaster = Buffer.from(originalBases[1].images.neutral.split(',')[1], 'base64');
       expectedKind = 'edit';
-      await click('修正软萌 Q 版候选 2');
+      await click('修正Q版候选 2');
       await change('角色候选修正要求', '保留鲜明轮廓，让眼睛更清楚。', 'textarea');
       await click('生成角色候选修正版');
       await countBases(4);
@@ -288,7 +302,7 @@ app.on('browser-window-created', (_event, created) => {
       const loaded = new Promise((resolve) => win.webContents.once('did-finish-load', resolve));
       win.webContents.reload();
       await loaded;
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await open();
       await countBases(4);
       assert.equal(await js(`!!document.querySelector('[aria-label="角色候选变化"]')`), false);
@@ -299,7 +313,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(calls.length, 5);
       expectedKind = 'sheet';
       expectedMaster = Buffer.from(edited.images.neutral.split(',')[1], 'base64');
-      await click('选择软萌 Q 版候选 4 并继续');
+      await click('选择Q版候选 4 并继续');
       await wait(`!!document.querySelector('.production-review')`);
       await idle();
       assert.equal(calls.length, 6);
@@ -328,7 +342,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.deepEqual(await cardDirections(), []);
       expectedKind = 'sheet';
       expectedMaster = Buffer.from(subtleBases[0].images.neutral.split(',')[1], 'base64');
-      await click('选择软萌 Q 版候选 1 并继续');
+      await click('选择Q版候选 1 并继续');
       await wait(`!!document.querySelector('.production-review')`);
       await idle();
       assert.equal(calls.length, 9);
@@ -343,8 +357,8 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(calls.length, 10);
       assert.equal((await tasks())[0].candidateVariation, 'subtle');
       assert.deepEqual(await cardDirections(), []);
-      await click('桌宠画风：软萌 Q 版');
-      await click('桌宠画风：原作画风');
+      await click('桌宠画风：Q版');
+      await click('桌宠画风：原作');
       await change('角色候选数量', '2');
       assert.equal(await js(`document.querySelector('[aria-label="角色候选变化"]').value`), 'explore');
       expectedDirection = ['balanced', 'bold'];

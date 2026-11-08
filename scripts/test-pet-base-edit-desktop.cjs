@@ -40,6 +40,7 @@ fs.writeFileSync(
       llmModel: '',
       chatMode: 'local',
       imageBaseUrl: 'https://base-edit.mori.example/v1',
+      searchProvider: 'wiki',
       imageModel: '',
       demoMode: false,
       proactiveEnabled: false,
@@ -101,7 +102,16 @@ storeModule.createStore = (options) => {
   };
   return store;
 };
+const wikiSearches = [];
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 global.fetch = async (url, init) => {
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
+    // The chibi look first looks for an existing design; this isolated wiki has none.
+    wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   assert.equal(url, 'https://base-edit.mori.example/v1/images/edits');
   assert.equal(init.headers.Authorization, 'Bearer isolated-base-edit-key');
   const form = init.body,
@@ -112,8 +122,10 @@ global.fetch = async (url, init) => {
       ? 'edit'
       : 'base';
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
-  assert.deepEqual(Buffer.from(await images.at(-1).arrayBuffer()), originalBytes);
-  assert.equal(images.length, kind === 'base' ? 1 : 2);
+  // A chibi base carries the Furina sticker last, as a style guide only.
+  assert.deepEqual(Buffer.from(await images[kind === 'base' ? 0 : images.length - 1].arrayBuffer()), originalBytes);
+  assert.equal(images.length, 2);
+  if (kind === 'base') assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina);
   if (kind === 'edit')
     assert.deepEqual(
       Buffer.from(await images[0].arrayBuffer()),
@@ -184,7 +196,9 @@ app.on('browser-window-created', (_event, created) => {
       `(()=>{const e=document.querySelector('[aria-label=${JSON.stringify(label)}]');if(!e)throw new Error('Missing control');Object.getOwnPropertyDescriptor(${kind === 'textarea' ? 'HTMLTextAreaElement' : kind === 'range' ? 'HTMLInputElement' : 'HTMLSelectElement'}.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('${kind === 'select' ? 'change' : 'input'}',{bubbles:true}));})()`,
     );
   const open = async () => {
-    await click('外观工作台');
+    await click('Mori 首页');
+    await click('角色工作室');
+    await click('外观与动作');
     await click('自动制作多画风桌宠');
     await wait(`!!document.querySelector('[aria-label="角色候选数量"]')`);
   };
@@ -192,7 +206,7 @@ app.on('browser-window-created', (_event, created) => {
     const loaded = new Promise((resolve) => win.webContents.once('did-finish-load', resolve));
     win.webContents.reload();
     await loaded;
-    await wait(`!!document.querySelector('.mori-symbol')`);
+    await wait(`!!document.querySelector('.room-rail')`);
     await open();
   };
   const onlyWaveAndTalk = async () => {
@@ -215,7 +229,7 @@ app.on('browser-window-created', (_event, created) => {
     fs.writeFileSync(path.join(dir, name), (await win.webContents.capturePage()).toPNG());
   };
   function assertAwaiting(job, originalStepCount) {
-    assert.equal(job.awaitingSelection, 'chibi');
+    assert.equal(job.awaitingSelection, 'chibi-pet');
     assert.equal(job.steps.length, originalStepCount, 'Candidate edits must not alter original step indices');
     assert.ok(job.steps.filter((step) => step.kind !== 'base').every((step) => step.status === 'queued'));
     assert.equal(job.results.length, 0);
@@ -223,7 +237,7 @@ app.on('browser-window-created', (_event, created) => {
   }
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'base-edit-fixture'},{imageKey:'isolated-base-edit-key'}))`,
       );
@@ -240,9 +254,9 @@ app.on('browser-window-created', (_event, created) => {
       const firstStepCount = firstJob.steps.length;
       const original = (await bases(firstJob.id))[0];
       expectedEditSource = bytesOf(original);
-      await click('放大核对软萌 Q 版候选 1');
+      await click('放大核对Q版候选 1');
       await wait(`!!document.querySelector('[aria-label="角色参考原图放大视图"]')`);
-      await click('修正软萌 Q 版候选 1');
+      await click('修正Q版候选 1');
       assert.equal(await js(`document.querySelector('[aria-label="角色候选修正要求"]').maxLength`), 600);
       assert.equal(await js(`document.querySelector('[aria-label="生成角色候选修正版"]').disabled`), true);
       await change('角色候选修正要求', '   ', 'textarea');
@@ -294,7 +308,7 @@ app.on('browser-window-created', (_event, created) => {
       await change('查看角色候选', corrected.id);
       await wait(`!!document.querySelector('[aria-label="修正前的角色候选放大视图"]')`);
       assert.equal(calls.length, 2);
-      assert.equal((await tasks())[0].awaitingSelection, 'chibi');
+      assert.equal((await tasks())[0].awaitingSelection, 'chibi-pet');
       assert.equal((await state()).skins.length, 0);
       await js(
         `document.querySelector('[aria-label="角色候选放大核对"]').scrollIntoView({block:'center',behavior:'instant'})`,
@@ -314,13 +328,13 @@ app.on('browser-window-created', (_event, created) => {
       );
       assert.equal(calls.length, 2);
       expectedActionMaster = bytesOf(corrected);
-      await click('选择软萌 Q 版候选 2 并继续');
+      await click('选择Q版候选 2 并继续');
       await wait(`!!document.querySelector('.production-review')`);
       await idle();
       assert.equal(calls.length, 4);
       assert.equal((await tasks())[0].status, 'ready');
       assert.equal(
-        await js(`document.querySelectorAll('button[aria-label="修正软萌 Q 版候选 1"]').length`),
+        await js(`document.querySelectorAll('button[aria-label="修正Q版候选 1"]').length`),
         0,
       );
 
@@ -338,30 +352,30 @@ app.on('browser-window-created', (_event, created) => {
       const secondStepCount = secondJob.steps.length,
         originalPair = await bases(secondJob.id);
       expectedEditSource = bytesOf(originalPair[1]);
-      await click('修正软萌 Q 版候选 2');
+      await click('修正Q版候选 2');
       await change('角色候选修正要求', '手指完整，发饰边缘更干净。', 'textarea');
       failNextEditSave = true;
       await click('生成角色候选修正版');
-      await wait(`!!document.querySelector('[aria-label="恢复软萌 Q 版候选修正保存"]')`);
+      await wait(`!!document.querySelector('[aria-label="恢复Q版候选修正保存"]')`);
       await idle();
       assert.equal(failNextEditSave, false, 'The injected failure must reach the generated edit asset');
       assert.equal(calls.length, 7);
       assert.equal((await bases(secondJob.id)).length, 2);
       const unsaved = (await tasks()).find((job) => job.id === secondJob.id);
       assert.equal(unsaved.baseEdits.at(-1).status, 'unsaved');
-      assert.equal(unsaved.awaitingSelection, 'chibi');
+      assert.equal(unsaved.awaitingSelection, 'chibi-pet');
       assert.ok(
         unsaved.steps.filter((step) => step.kind !== 'base').every((step) => step.status === 'queued'),
       );
-      assert.equal(await js(`document.querySelector('[aria-label="修正软萌 Q 版候选 1"]').disabled`), true);
+      assert.equal(await js(`document.querySelector('[aria-label="修正Q版候选 1"]').disabled`), true);
       await js(`window.mori.load().then(r=>window.mori.saveSettings(r.state.settings,{imageKey:''}))`);
       await wait(`document.querySelector('[aria-label="开始自动制作桌宠"]').disabled`);
       credentialsUnavailable = true;
       assert.equal(
-        await js(`document.querySelector('[aria-label="恢复软萌 Q 版候选修正保存"]').disabled`),
+        await js(`document.querySelector('[aria-label="恢复Q版候选修正保存"]').disabled`),
         false,
       );
-      await click('恢复软萌 Q 版候选修正保存');
+      await click('恢复Q版候选修正保存');
       await wait(
         `document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===3`,
       );
@@ -411,7 +425,7 @@ app.on('browser-window-created', (_event, created) => {
       );
       assert.equal(calls.length, 7);
       expectedActionMaster = bytesOf(secondCorrected);
-      await click('选择软萌 Q 版候选 3 并继续');
+      await click('选择Q版候选 3 并继续');
       await wait(`!!document.querySelector('.production-review')`);
       await idle();
       assert.equal(calls.length, 9);

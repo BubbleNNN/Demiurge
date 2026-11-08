@@ -1,0 +1,40 @@
+{
+  "activities": [
+    {
+      "id": "read",
+      "name": "读书",
+      "doing": "在读书",
+      "prop": "book"
+    },
+    {
+      "id": "gaming",
+      "name": "玩掌机",
+      "doing": "在玩掌机",
+      "prop": "handheld game console"
+    },
+    {
+      "id": "snack",
+      "name": "吃点心",
+      "doing": "在吃点心",
+      "prop": "small dessert plate with a fork"
+    },
+    {
+      "id": "music",
+      "name": "听音乐",
+      "doing": "在听音乐",
+      "prop": "headphones"
+    },
+    {
+      "id": "diary",
+      "name": "写日记",
+      "doing": "在写日记",
+      "prop": "small notebook and pen"
+    },
+    {
+      "id": "office",
+      "name": "办公",
+      "doing": "在处理手头的事情",
+      "prop": "small laptop"
+    }
+  ]
+}

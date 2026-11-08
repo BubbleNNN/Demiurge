@@ -123,3 +123,64 @@ test('sticker packing clears near-transparent residue only in derivatives; other
   assert.ok(!anime.warnings.some((w) => w.includes('alpha')));
   assert.equal(original, asUrl(master));
 });
+
+test('poses that drift sideways inside their grid cells are registered by their feet; a jump keeps its height', () => {
+  // 2x2 sheet: each pose sits further left in its cell, like imprecise image-model layouts.
+  const cell = 128,
+    width = cell * 2,
+    height = cell * 2,
+    bitmap = Buffer.alloc(width * height * 4);
+  const rect = (x0, y0, w, h, color) => {
+    for (let y = y0; y < y0 + h; y++)
+      for (let x = x0; x < x0 + w; x++) {
+        const i = (y * width + x) * 4;
+        bitmap[i] = color[0];
+        bitmap[i + 1] = color[1];
+        bitmap[i + 2] = color[2];
+        bitmap[i + 3] = 255;
+      }
+  };
+  const drift = [0, -8, -16, -24],
+    lift = [0, 0, 14, 0];
+  drift.forEach((dx, n) => {
+    const ox = (n % 2) * cell + 49 + dx + 8,
+      oy = Math.floor(n / 2) * cell - lift[n];
+    rect(ox, oy + 20, 30, 38, [210, 115, 160]);
+    rect(ox + 4, oy + 58, 22, 39, [180, 120, 220]);
+    rect(ox + 4, oy + 97, 8, 13, [75, 50, 120]);
+    rect(ox + 18, oy + 97, 8, 13, [75, 50, 120]);
+    // Each pose moves one arm so the frames are distinct.
+    rect(ox - 8, oy + 62 - n * 6, 7, 26, [215, 150, 185]);
+  });
+  const packed = packFrames(
+    f.url(f.image()),
+    { wave: f.url(f.encode(bitmap, width, height)) },
+    'original',
+    f.codec,
+  );
+  const atlas = f.decode(Buffer.from(packed.image.split(',')[1], 'base64'));
+  const feet = (index) => {
+    const [x0, y0, w, h] = packed.sprite.frames[index].rect;
+    let sum = 0,
+      count = 0,
+      bottom = 0;
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (atlas.bitmap[((y0 + y) * atlas.width + x0 + x) * 4 + 3] > 128) bottom = Math.max(bottom, y);
+    for (let y = bottom - 6; y <= bottom; y++)
+      for (let x = 0; x < w; x++)
+        if (atlas.bitmap[((y0 + y) * atlas.width + x0 + x) * 4 + 3] > 128) {
+          sum += x;
+          count++;
+        }
+    return { x: (sum / count) * (packed.sprite.width / w), y: bottom * (packed.sprite.height / h) };
+  };
+  const wave = packed.sprite.clips.wave.frames.slice(1, -1).map(feet);
+  const xs = wave.map((point) => point.x);
+  assert.ok(Math.max(...xs) - Math.min(...xs) < 3, `feet stay in place horizontally: ${xs.map(Math.round)}`);
+  // The clip reuses the master as its rest frame, so sheet poses 1-3 follow; pose 2 is the lifted one.
+  assert.ok(
+    wave[0].y - wave[1].y > 20,
+    `the lifted pose keeps its jump height: ${wave.map((p) => Math.round(p.y))}`,
+  );
+});

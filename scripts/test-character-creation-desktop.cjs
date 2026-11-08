@@ -62,7 +62,10 @@ async function finish(error) {
 app.on('browser-window-created', (_event, window) => {
   if (win) return;
   win = window;
-  const js = (code) => win.webContents.executeJavaScript(code, true);
+  const js = (code) =>
+    win.webContents.executeJavaScript(code, true).catch((error) => {
+      throw new Error(code.slice(0, 300) + ': ' + error.message);
+    });
   const wait = async (code) => {
     for (let n = 0; n < 200; n++) {
       if (await js(code)) return;
@@ -81,7 +84,7 @@ app.on('browser-window-created', (_event, window) => {
   const state = () => js('window.mori.load().then(r=>r.state)');
   win.webContents.once('did-finish-load', async () => {
     try {
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       const initial = await state();
       assert.equal(await js('window.mori.load().then(r=>r.keys.llmKey)'), false);
       await click('添加角色');
@@ -111,7 +114,10 @@ app.on('browser-window-created', (_event, window) => {
       assert.equal(loaded.skins.filter((s) => s.characterId === simpleId).length, 0);
       assert.equal(requests, 0);
       await click('稍后补充素材，保留角色档案');
-      await click('角色包与本地互动');
+      await click('Mori 首页');
+      await click('角色工作室');
+      await click('外观与动作');
+      await click('使用预制角色包');
       await wait(`!!document.querySelector('.pack-current')`);
       assert.equal(
         await js(`document.querySelectorAll('.pack-outfits button').length`),
@@ -166,7 +172,7 @@ app.on('browser-window-created', (_event, window) => {
         initial.characters,
       );
       assert.deepEqual(loaded.memories, initial.memories);
-      await click('陪伴空间');
+      await click('Mori 首页');
       await fill('聊天消息', '你好');
       await click('发送消息');
       await wait(
@@ -177,7 +183,7 @@ app.on('browser-window-created', (_event, window) => {
         win.webContents.once('did-finish-load', resolve);
         win.webContents.reload();
       });
-      await wait(`!!document.querySelector('.mori-symbol')`);
+      await wait(`!!document.querySelector('.room-rail')`);
       loaded = await state();
       assert.equal(loaded.activeCharacterId, charId);
       assert.equal(loaded.activeSkinId, animation.id);

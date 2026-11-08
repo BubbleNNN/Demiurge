@@ -1,14 +1,15 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
-  ArrowUpRight,
-  ChevronDown,
+  BookOpen,
   Copy,
   Eye,
   Hand,
+  Heart,
+  History,
   Monitor,
   Moon,
+  MoreHorizontal,
   Pointer,
-  Settings2,
   SlidersHorizontal,
   Sparkles,
   Sun,
@@ -17,13 +18,40 @@ import {
 } from 'lucide-react';
 import { supportsAction } from '../../artwork';
 import { hitCharacter } from '../../animation/framing';
-import { engineName } from '../../theme';
 import type { Character, ChatMessage, CompanionEvent, Skin } from '../../types';
+import { momentOffers, type MomentId } from '../../life';
+
+// Reveal a new line a few characters at a time, like someone speaking; instant under reduced motion.
+function useTypewriter(text: string, enabled: boolean) {
+  const [shown, setShown] = useState(text.length);
+  useEffect(() => {
+    if (!enabled || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setShown(text.length);
+      return;
+    }
+    setShown(0);
+    const step = Math.max(1, Math.ceil(text.length / 90));
+    const timer = setInterval(() => {
+      setShown((count) => {
+        if (count + step >= text.length) clearInterval(timer);
+        return Math.min(text.length, count + step);
+      });
+    }, 28);
+    return () => clearInterval(timer);
+  }, [text, enabled]);
+  return text.slice(0, shown);
+}
 
 interface Props {
   character: Pick<Character, 'name' | 'work'>;
   skin?: Skin;
+  skins: Skin[];
   avatar: ReactNode;
+  thumbnail: (skin: Skin) => ReactNode;
+  composer: ReactNode;
+  setup?: ReactNode;
+  drawer?: ReactNode;
+  quickReplies: { label: string; text: string }[];
   interactionBusy: boolean;
   talking: boolean;
   resting: boolean;
@@ -35,25 +63,39 @@ interface Props {
   sceneSettingsOpen: boolean;
   tracking: boolean;
   motionEnabled: boolean;
-  skinReview: string;
   presence: string;
   touchCharacter: (kind: 'headpat' | 'poke') => void;
   interact: (event: CompanionEvent) => void;
   copyMessage: (text: string) => void;
   speak: (text: string) => void;
+  sendQuick: (text: string) => void;
+  chooseSkin: (skin: Skin) => void;
   onHideBubble: () => void;
   onOpenConversation: () => void;
-  onOpenProfile: () => void;
+  onOpenStudio: () => void;
   onOpenAppearance: () => void;
   onOpenDesktop: () => void;
   onToggleSettings: () => void;
   onToggleTracking: () => void;
+  invitation: string;
+  onAcceptInvitation: () => void;
+  onDeclineInvitation: () => void;
+  onOpenMoment: (id: MomentId) => void;
+  momentPanel?: ReactNode;
 }
+
+const WARDROBE_LIMIT = 4;
 
 export function CompanionScene({
   character,
   skin,
+  skins,
   avatar,
+  thumbnail,
+  composer,
+  setup,
+  drawer,
+  quickReplies,
   interactionBusy,
   talking,
   resting,
@@ -65,33 +107,66 @@ export function CompanionScene({
   sceneSettingsOpen,
   tracking,
   motionEnabled,
-  skinReview,
   presence,
   touchCharacter,
   interact,
   copyMessage,
   speak,
+  sendQuick,
+  chooseSkin,
   onHideBubble,
   onOpenConversation,
-  onOpenProfile,
+  onOpenStudio,
   onOpenAppearance,
   onOpenDesktop,
   onToggleSettings,
   onToggleTracking,
+  invitation,
+  onAcceptInvitation,
+  onDeclineInvitation,
+  onOpenMoment,
+  momentPanel,
 }: Props) {
+  const [wardrobeOpen, setWardrobeOpen] = useState(false);
+  const [momentMenu, setMomentMenu] = useState(false);
+  const showBubble =
+    Boolean(invitation) || (!bubbleHidden && Boolean(interactionLine || lastReply)) || interactionBusy;
+  const spoken = invitation || interactionLine || lastReply?.content || '';
+  const typed = useTypewriter(spoken, motionEnabled && !interactionBusy);
+  // Keep the current outfit visible even when it falls outside the first few.
+  const shelf = skins.slice(0, WARDROBE_LIMIT);
+  if (skin && !shelf.some((item) => item.id === skin.id)) shelf[shelf.length - 1] = skin;
   return (
-    <section className={`character-scene ${skin ? '' : 'no-appearance'}`}>
-      <div className="scene-floor" aria-hidden="true" />
-      <div className="scene-intro">
-        <span className="character-work">{character.work || '你的原创角色'}</span>
-        <h1>{character.name}</h1>
-        <button className="scene-profile" onClick={onOpenProfile}>
-          角色档案
-          <ArrowUpRight size={14} />
-        </button>
-      </div>
+    <section
+      className={`room-scene ${skin ? '' : 'no-appearance'} ${drawer ? 'drawer-open' : ''} ${momentPanel ? 'moment-open' : ''}`}
+    >
+      <header className="room-header">
+        <div className="room-identity">
+          <h1>{character.name}</h1>
+          <span className="room-presence">
+            <i aria-hidden="true" />
+            {character.work || '原创角色'}
+            <span aria-hidden="true">·</span>
+            {resting ? '正在休息' : presence}
+          </span>
+        </div>
+        <div className="room-actions">
+          <button className="room-pill" onClick={onOpenStudio}>
+            <BookOpen size={17} />
+            角色工作室
+          </button>
+          <button className="room-pill dark" disabled={!skin} onClick={onOpenDesktop}>
+            <Monitor size={17} />
+            放到桌面
+          </button>
+        </div>
+      </header>
+
+      {setup && <div className="room-setup">{setup}</div>}
+
+      <div className="room-floor" aria-hidden="true" />
       <div
-        className="scene-artwork"
+        className="scene-artwork room-figure"
         onPointerUp={(event) => {
           if (!skin || interactionBusy || talking || resting || event.button !== 0) return;
           const hit = hitCharacter(event.currentTarget, event.clientX, event.clientY);
@@ -139,111 +214,175 @@ export function CompanionScene({
           </div>
         )}
       </div>
-      {((!bubbleHidden && (interactionLine || lastReply)) || interactionBusy) && (
-        <section className="scene-reply-bubble" aria-label="角色回复气泡" role="status">
-          <div className="scene-bubble-heading">
-            <strong>{character.name}</strong>
-            <small>
-              {interactionBusy
-                ? '正在想怎么回应你'
-                : interactionLine
-                  ? '日常互动'
-                  : lastReply?.origin === 'script'
-                    ? '本地台词'
-                    : '角色回复'}
-            </small>
-            {!interactionBusy && (
-              <button aria-label="收起回复气泡" onClick={onHideBubble}>
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          <p>{interactionBusy ? '让我想一想……' : interactionLine || lastReply?.content}</p>
-          {!interactionBusy && !interactionLine && lastReply && (
-            <div className="scene-bubble-tools">
-              <button className="text-button" onClick={() => copyMessage(lastReply.content)}>
-                <Copy size={12} />
-                复制
-              </button>
-              <button
-                className="text-button"
-                disabled={audioBusy || lastReply.origin === 'script'}
-                onClick={() => speak(lastReply.content)}
-              >
-                <Volume2 size={12} />
-                朗读
-              </button>
-              <button className="text-button" onClick={onOpenConversation}>
-                展开对话
-                <ChevronDown size={12} />
-              </button>
+
+      <div className="room-dialogue">
+        {showBubble && (
+          <section className="room-bubble" aria-label="角色回复气泡" role="status">
+            <span className="room-bubble-tail" aria-hidden="true" />
+            <div className="room-bubble-heading">
+              <strong>{character.name}</strong>
+              {!interactionBusy && (invitation || interactionLine || lastReply?.origin === 'script') && (
+                <small>{invitation ? '想邀请你' : interactionLine ? '日常互动' : '本地台词'}</small>
+              )}
+              {!interactionBusy && !invitation && (
+                <button aria-label="收起回复气泡" onClick={onHideBubble}>
+                  <X size={14} />
+                </button>
+              )}
             </div>
+            {interactionBusy ? (
+              <p className="room-thinking" aria-label="正在想怎么回应你">
+                <i />
+                <i />
+                <i />
+              </p>
+            ) : (
+              <p>
+                {/* Screen readers get the whole line at once; the typed reveal is decorative. */}
+                <span className="room-line">{spoken}</span>
+                <span aria-hidden="true">{typed}</span>
+              </p>
+            )}
+            {invitation && !interactionBusy && (
+              <div className="room-invite">
+                <button className="primary" onClick={onAcceptInvitation}>
+                  好呀
+                </button>
+                <button onClick={onDeclineInvitation}>等会儿</button>
+              </div>
+            )}
+            {!interactionBusy && !invitation && !interactionLine && lastReply && (
+              <div className="room-bubble-tools">
+                <button aria-label="复制回复" title="复制" onClick={() => copyMessage(lastReply.content)}>
+                  <Copy size={14} />
+                </button>
+                <button
+                  aria-label="朗读回复"
+                  title="朗读"
+                  disabled={audioBusy || lastReply.origin === 'script'}
+                  onClick={() => speak(lastReply.content)}
+                >
+                  <Volume2 size={14} />
+                </button>
+                <button aria-label="查看对话记录" title="对话记录" onClick={onOpenConversation}>
+                  <History size={14} />
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+        {!interactionBusy && !invitation && (
+          <div className="room-quick" role="group" aria-label="快捷回复">
+            {quickReplies.map((reply) => (
+              <button key={reply.label} onClick={() => sendQuick(reply.text)}>
+                {reply.label}
+              </button>
+            ))}
+            <button
+              className="room-quick-moments"
+              aria-expanded={momentMenu}
+              onClick={() => setMomentMenu(!momentMenu)}
+            >
+              <Heart size={14} />
+              一起做点什么
+            </button>
+          </div>
+        )}
+        {momentMenu && !interactionBusy && !invitation && (
+          <div className="room-moment-menu" role="group" aria-label="一起做点什么">
+            {(Object.keys(momentOffers) as MomentId[]).map((id) => (
+              <button
+                key={id}
+                onClick={() => {
+                  setMomentMenu(false);
+                  onOpenMoment(id);
+                }}
+              >
+                {momentOffers[id].title}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {momentPanel && <div className="room-moment">{momentPanel}</div>}
+
+      {skins.length > 0 && (
+        <div className={`room-wardrobe ${wardrobeOpen ? 'open' : ''}`} role="group" aria-label="换装">
+          <span>换装</span>
+          {(wardrobeOpen ? skins : shelf).map((item) => (
+            <button
+              key={item.id}
+              className={skin?.id === item.id ? 'active' : ''}
+              aria-pressed={skin?.id === item.id}
+              aria-label={item.name}
+              title={item.name}
+              onClick={() => chooseSkin(item)}
+            >
+              {thumbnail(item)}
+            </button>
+          ))}
+          {skins.length > WARDROBE_LIMIT && (
+            <button
+              className="room-wardrobe-more"
+              aria-label={wardrobeOpen ? '收起外观' : `全部 ${skins.length} 套外观`}
+              aria-expanded={wardrobeOpen}
+              onClick={() => setWardrobeOpen(!wardrobeOpen)}
+            >
+              {wardrobeOpen ? <X size={16} /> : <MoreHorizontal size={18} />}
+            </button>
           )}
-        </section>
-      )}
-      {sceneSettingsOpen && (
-        <div className="scene-engine">
-          <span />
-          <span>{engineName(skin)}</span>
-          {skin && skinReview && <small>{skinReview}</small>}
         </div>
       )}
-      <div className="scene-controls">
-        <button
-          aria-label={sceneSettingsOpen ? '收起人物设置' : '展开人物设置'}
-          aria-expanded={sceneSettingsOpen}
-          onClick={onToggleSettings}
-          title="人物设置"
-        >
-          <Settings2 size={16} />
-        </button>
+
+      <div className="room-tools">
         {sceneSettingsOpen && (
-          <>
+          <div className="room-tools-menu">
             <button
-              className={tracking ? 'active' : ''}
-              onClick={onToggleTracking}
-              disabled={skin?.kind !== 'live2d' && skin?.kind !== 'vrm'}
-              aria-label="切换视线跟随"
-              title="模型视线跟随"
-            >
-              <Eye size={16} />
-            </button>
-            <button
-              disabled={!motionEnabled || !supportsAction(skin, 'wave')}
+              disabled={!motionEnabled || !supportsAction(skin, 'wave') || interactionBusy}
               onClick={() => interact('greet')}
               aria-label="让角色打招呼"
               title={supportsAction(skin, 'wave') ? '打招呼' : '当前外观没有招呼动作'}
             >
               <Sparkles size={16} />
+              打招呼
             </button>
             <button
               disabled={interactionBusy || talking}
               aria-label={resting ? '唤醒角色' : '让角色休息'}
-              title={resting ? '唤醒' : '休息'}
               onClick={() => interact(resting ? 'wake' : 'rest')}
             >
               {resting ? <Sun size={16} /> : <Moon size={16} />}
+              {resting ? '唤醒' : '休息'}
             </button>
-            <button onClick={onOpenAppearance} aria-label="打开外观调整" title="调整外观">
+            <button
+              className={tracking ? 'active' : ''}
+              onClick={onToggleTracking}
+              disabled={skin?.kind !== 'live2d' && skin?.kind !== 'vrm'}
+              aria-label="切换视线跟随"
+              aria-pressed={tracking}
+            >
+              <Eye size={16} />
+              视线跟随
+            </button>
+            <button onClick={onOpenAppearance} aria-label="打开外观调整">
               <SlidersHorizontal size={16} />
+              动作与表情
             </button>
-          </>
+          </div>
         )}
-      </div>
-      <div className="scene-bottom">
-        <div className="scene-presence">
-          <i />
-          <span>
-            {resting ? '正在休息' : presence}
-            <small>{resting ? '轻声陪伴，醒来再继续' : '试着点一下头顶或身体'}</small>
-          </span>
-        </div>
-        <button className="button primary desktop-shortcut" onClick={onOpenDesktop}>
-          <Monitor size={16} />
-          来到桌面
-          <ArrowUpRight size={14} />
+        <button
+          className="room-tools-toggle"
+          aria-label={sceneSettingsOpen ? '收起人物设置' : '展开人物设置'}
+          aria-expanded={sceneSettingsOpen}
+          title="人物设置"
+          onClick={onToggleSettings}
+        >
+          {sceneSettingsOpen ? <X size={18} /> : <MoreHorizontal size={18} />}
         </button>
       </div>
+
+      {drawer}
+      <div className="room-composer">{composer}</div>
     </section>
   );
 }

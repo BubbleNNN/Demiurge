@@ -40,7 +40,10 @@ function finish(error) {
 app.on('browser-window-created', (_, win) => {
   if (started) return;
   started = true;
-  const js = (code) => win.webContents.executeJavaScript(code, true);
+  const js = (code) =>
+    win.webContents.executeJavaScript(code, true).catch((error) => {
+      throw new Error(code.slice(0, 300) + ': ' + error.message);
+    });
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const wait = async (code, label = code) => {
     for (let n = 0; n < 180; n++) {
@@ -67,6 +70,8 @@ app.on('browser-window-created', (_, win) => {
     try {
       await wait('window.mori.load().then(({state})=>state?.skins.length===7)');
       await wait(`!!document.querySelector('.workbench')`);
+      // The motion workbench is collapsed by default; open it to inspect playback.
+      await js(`document.querySelector('.motion-workbench').open=true`);
       await js(`document.querySelector('.workbench').scrollIntoView({block:'center',behavior:'instant'})`);
       await wait(`${canvas}?.dataset.motion==='active'`);
       assert.equal(await js(`document.querySelectorAll('.wardrobe-card').length`), 7);
@@ -179,16 +184,16 @@ app.on('browser-window-created', (_, win) => {
       await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [] });
       win.webContents.debugger.detach();
       await click('平静');
-      await js(`document.querySelector('[aria-label="返回我的空间"]').click()`);
+      await js(`document.querySelector('.room-back').click()`);
       await wait(`!!document.querySelector('[data-feature="home"]')`);
       await js(
         `document.querySelector('.main-content')?.scrollTo({top:0,behavior:'instant'});window.scrollTo(0,0)`,
       );
       await delay(650);
       await js(`document.querySelector('.head-zone').click()`);
-      await wait(`document.querySelector('.character-scene canvas')?.dataset.clip==='nod'`);
+      await wait(`document.querySelector('.room-figure canvas')?.dataset.clip==='nod'`);
       await delay(1100);
-      await click('来到桌面');
+      await click('放到桌面');
       await delay(500);
       const pet = BrowserWindow.getAllWindows().find((window) => window !== win);
       assert.ok(pet, 'Desktop pet window missing');

@@ -1,0 +1,1377 @@
+/*
+ * Room: the character owns the palette. Every color below derives from the
+ * character theme (--accent, --companion, --paper, --ink set by themeVars).
+ */
+.room-app {
+  --surface: #ffffff;
+  --room-bg: color-mix(in srgb, var(--companion) 16%, var(--paper));
+  --accent-ink: color-mix(in srgb, var(--accent) 78%, var(--ink));
+  --accent-soft: color-mix(in srgb, var(--accent) 11%, white);
+  --tint: color-mix(in srgb, var(--companion) 11%, white);
+  --line: color-mix(in srgb, var(--companion) 24%, white);
+  --muted: color-mix(in srgb, var(--ink) 78%, white);
+  --shadow-soft: 0 8px 28px color-mix(in srgb, var(--ink) 9%, transparent);
+  --shadow-lift: 0 16px 44px color-mix(in srgb, var(--ink) 14%, transparent);
+  --radius-card: 24px;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  background: var(--room-bg);
+  color: var(--ink);
+  font-size: 15px;
+}
+.room-app button:focus-visible,
+.room-app a:focus-visible,
+.room-app summary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+
+/* ── Rail ─────────────────────────────────────────── */
+.room-rail {
+  flex: 0 0 76px;
+  margin: 20px 0 20px 20px;
+  padding: 18px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  z-index: 20;
+}
+.rail-brand {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-ink);
+  color: #fff;
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.rail-characters {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+.rail-avatar {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid transparent;
+  background: var(--tint);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.rail-avatar:hover {
+  border-color: var(--line);
+}
+.rail-avatar.active {
+  border-color: var(--accent);
+}
+.rail-avatar :is(img, canvas),
+.room-wardrobe button :is(img, canvas),
+.studio-avatar :is(img, canvas) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 10%;
+  display: block;
+}
+.rail-add,
+.rail-import,
+.rail-settings {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+}
+.rail-add {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  background: var(--tint);
+}
+.rail-import {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+}
+.rail-settings {
+  width: 44px;
+  height: 44px;
+}
+.rail-add:hover,
+.rail-import:hover,
+.rail-settings:hover {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.rail-settings.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* ── Main column ──────────────────────────────────── */
+.room-app .room-main {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  padding: 0;
+  overflow-y: auto;
+  position: relative;
+}
+.room-app .room-main.home-content {
+  overflow: hidden;
+}
+
+/* ── Room scene (home) ────────────────────────────── */
+.room-scene {
+  --figure-x: 40%;
+  position: relative;
+  height: 100%;
+  min-height: 620px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.room-header {
+  position: absolute;
+  top: 28px;
+  left: 36px;
+  right: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  z-index: 10;
+  pointer-events: none;
+}
+.room-header > * {
+  pointer-events: auto;
+}
+.room-identity h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--ink);
+}
+.room-presence {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.room-presence > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.room-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.room-pill {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-soft);
+  white-space: nowrap;
+}
+.room-pill:hover:not(:disabled) {
+  background: var(--tint);
+}
+.room-pill.dark {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: none;
+}
+.room-pill.dark:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 88%, black);
+}
+
+.room-floor {
+  position: absolute;
+  left: var(--figure-x);
+  bottom: 100px;
+  width: min(460px, 40%);
+  height: 64px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--ink) 20%, transparent), transparent 70%);
+  z-index: 1;
+}
+.room-scene .room-figure {
+  position: absolute;
+  top: 92px;
+  bottom: 112px;
+  left: var(--figure-x);
+  right: auto;
+  width: min(560px, 46%);
+  transform: translateX(-50%);
+  z-index: 3;
+}
+.room-scene .room-figure .illustration-motion > img,
+.room-scene .room-figure .illustration-motion > .skin-portrait {
+  filter: drop-shadow(0 18px 22px color-mix(in srgb, var(--ink) 12%, transparent));
+}
+.room-scene.no-appearance .room-floor,
+.room-scene.no-appearance .room-figure {
+  opacity: 0.35;
+}
+
+/* Speech bubble + quick replies, anchored beside the character's head. */
+.room-dialogue {
+  position: absolute;
+  top: 132px;
+  left: calc(var(--figure-x) + 150px);
+  width: min(400px, calc(100% - var(--figure-x) - 270px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 6;
+}
+.room-bubble {
+  position: relative;
+  padding: 16px 20px 14px;
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+  animation: bubble-in 0.28s ease-out both;
+}
+.room-bubble-tail {
+  position: absolute;
+  left: -7px;
+  top: 30px;
+  width: 18px;
+  height: 18px;
+  background: var(--surface);
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+.room-bubble-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.room-bubble-heading strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+.room-bubble-heading small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.room-bubble-heading button {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.room-bubble-heading button:hover {
+  background: var(--tint);
+}
+.room-bubble > p {
+  position: relative;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+}
+.room-bubble-tools {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  margin: 8px -6px 0;
+}
+.room-bubble-tools button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.room-bubble-tools button:hover:not(:disabled) {
+  background: var(--tint);
+  color: var(--accent-ink);
+}
+.room-thinking {
+  display: flex;
+  gap: 6px;
+  height: 30px;
+  align-items: center;
+}
+.room-thinking i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 55%, white);
+  animation: thinking-dot 1.1s ease-in-out infinite;
+}
+.room-thinking i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.room-thinking i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.room-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.room-quick button {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, white 72%, transparent);
+  color: var(--ink);
+  font-size: 14px;
+}
+.room-quick button:hover {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--accent) 35%, white);
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+@keyframes thinking-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* Outfit switcher on the right edge. */
+.room-wardrobe {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 78%, transparent);
+  box-shadow: var(--shadow-soft);
+  z-index: 7;
+  max-height: calc(100% - 280px);
+}
+.room-wardrobe.open {
+  border-radius: 32px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.room-wardrobe > span {
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 2px;
+}
+.room-wardrobe button {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid transparent;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.room-wardrobe button:hover {
+  border-color: var(--line);
+}
+.room-wardrobe button.active {
+  border-color: var(--accent);
+}
+.room-wardrobe .room-wardrobe-more {
+  background: var(--tint);
+}
+
+/* Character tools: greet, rest, gaze — tucked under the name. */
+.room-tools {
+  position: absolute;
+  top: 108px;
+  left: 36px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 10px;
+}
+.room-tools-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, white 72%, transparent);
+  color: var(--muted);
+}
+.room-tools-toggle:hover,
+.room-tools-toggle[aria-expanded='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+.room-tools-menu {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  min-width: 168px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+.room-tools-menu button {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: left;
+}
+.room-tools-menu button:hover:not(:disabled) {
+  background: var(--tint);
+}
+.room-tools-menu button.active {
+  color: var(--accent-ink);
+}
+
+/* Setup card for characters that are not ready yet. */
+.room-setup {
+  position: absolute;
+  z-index: 8;
+  top: 160px;
+  left: 36px;
+  width: min(360px, 34%);
+}
+.room-setup:empty {
+  display: none;
+}
+.room-scene.no-appearance .room-setup {
+  top: 50%;
+  left: 50%;
+  width: min(560px, calc(100% - 72px));
+  transform: translate(-50%, -55%);
+}
+.room-setup .character-readiness {
+  margin: 0;
+  padding: 20px 22px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+
+.room-setup .readiness-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.room-setup .readiness-steps button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  text-align: left;
+}
+.room-setup .readiness-steps button span {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.room-setup .readiness-steps button small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.room-setup .readiness-steps button > svg:last-child {
+  margin-left: auto;
+}
+/* Characters without artwork show their initial instead of a generic icon. */
+.avatar-initial {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+/* Composer pill. */
+.room-composer {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  width: min(700px, calc(100% - 64px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 12;
+}
+.room-composer .chat-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+}
+.room-composer .chat-feedback:empty {
+  display: none;
+}
+.room-composer .chat-feedback > * {
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  font-size: 13px;
+}
+.room-composer .topic-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+}
+.room-app .room-compose {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 10px;
+  border: 0;
+  border-radius: 30px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+.room-app .room-compose:focus-within {
+  box-shadow:
+    var(--shadow-lift),
+    0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.room-app .room-compose textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  max-height: 132px;
+  field-sizing: content;
+  padding: 10px 6px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--ink);
+}
+.room-app .room-compose textarea::placeholder {
+  color: color-mix(in srgb, var(--ink) 55%, white);
+}
+.room-app .room-compose .voice-button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+.room-app .room-compose .voice-button:hover:not(:disabled),
+.room-app .room-compose .voice-button[aria-expanded='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.room-app .room-compose .send-button {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+.room-app .room-compose .chat-preferences {
+  position: relative;
+  margin: 0;
+}
+.room-app .room-compose .chat-preferences > summary {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.room-app .room-compose .chat-preferences > summary:hover {
+  background: var(--tint);
+}
+.room-app .room-compose .chat-options-label {
+  display: none;
+}
+.room-app .room-compose .chat-preferences > summary > .chat-mode-label {
+  margin: 0;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.room-app .room-compose .chat-mode-picker {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  min-width: 240px;
+  padding: 8px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+.room-app .room-compose .chat-mode-picker button {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.room-app .room-compose .chat-mode-picker {
+  flex-wrap: wrap;
+}
+.room-app .room-compose .chat-mode-picker > .connection-text {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  padding: 8px 6px 2px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.room-app .room-compose .connection-text > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c98a2e;
+}
+.room-app .room-compose .connection-text > i.online {
+  background: #3f9a63;
+}
+.room-app .room-compose .chat-preferences.offline > summary > .chat-mode-label::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #c98a2e;
+  vertical-align: middle;
+}
+
+/* History drawer. */
+.history-drawer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  bottom: 112px;
+  width: min(420px, calc(100% - 40px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+  z-index: 11;
+  overflow: hidden;
+  animation: drawer-in 0.22s ease-out both;
+}
+.history-drawer > header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 12px 12px 22px;
+  border-bottom: 1px solid var(--line);
+}
+.history-drawer > header > div {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.history-drawer > header strong {
+  font-size: 16px;
+}
+.history-drawer > header small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.history-drawer .icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.history-drawer .icon-button:hover {
+  background: var(--tint);
+  color: var(--ink);
+}
+.history-drawer .chat-history {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  padding: 18px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.history-drawer .chat-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 86%;
+}
+.history-drawer .chat-message.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.history-drawer .message-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.history-drawer .chat-bubble {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 4px 18px 18px 18px;
+  background: var(--tint);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  box-shadow: none;
+}
+.history-drawer .chat-message.user .chat-bubble {
+  border-radius: 18px 4px 18px 18px;
+  background: var(--accent-ink);
+  color: #fff;
+}
+.history-drawer .reply-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.history-drawer .reply-tools small {
+  margin-right: 4px;
+}
+.history-drawer .reply-tools button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.history-drawer .topic-divider {
+  align-self: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.history-drawer .conversation-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.room-scene.drawer-open .room-dialogue,
+.room-scene.drawer-open .room-wardrobe {
+  display: none;
+}
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* Narrower windows: move the character left and let the bubble take the room. */
+@media (max-width: 1180px) {
+  .room-scene {
+    --figure-x: 33%;
+  }
+  .room-dialogue {
+    left: calc(var(--figure-x) + 130px);
+    width: calc(100% - var(--figure-x) - 130px - 110px);
+  }
+}
+@media (max-width: 860px) {
+  .room-actions .room-pill {
+    padding: 0 14px;
+  }
+  .room-wardrobe {
+    display: none;
+  }
+  .room-dialogue {
+    width: calc(100% - var(--figure-x) - 130px - 28px);
+  }
+}
+
+/* ── Page frames (studio and settings) ───────────── */
+.page-frame {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 40px 72px;
+}
+.page-frame-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px 24px;
+  margin-bottom: 26px;
+}
+.page-frame-header h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.page-frame-kicker {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.room-back {
+  flex-basis: 100%;
+  width: max-content;
+  max-width: max-content;
+  height: 40px;
+  padding: 0 16px 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: color-mix(in srgb, white 72%, transparent);
+  color: var(--ink);
+  font-size: 14px;
+}
+.room-back:hover {
+  background: var(--surface);
+}
+.studio-identity {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.studio-identity small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.studio-avatar {
+  width: 68px;
+  height: 68px;
+  flex: 0 0 68px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.studio-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 72%, transparent);
+}
+.studio-tabs button {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.studio-tabs button:hover {
+  color: var(--ink);
+}
+.studio-tabs button.active {
+  background: var(--ink);
+  color: #fff;
+}
+.page-frame-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.page-frame-body > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Studio content: soften the existing cards into the room language. */
+.room-app .page-frame-body :is(
+    .production-entry,
+    .creation-tools,
+    .saved-appearances,
+    .motion-workbench,
+    .reference-panel,
+    .profile-copy,
+    .persona-summary,
+    .memory-compose,
+    .settings-card,
+    .notice,
+    .empty-note,
+    .memory-empty
+  ) {
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+.room-app .page-frame-body .production-entry {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: var(--shadow-lift);
+}
+.room-app .page-frame-body .production-entry :is(strong, small, p) {
+  color: #fff;
+}
+.room-app .page-frame-body .production-entry :is(small, p) {
+  opacity: 0.78;
+}
+.room-app .page-frame-body .production-icon {
+  background: color-mix(in srgb, white 14%, transparent);
+  color: #fff;
+}
+.room-app .page-frame-body .production-entry-action {
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 999px;
+}
+.room-app .wardrobe-card,
+.room-app .memory-card,
+.room-app .source-row,
+.room-app blockquote,
+.room-app .engine-grid > button {
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+.room-app .wardrobe-card.selected {
+  box-shadow:
+    var(--shadow-soft),
+    0 0 0 3px var(--accent);
+}
+.room-app .profile-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.room-app .tags span {
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 13px;
+  padding: 4px 12px;
+}
+.room-app .settings-intro {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+/* Buttons across studio, settings and dialogs. */
+.room-app .button {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.room-app .button.primary {
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+  color: #fff;
+}
+.room-app .button.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-ink) 88%, black);
+}
+.room-app .button.secondary {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.room-app .button.secondary:hover:not(:disabled) {
+  background: var(--tint);
+}
+.room-app .text-button {
+  color: var(--accent-ink);
+}
+
+/* Desktop pet card inside settings. */
+.room-app .desktop-workspace {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 20px 24px;
+}
+.room-app .desktop-workspace .desktop-preview {
+  height: 220px;
+  border-radius: 20px;
+  background: var(--tint);
+  position: relative;
+  overflow: hidden;
+}
+.room-app .desktop-size-controls h2 {
+  font-size: 18px;
+  margin: 0 0 4px;
+}
+.room-app .desktop-size-controls > p {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 14px;
+}
+.room-app .desktop-size-controls .toolbar {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Dialogs follow the same palette. */
+.room-app .modal {
+  border: 0;
+  border-radius: 28px;
+  box-shadow: var(--shadow-lift);
+}
+.room-app .toast {
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: var(--shadow-lift);
+}
+
+/* One sans family for headings; quotes keep the serif voice. */
+.room-app :is(h1, h2, h3, h4) {
+  font-family: inherit;
+}
+/* Frame-resolution diagnostics belong in the studio, not on the stage. */
+.room-scene .sprite-resolution-note {
+  display: none;
+}
+.room-app .page-frame-body :is(.profile-copy, .saved-appearances) {
+  padding: 24px 28px;
+}
+.room-app .page-frame-body .profile-copy p {
+  font-size: 14px;
+  line-height: 1.85;
+}
+.room-app .desktop-size-controls {
+  padding: 0;
+}
+.room-app .desktop-size-controls h2 {
+  margin: 0 0 4px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.room-app .desktop-workspace .desktop-preview {
+  height: 240px;
+  padding-bottom: 18px;
+}
+.room-app .desktop-workspace .desktop-preview::before {
+  width: 200px;
+  height: 200px;
+}
+.room-app .desktop-workspace .desktop-preview-pet {
+  height: 170px;
+}
+.room-app .desktop-workspace .desktop-preview.size-small .desktop-preview-pet {
+  height: 128px;
+}
+.room-app .desktop-workspace .desktop-preview.size-large .desktop-preview-pet {
+  height: 210px;
+}
+
+@media (max-width: 860px) {
+  .page-frame {
+    padding: 22px 22px 56px;
+  }
+  .room-app .desktop-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-bubble,
+  .history-drawer,
+  .room-thinking i {
+    animation: none;
+  }
+}
+
+/* Settings save themselves; the footer shows where that stands. */
+.room-app .settings-save {
+  align-items: center;
+}
+.room-app .settings-status {
+  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.room-app .settings-status.saved > svg {
+  color: #3f9a63;
+}
+.room-app .settings-status.error {
+  color: #b3403a;
+}
+
+/* Invitations and shared moments. */
+.room-invite {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.room-invite button,
+.moment-choices button,
+.room-moment-menu button {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.room-invite button.primary {
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+  color: #fff;
+}
+.room-invite button:hover:not(.primary),
+.moment-choices button:hover,
+.room-moment-menu button:hover {
+  background: var(--tint);
+}
+.room-quick .room-quick-moments {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-ink);
+  border-color: color-mix(in srgb, var(--accent) 30%, white);
+}
+.room-moment-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 20px;
+  background: color-mix(in srgb, white 80%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+.room-moment {
+  position: absolute;
+  top: 120px;
+  left: calc(var(--figure-x) + 150px);
+  width: min(440px, calc(100% - var(--figure-x) - 190px));
+  z-index: 11;
+}
+.room-scene.moment-open .room-dialogue {
+  display: none;
+}
+.moment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 20px;
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+  animation: bubble-in 0.28s ease-out both;
+}
+.moment-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.moment-card > header strong {
+  font-size: 15px;
+  color: var(--accent-ink);
+}
+.moment-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.moment-close:hover {
+  background: var(--tint);
+}
+.moment-card p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.moment-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.moment-result {
+  color: var(--accent-ink);
+}
+.moment-meta {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.moment-passage {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--tint);
+  font-family: 'Songti SC', 'STSong', serif;
+  font-size: 16px;
+  line-height: 1.9;
+}
+.star-field {
+  position: relative;
+  height: 280px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 88%, #1b2a5a), color-mix(in srgb, var(--accent) 35%, #241a3a));
+}
+.falling-star {
+  position: absolute;
+  top: -40px;
+  width: 44px;
+  height: 44px;
+  margin-left: -22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #ffe58a;
+  filter: drop-shadow(0 0 6px rgba(255, 229, 138, 0.8));
+  animation: star-fall 3.6s linear forwards;
+}
+.falling-star svg {
+  fill: currentColor;
+}
+.star-field.still .falling-star {
+  animation: none;
+  top: 40%;
+}
+@keyframes star-fall {
+  to {
+    transform: translateY(340px) rotate(160deg);
+  }
+}
+@media (max-width: 1180px) {
+  .room-moment {
+    left: calc(var(--figure-x) + 130px);
+    width: calc(100% - var(--figure-x) - 130px - 28px);
+  }
+}
+
+/* Whole spoken line for assistive technology; the visible text types itself out. */
+.room-bubble .room-line {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Frame review: confirm every frame at once after watching the clips. */
+.frame-review-heading .frame-review-bulk {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

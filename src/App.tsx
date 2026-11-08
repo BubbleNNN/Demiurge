@@ -1,12 +1,27 @@
-import { isActivity, activityDuration } from './animation/activities';
-import { FeatureNavigation } from './features/FeatureNavigation';
-import { featureTitle, startupView, type AppView } from './features/navigation';
+import {useDesktopLife} from './features/desktop/useDesktopLife';
+import { isActivity, activityDuration, activities } from './animation/activities';
+import { activityIcons } from './features/companion/activityIcons';
+import { Moment, type MomentResult } from './features/companion/Moments';
+import {
+  advanceLife,
+  createLife,
+  lifeSituation,
+  momentOffers,
+  recordMoment,
+  restoreLife,
+  settleInvite,
+  type LifeState,
+  type MomentId,
+} from './life';
+import { CharacterRail } from './features/shell/CharacterRail';
+import { startupView, type AppView } from './features/navigation';
+import { StudioFrame, SettingsFrame, isStudioTab } from './features/studio/StudioFrame';
 import { CompanionScene } from './features/companion/CompanionScene';
 import { ConversationPanel, type ConversationMode } from './features/conversation/ConversationPanel';
 import { DesktopPage } from './features/desktop/DesktopPage';
 import { PetProductionStudio } from './features/appearance/PetProductionStudio';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { selectedSearchProvider, searchProviderNames } from './research';
+import { chatServiceReady, imageServiceReady, selectedSearchProvider, searchProviderNames } from './research';
 import {
   ArrowUpRight,
   Check,
@@ -30,7 +45,6 @@ import {
   WandSparkles,
   X,
   BookOpen,
-  Gamepad2,
   Square,
   Eye,
   Box,
@@ -111,6 +125,8 @@ const emotions: { id: Emotion; name: string; mark: string }[] = [
   { id: 'surprised', name: '惊讶', mark: '✧' },
 ];
 const actionNames: Record<PetAction, string> = {
+  walk_left:'向左跑',walk_right:'向右跑',walk_up:'向后跑',walk_down:'向前跑',drag:'被拎起',listen:'倾听',
+  office:'办公',
   idle: '待机',
   bounce: '小跳',
   nod: '点头',
@@ -119,6 +135,9 @@ const actionNames: Record<PetAction, string> = {
   wave: '招呼',
   read: '读书',
   gaming: '玩掌机',
+  snack: '吃点心',
+  music: '听音乐',
+  diary: '写日记',
 };
 export default function App() {
   const [state, setState] = useState<AppState>(initialState);
@@ -150,6 +169,12 @@ export default function App() {
   const [bubbleHidden, setBubbleHidden] = useState(false);
   const [sceneSettingsOpen, setSceneSettingsOpen] = useState(false);
   const [touchFeedback, setTouchFeedback] = useState<{ kind: 'headpat' | 'poke'; key: number } | null>(null);
+  // Daily life: needs, self-chosen activities, invitations and shared moments (see life.ts).
+  const lifeRef = useRef<LifeState>(createLife());
+  const [, setLifeVersion] = useState(0);
+  const [invitation, setInvitation] = useState<MomentId | null>(null);
+  const [moment, setMoment] = useState<MomentId | null>(null);
+  const activityEnd = useRef(0);
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [chatBusy, setChatBusy] = useState(false);
   const [sharedChatStatus, setSharedChatStatus] = useState<ChatStatus>({ busy: false });
@@ -239,7 +264,7 @@ export default function App() {
     );
   const theme = resolveTheme(character);
   const lastReply = messages.filter((m) => m.role === 'assistant').at(-1);
-  const connected = isDesktop && keys.llmKey && Boolean(state.settings.llmModel);
+  const connected = isDesktop && chatServiceReady(state.settings, keys);
   const localChat = state.settings.chatMode === 'local';
   const profileChanged =
     profile &&
@@ -256,11 +281,13 @@ export default function App() {
     JSON.stringify(memoryBase.current?.memories.find((memory) => memory.id === editingMemory.id)) !==
       JSON.stringify(latestEditingMemory);
   useEffect(() => {
-    if (action === 'idle' || action === 'sleep') return;
+    if (action === 'idle' || action === 'sleep' || action.startsWith('walk_') || action === 'drag') return;
     const animation = spriteAnimation(skin),
       clip = animation?.clips[action];
     const duration = isActivity(action)
-      ? activityDuration
+      ? activityEnd.current > Date.now()
+        ? Math.min(600000, activityEnd.current - Date.now())
+        : activityDuration
       : animation && clip
         ? Math.min(120000, clipDuration(animation, clip) + 80)
         : 2600;
@@ -425,6 +452,128 @@ export default function App() {
     setAction('idle');
     seenReplies.current.set(character.id, lastReply?.id || '');
   }, [character.id, ready]);
+  const lifeKey = `mori-life-${character.id}`;
+  function persistLife() {
+    try {
+      localStorage.setItem(lifeKey, JSON.stringify(lifeRef.current));
+    } catch {
+      /* Life state is a convenience; the companion works without it. */
+    }
+    setLifeVersion((v) => v + 1);
+  }
+  function readLife() {
+    try {
+      return restoreLife(JSON.parse(localStorage.getItem(lifeKey) || 'null'));
+    } catch {
+      return createLife();
+    }
+  }
+  useEffect(() => {
+    lifeRef.current = readLife();
+    setInvitation(null);
+    setMoment(null);
+    activityEnd.current = 0;
+    setLifeVersion((v) => v + 1);
+  }, [character.id]);
+  const desktop = useDesktopLife({
+    petMode,characterId:character.id,enabled:ready&&motionEnabled&&state.settings.desktopLifeEnabled!==false,
+    blocked:interactionBusy||talking||resting||Boolean(moment)||petChat,
+    onAction:a=>setAction(supportsAction(skin,a)?a:'idle'),
+    onLine:line=>{setInteractionLine(line);setBubbleHidden(false);},
+    onResult:found=>{settleInvite(lifeRef.current,found?'accept':'ignored');
+      if(found){lifeRef.current.desktopEvents=[...(lifeRef.current.desktopEvents||[]),{at:Date.now(),text:'一起玩捉迷藏，你找到了我'}].slice(-12);lifeRef.current.social=Math.max(0,lifeRef.current.social-35);}
+      persistLife();},
+  });
+  const lifeTick = useRef<() => void>(() => {});
+  lifeTick.current = () => {
+    // The desktop pet, when open, owns the routine; the main window mirrors its state.
+    let petAlive = false;
+    try {
+      if (petMode) localStorage.setItem('mori-life-pet-heartbeat', String(Date.now()));
+      else petAlive = Date.now() - Number(localStorage.getItem('mori-life-pet-heartbeat') || 0) < 15000;
+    } catch {
+      /* Without storage each window keeps its own routine. */
+    }
+    if (petAlive) {
+      lifeRef.current = readLife();
+      setLifeVersion((v) => v + 1);
+      return;
+    }
+    const life = lifeRef.current;
+    const step = advanceLife(life, {
+      available: activities.map((item) => item.id),
+      temperament: character.behavior,
+      proactive: state.settings.proactiveEnabled !== false,
+      blocked:
+        interactionBusy ||
+        talking ||
+        resting ||
+        Boolean(moment) ||
+        desktop.active || petChat ||
+        Boolean(drag.current) ||
+        (behavior.current.priority >= 100 && behavior.current.until > performance.now()),
+    });
+    if (!step) return;
+    if(!life.pending)setInvitation(null);
+    if(petMode && !desktop.active && !step.invite && !life.pending && ['read','diary','office'].includes(step.activity))void desktop.explore('read',true);
+    if (step.changed) {
+      if (isActivity(step.activity) && supportsAction(skin, step.activity) && motionEnabled) {
+        activityEnd.current = life.until;
+        move(step.activity, 'neutral', true);
+      } else if (isActivity(action)) {
+        activityEnd.current = 0;
+        move('idle', emotion);
+      }
+    }
+    if (step.invite) {
+      setInvitation(step.invite);setBubbleHidden(false);
+      if(petMode)void desktop.explore('hide',true).then(started=>{if(started){setInvitation(null);lifeRef.current.pending=null;persistLife();}});
+    } else if (step.speech && !interactionLine) {
+      setInteractionLine(step.speech);
+      setBubbleHidden(false);
+    }
+    persistLife();
+  };
+  useEffect(() => {
+    if (!ready) return;
+    const timer = setInterval(() => lifeTick.current(), 5000);
+    return () => clearInterval(timer);
+  }, [ready]);
+  function openMoment(id: MomentId) {
+    desktop.stop();
+    if (invitation) settleInvite(lifeRef.current, 'accept');
+    setInvitation(null);
+    setInteractionLine('');
+    setMoment(id);
+    persistLife();
+  }
+  function declineInvitation() {
+    settleInvite(lifeRef.current, 'decline');
+    setInvitation(null);
+    setInteractionLine('好，那我先自己找点事做，你忙完再来找我。');
+    persistLife();
+  }
+  function finishMoment(result: MomentResult) {
+    if (!moment) return;
+    recordMoment(lifeRef.current, moment, result.outcome);
+    setMoment(null);
+    setInteractionLine(result.line);
+    setBubbleHidden(false);
+    const face = supportsEmotion(skin, result.emotion) ? result.emotion : 'neutral';
+    if (motionEnabled && supportsAction(skin, result.action)) {
+      if (isActivity(result.action)) activityEnd.current = Date.now() + 30000;
+      move(result.action, face, true);
+    } else if (motionEnabled && supportsAction(skin, 'nod')) move('nod', face);
+    else setEmotion(face);
+    persistLife();
+  }
+  useEffect(() => {
+    // The conversation lives on the home screen; the old chat page opens its history drawer.
+    // Declared after the reset above so it wins when both run as the workspace loads.
+    if (view !== 'chat' || !ready) return;
+    setChatExpanded(true);
+    setView('home');
+  }, [view, ready]);
   useEffect(() => {
     behavior.current = freshBehavior();
     interactionCounts.current = {};
@@ -448,7 +597,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', close);
   }, [petChat]);
   useEffect(() => {
-    if (!state.settings.proactiveEnabled || !petMode || !motionEnabled) return;
+    if (!state.settings.proactiveEnabled || !petMode || !motionEnabled || desktop.active || invitation || moment) return;
     const timer = setInterval(() => {
       if (
         !document.hidden &&
@@ -460,7 +609,7 @@ export default function App() {
         interact('greet', true);
     }, proactiveInterval(character));
     return () => clearInterval(timer);
-  }, [state.settings.proactiveEnabled, petMode, motionEnabled, interactionBusy, talking, action, skin]);
+  }, [state.settings.proactiveEnabled, petMode, motionEnabled, interactionBusy, talking, action, skin, desktop.active, invitation, moment]);
   useEffect(() => {
     if (!petMode || !isDesktop) return;
     let ignore = false;
@@ -545,7 +694,11 @@ export default function App() {
       setToast(`复制失败：${errorText(error)}`);
     }
   }
-  function move(value: PetAction, face: Emotion = emotion) {
+  function move(value: PetAction, face: Emotion = emotion, automatic = false) {
+    if (!automatic) {
+      if (desktop.active) desktop.stop();
+      activityEnd.current = isActivity(value) ? Date.now() + activityDuration : 0;
+    }
     behavior.current = {
       ...freshBehavior(),
       resting: value === 'sleep',
@@ -561,7 +714,9 @@ export default function App() {
     const animation = spriteAnimation(skin),
       clip = animation?.clips[value];
     return isActivity(value)
-      ? activityDuration
+      ? activityEnd.current > Date.now()
+        ? Math.min(600000, activityEnd.current - Date.now())
+        : activityDuration
       : value === 'idle'
         ? 500
         : animation && clip
@@ -751,6 +906,10 @@ export default function App() {
               messages: history.slice(-24),
               memories: stateRef.current.memories.filter((m) => m.characterId === currentCharacter.id),
               skinId: skin?.id,
+              situation: lifeSituation(
+                lifeRef.current,
+                Object.fromEntries(activities.map((item) => [item.id, item.doing])),
+              ),
             };
       failedChat.current = request;
       const reply = await bridge.chat({ ...request, skinId: skin?.id });
@@ -1116,6 +1275,14 @@ export default function App() {
   );
   const assetThumb = (item?: Skin) =>
     skinImage(item) ? <SkinArtwork skin={item} /> : item?.kind === 'live2d' ? <Layers3 /> : <Box />;
+  const portrait = (c: Character, item?: Skin) =>
+    item ? (
+      assetThumb(item)
+    ) : (
+      <span className="avatar-initial" aria-hidden="true">
+        {Array.from(c.name)[0] || '?'}
+      </span>
+    );
   const progressCard = jobBusy && (
     <div className="progress-card" role="status">
       <LoaderCircle className="spin" size={18} />
@@ -1142,6 +1309,7 @@ export default function App() {
       chatExpanded={chatExpanded}
       audioBusy={audioBusy}
       talking={talking}
+      speaking={talking && Boolean(audioRef.current)}
       newTopicPending={newTopicPending}
       replyNeedsSave={completedReplies.current.has(character.id)}
       historyRef={historyRef}
@@ -1235,6 +1403,9 @@ export default function App() {
     return (
       <div className={`desktop-pet-shell ${petChat ? 'with-chat' : ''}`} style={themeVars(character)}>
         <div className="pet-toolbar">
+          <button aria-label="探索桌面" title="探索桌面" disabled={desktop.active||interactionBusy||talking} onClick={()=>void desktop.explore()}>⌖</button>
+          <button aria-label="一起玩" title="一起玩" onClick={()=>openMoment('guess')}>♡</button>
+          {desktop.active&&<button aria-label="结束桌面活动" onClick={()=>desktop.stop()}>■</button>}
           <button aria-label="打开工坊" onClick={() => notifyError(bridge.openWorkshop())}>
             <Flower2 size={16} />
           </button>
@@ -1247,20 +1418,23 @@ export default function App() {
           >
             {resting ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          {(['read', 'gaming'] as const)
-            .filter((value) => supportsAction(skin, value))
-            .map((value) => (
-              <button
-                key={value}
-                aria-label={`桌宠${actionNames[value]}`}
-                aria-pressed={action === value}
-                disabled={interactionBusy || talking}
-                title={`${actionNames[value]}，约一分钟`}
-                onClick={() => move(value, 'neutral')}
-              >
-                {value === 'read' ? <BookOpen size={16} /> : <Gamepad2 size={16} />}
-              </button>
-            ))}
+          {activities
+            .filter(({ id }) => supportsAction(skin, id))
+            .map(({ id }) => {
+              const Icon = activityIcons[id];
+              return (
+                <button
+                  key={id}
+                  aria-label={`桌宠${actionNames[id]}`}
+                  aria-pressed={action === id}
+                  disabled={interactionBusy || talking}
+                  title={`${actionNames[id]}，约一分钟`}
+                  onClick={() => move(id, 'neutral')}
+                >
+                  <Icon size={16} />
+                </button>
+              );
+            })}
           {isActivity(action) && (
             <button aria-label="停止桌宠活动" title="停止活动" onClick={() => move('idle', 'neutral')}>
               <Square size={16} />
@@ -1270,14 +1444,18 @@ export default function App() {
             <X size={16} />
           </button>
         </div>
+        {desktop.phase==='inviting'&&<div className="pet-invite"><p>{desktop.status}</p><button onClick={desktop.start}>好呀，去藏吧</button><button onClick={desktop.decline}>等会儿</button></div>}
+        {invitation&&!moment&&!petChat&&<div className="pet-invite"><p>{momentOffers[invitation].invite}</p><button onClick={()=>openMoment(invitation)}>好呀，一起</button><button onClick={declineInvitation}>等会儿</button></div>}
+        {moment&&<div className="pet-moment"><Moment id={moment} name={character.name} reducedMotion={!motionEnabled} onDone={finishMoment} onClose={()=>setMoment(null)}/></div>}
         {petChat && <div className="pet-chat-panel">{conversationPanel('pet')}</div>}
-        {!petChat && !bubbleHidden && (interactionLine || lastReply) && (
+        {!petChat && !moment && !invitation && desktop.phase!=='inviting' && !bubbleHidden && (interactionLine || lastReply) && (
           <button className="pet-speech" onClick={() => setPetChat(true)}>
             {(interactionLine || lastReply?.content || '').slice(0, 70)}
           </button>
         )}
         <div
           className="pet-draggable"
+          style={desktop.mask?{clipPath:`path(evenodd, "M 0 0 H ${innerWidth} V ${innerHeight} H 0 Z M ${desktop.mask.x-12} ${desktop.mask.y-(document.querySelector('.pet-draggable')?.getBoundingClientRect().top||0)} h ${desktop.mask.width} v ${desktop.mask.height} h ${-desktop.mask.width} Z")`}:undefined}
           role="button"
           tabIndex={0}
           aria-label={`和${character.name}互动，按 Enter 轻触，拖动可移动桌宠`}
@@ -1291,6 +1469,7 @@ export default function App() {
             if (e.button !== 0) return;
             const hit = hitCharacter(e.currentTarget, e.clientX, e.clientY);
             if (!hit) return;
+            desktop.stop(true);
             drag.current = { x: e.screenX, y: e.screenY, moved: false, hit };
             e.currentTarget.setPointerCapture(e.pointerId);
           }}
@@ -1300,6 +1479,7 @@ export default function App() {
               y = e.screenY - drag.current.y;
             if (Math.abs(x) + Math.abs(y) > 2) {
               drag.current.moved = true;
+              if(supportsAction(skin,'drag'))setAction('drag');
               bridge.movePet({ x, y });
               drag.current.x = e.screenX;
               drag.current.y = e.screenY;
@@ -1315,9 +1495,11 @@ export default function App() {
               event.currentTarget.releasePointerCapture(event.pointerId);
           }}
           onLostPointerCapture={() => {
+            if(action==='drag')setAction('idle');
             drag.current = null;
           }}
           onPointerCancel={() => {
+            if(action==='drag')setAction('idle');
             drag.current = null;
           }}
         >
@@ -1333,7 +1515,7 @@ export default function App() {
             </div>
           )}
         </div>
-        <span className="pet-name-tag">
+        <span className="pet-name-tag" title={desktop.status}>
           {character.name}
           <i />
           {engineName(skin)}
@@ -1341,243 +1523,138 @@ export default function App() {
         {toast && <div className="pet-toast">{toast}</div>}
       </div>
     );
-  return (
-    <div className={`studio theme-${theme.id}`} style={themeVars(character)}>
-      <FeatureNavigation view={view} onNavigate={setView} />
-      <aside className="library-sidebar">
-        <div className="wordmark">
-          mori<span>与你，此刻</span>
+  const homeView = view === 'home' || view === 'chat';
+  const settingsView = view === 'settings' || view === 'desktop';
+  const quickReplies = localChat
+    ? [
+        { label: '打个招呼', text: '你好' },
+        { label: '给我一点鼓励', text: '给我一点鼓励吧' },
+        { label: '晚安', text: '晚安' },
+      ]
+    : [
+        { label: '聊聊今天', text: '今天过得怎么样？' },
+        { label: '给我一点鼓励', text: '给我一点鼓励吧' },
+      ];
+  const historyDrawer = chatExpanded ? (
+    <aside className="history-drawer" aria-label="对话记录">
+      <header>
+        <div>
+          <strong>对话记录</strong>
+          <small>{messages.length} 条</small>
         </div>
-        <div className="library-heading">
-          <span>我的角色</span>
-          <button className="icon-button" aria-label="添加角色" onClick={openCreate}>
-            <Plus size={17} />
-          </button>
-        </div>
-        <div className="character-list">
-          {state.characters.map((c) => (
-            <button
-              className={`character-item ${c.id === character.id ? 'selected' : ''}`}
-              key={c.id}
-              onClick={() => selectCharacter(c)}
-            >
-              <span className="character-thumb" style={{ background: resolveTheme(c).paper }}>
-                {assetThumb(c.id === character.id ? skin : selectedCharacterSkin(state, c))}
-              </span>
-              <span>
-                <strong>{c.name}</strong>
-                <small>{c.work || '原创角色'}</small>
-              </span>
-              {c.id === character.id && <i />}
-            </button>
-          ))}
-        </div>
-        <button className="new-character" onClick={openCreate}>
-          <Plus size={15} />
-          遇见新角色
-        </button>
         <button
-          className="new-character pack-library-entry"
-          aria-label="角色包与本地互动"
-          onClick={() => setPacksOpen(true)}
+          className="icon-button"
+          aria-label="查找与导出对话"
+          title="查找与导出对话"
+          onClick={() => {
+            setHistoryQuery('');
+            setHistoryOpen(true);
+          }}
         >
-          <FolderHeart size={15} />
-          角色包与本地互动
+          <Search size={17} />
         </button>
-        <div className="sidebar-quote">
-          <span>✧</span>
-          <p>
-            让喜欢的角色，
-            <br />
-            住进你的日常。
-          </p>
-          <i />
-        </div>
-        <div className="sidebar-bottom">
-          <button onClick={importCharacter}>
-            <Upload size={14} />
-            导入角色包
-          </button>
-          <div className="local-indicator">
-            <span />
-            <span>
-              本地工作区<small>开发版本</small>
-            </span>
-            <ShieldCheck size={14} />
-          </div>
-        </div>
-      </aside>
-      <section className="studio-body">
-        <header className="studio-topbar">
-          <nav className="breadcrumb" aria-label="页面导航">
-            <button type="button" aria-label="返回我的空间" onClick={() => setView('home')}>
-              我的空间
-            </button>
-            <ChevronRight size={12} aria-hidden="true" />
-            <strong aria-current="page">{featureTitle(view)}</strong>
-          </nav>
-          <div className="topbar-actions">
-            {view !== 'home' && (
-              <button
-                className="icon-button"
-                aria-label="查找与导出对话"
-                title="查找与导出对话"
-                onClick={() => {
-                  setHistoryQuery('');
-                  setHistoryOpen(true);
-                }}
-              >
-                <Search size={16} />
-              </button>
-            )}
-            <button className="theme-shortcut" onClick={() => setThemeOpen(true)}>
-              <span className="theme-dot" />
-              {theme.name}
-              <Palette size={13} />
-            </button>
-            <button
-              className={`service-status ${connected ? 'connected' : ''}`}
-              onClick={() => setView('settings')}
-            >
-              <i />
-              {localChat ? '本地台词' : connected ? '对话已配置' : '连接服务'}
-              <ArrowUpRight size={13} />
-            </button>
-          </div>
-        </header>
-        <div className={`content-layout companion-layout ${view === 'settings' ? 'settings-layout' : ''}`}>
-          <main className={`main-content ${view === 'home' ? 'home-content' : ''}`} data-feature={view}>
-            {view === 'home' && (
-              <>
-                <CharacterReadiness
-                  character={character}
-                  skins={allSkins}
-                  onSetup={() => setSetupCharacterId(character.id)}
-                  onVoice={openProfile}
-                  onInteraction={() => setPacksOpen(true)}
-                  onAnimation={() => setArtWorkflowOpen(true)}
-                />
-                <div className="companion-room">
-                  <CompanionScene
-                    character={character}
-                    skin={skin}
-                    avatar={avatar}
-                    interactionBusy={interactionBusy}
-                    talking={talking}
-                    resting={resting}
-                    touchFeedback={touchFeedback}
-                    bubbleHidden={bubbleHidden}
-                    interactionLine={interactionLine}
-                    lastReply={lastReply}
-                    audioBusy={audioBusy}
-                    sceneSettingsOpen={sceneSettingsOpen}
-                    tracking={tracking}
-                    motionEnabled={motionEnabled}
-                    skinReview={skin ? reviewLabel(skin) : ''}
-                    presence={`${actionNames[action]} · ${emotions.find((e) => e.id === emotion)?.name}`}
-                    touchCharacter={touchCharacter}
-                    interact={interact}
-                    copyMessage={copyMessage}
-                    speak={speak}
-                    onHideBubble={() => {
-                      setBubbleHidden(true);
-                      setInteractionLine('');
-                    }}
-                    onOpenConversation={() => {
-                      setChatExpanded(true);
-                      document
-                        .querySelector('.inline-conversation')
-                        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                    }}
-                    onOpenProfile={() => setView('characters')}
-                    onOpenAppearance={() => setView('wardrobe')}
-                    onOpenDesktop={() => notifyError(bridge.openPet())}
-                    onToggleSettings={() => setSceneSettingsOpen(!sceneSettingsOpen)}
-                    onToggleTracking={() => updatePlayback('trackingEnabled', !tracking)}
-                  />
-                  <section
-                    className={`inline-conversation ${chatExpanded ? 'expanded' : ''}`}
-                    aria-label="人物下方的对话栏"
-                  >
-                    {conversationPanel('compact')}
-                  </section>
-                </div>
-                <section className="appearance-shelf">
-                  <div className="section-heading">
-                    <div>
-                      <h2>
-                        她的不同模样 <span>{skins.length}</span>
-                      </h2>
-                      <p>熟悉的她，也有新的风格。</p>
-                    </div>
-                    <button className="text-button" onClick={() => setView('wardrobe')}>
-                      全部外观
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                  <div className="skin-strip">
-                    {skins.map((item) => (
-                      <button
-                        key={item.id}
-                        className={`skin-tile ${skin?.id === item.id ? 'selected' : ''}`}
-                        onClick={() => chooseSkin(item)}
-                      >
-                        <span className="skin-art">{assetThumb(item)}</span>
-                        <span>
-                          <strong>{item.name}</strong>
-                          <small>
-                            {item.kind === 'live2d' || item.kind === 'vrm' || item.kind === 'glb'
-                              ? engineName(item)
-                              : `${styleName(item.style)} · ${reviewLabel(item) || '导入立绘'}`}
-                          </small>
-                        </span>
-                        {skin?.id === item.id && <Check size={14} />}
-                      </button>
-                    ))}
-                    <button
-                      className="new-skin-tile"
-                      onClick={() => {
-                        setSetupCharacterId(character.id);
-                      }}
-                    >
-                      <Plus size={20} />
-                      <span>准备外观与动作</span>
-                    </button>
-                  </div>
-                </section>
-                <div className="home-footer">
-                  <Flower2 size={13} />
-                  <span>属于你们的故事，正在慢慢发生。</span>
-                  <span>{memories.length} 段相处记忆</span>
-                </div>
-              </>
-            )}
-            {view === 'chat' && (
-              <section className="conversation-workspace" aria-label="对话与语音模块">
-                {conversationPanel('full')}
-              </section>
-            )}
-            {view === 'desktop' && (
-              <DesktopPage
-                preview={avatar}
-                size={state.settings.petSize || 'medium'}
-                onSize={(petSize) => commit((s) => ({ ...s, settings: { ...s.settings, petSize } }))}
-                characterName={character.name}
-                skinName={skin?.name}
-                desktopAvailable={isDesktop}
-                onOpen={() => notifyError(bridge.openPet())}
-                onClose={() => notifyError(bridge.closePet())}
-                onAppearance={() => setView('wardrobe')}
-                onSettings={() => setView('settings')}
+        <button className="icon-button" aria-label="关闭对话记录" onClick={() => setChatExpanded(false)}>
+          <X size={17} />
+        </button>
+      </header>
+      {conversationPanel('history')}
+    </aside>
+  ) : undefined;
+  return (
+    <div className={`studio room-app theme-${theme.id}`} style={themeVars(character)}>
+      <CharacterRail
+        characters={state.characters}
+        activeId={character.id}
+        settingsActive={settingsView}
+        thumbnail={(c) => portrait(c, c.id === character.id ? skin : selectedCharacterSkin(state, c))}
+        onSelect={selectCharacter}
+        onCreate={openCreate}
+        onImport={importCharacter}
+        onHome={() => setView('home')}
+        onSettings={() => setView('settings')}
+      />
+      <main className={`main-content room-main ${homeView ? 'home-content' : ''}`} data-feature={view}>
+        {homeView && (
+          <CompanionScene
+            character={character}
+            skin={skin}
+            skins={displaySkins}
+            avatar={avatar}
+            thumbnail={assetThumb}
+            composer={conversationPanel('room')}
+            setup={
+              <CharacterReadiness
+                character={character}
+                skins={allSkins}
+                onSetup={() => setSetupCharacterId(character.id)}
+                onVoice={openProfile}
+                onInteraction={() => setPacksOpen(true)}
+                onAnimation={() => setArtWorkflowOpen(true)}
               />
-            )}
+            }
+            drawer={historyDrawer}
+            quickReplies={localChat || messages.length < 2 ? quickReplies : []}
+            interactionBusy={interactionBusy}
+            talking={talking}
+            resting={resting}
+            touchFeedback={touchFeedback}
+            bubbleHidden={bubbleHidden}
+            interactionLine={interactionLine}
+            lastReply={lastReply}
+            audioBusy={audioBusy}
+            sceneSettingsOpen={sceneSettingsOpen}
+            tracking={tracking}
+            motionEnabled={motionEnabled}
+            presence={
+              lifeRef.current.activity === 'sleep'
+                ? '在休息'
+                : activities.find((item) => item.id === lifeRef.current.activity)?.doing ||
+                  `${actionNames[action]} · ${emotions.find((e) => e.id === emotion)?.name}`
+            }
+            invitation={invitation ? momentOffers[invitation].invite : ''}
+            onAcceptInvitation={() => invitation && openMoment(invitation)}
+            onDeclineInvitation={declineInvitation}
+            onOpenMoment={openMoment}
+            momentPanel={
+              moment ? (
+                <Moment
+                  id={moment}
+                  name={character.name}
+                  reducedMotion={!motionEnabled || matchMedia('(prefers-reduced-motion: reduce)').matches}
+                  onDone={finishMoment}
+                  onClose={() => setMoment(null)}
+                />
+              ) : undefined
+            }
+            touchCharacter={touchCharacter}
+            interact={interact}
+            copyMessage={copyMessage}
+            speak={speak}
+            sendQuick={(text) => void sendChat(text)}
+            chooseSkin={chooseSkin}
+            onHideBubble={() => {
+              setBubbleHidden(true);
+              setInteractionLine('');
+            }}
+            onOpenConversation={() => setChatExpanded(true)}
+            onOpenStudio={() => setView('characters')}
+            onOpenAppearance={() => setView('wardrobe')}
+            onOpenDesktop={() => notifyError(bridge.openPet())}
+            onToggleSettings={() => setSceneSettingsOpen(!sceneSettingsOpen)}
+            onToggleTracking={() => updatePlayback('trackingEnabled', !tracking)}
+          />
+        )}
+        {isStudioTab(view) && (
+          <StudioFrame
+            name={character.name}
+            work={character.work}
+            thumbnail={portrait(character, skin)}
+            tab={view}
+            onTab={setView}
+            onBack={() => setView('home')}
+          >
             {view === 'wardrobe' && (
               <>
-                <div className="page-heading">
-                  <span className="page-kicker">外观工作台</span>
-                  <h1>每一种模样，都是她。</h1>
-                  <p>从角色原图自动制作多画风形象和逐帧动作，也可以导入已有素材。</p>
-                </div>
                 <button
                   className="production-entry"
                   aria-label="自动制作多画风桌宠"
@@ -1587,228 +1664,247 @@ export default function App() {
                     <WandSparkles size={26} />
                   </span>
                   <span>
-                    <small>自动制作</small>
-                    <strong>角色图、桌宠和动作，一起完成。</strong>
-                    <p>选择画风与动作 → 自动生成并整理 → 试播后启用</p>
+                    <small>CREATE A COMPANION · 自动制作</small>
+                    <strong>从一张角色原图，开始制作。</strong>
+                    <p>选画风 → 确认角色图 → 制作动作 → 核对并启用</p>
                   </span>
                   <span className="production-entry-action">
                     开始制作
                     <ArrowUpRight size={17} />
                   </span>
                 </button>
-                <div className="engine-grid">
-                  <button aria-label="使用预制角色包" onClick={() => setPacksOpen(true)}>
-                    <FolderHeart />
-                    <strong>角色包与本地互动</strong>
-                    <span>预制外观 / 真实动作 / 无图像 API</span>
-                    <ArrowUpRight size={17} />
-                  </button>
-                  <button aria-label="画风与素材制作" onClick={() => setArtWorkflowOpen(true)}>
-                    <Palette />
-                    <strong>画风与素材制作</strong>
-                    <span>{styles.length} 种制作说明 / 现成素材 / 动作预览</span>
-                    <ArrowUpRight size={17} />
-                  </button>
-                  <button aria-label="制作 3D 模型" onClick={() => setModelStudioOpen(true)}>
-                    <Box />
-                    <strong>制作 3D 模型</strong>
-                    <span>主参考原图 / 图生模型 / 骨骼绑定</span>
-                    <ArrowUpRight size={17} />
-                  </button>
-                  <button
-                    aria-label="制作立绘与像素动画"
-                    onClick={() => {
-                      pending.current = {};
-                      setJobError('');
-                      setGenerateOpen(true);
-                    }}
-                  >
-                    <WandSparkles />
-                    <strong>制作立绘与像素动画</strong>
-                    <span>原图编辑 / 可选像素绘图 / 候选核对</span>
-                    <ArrowUpRight size={17} />
-                  </button>
-                  <button disabled={jobBusy} onClick={() => importAsset('live2d')}>
-                    <Layers3 />
-                    <strong>导入 Live2D</strong>
-                    <span>model3.json / ZIP 模型包</span>
-                    <Upload size={17} />
-                  </button>
-                  <button disabled={jobBusy} onClick={() => importAsset('vrm')}>
-                    <Box />
-                    <strong>导入 VRM 3D</strong>
-                    <span>VRM 0.x / 1.0</span>
-                    <Upload size={17} />
-                  </button>
-                  <button disabled={jobBusy} onClick={() => importAsset('sprite')}>
-                    <Film />
-                    <strong>导入逐帧动画</strong>
-                    <span>Aseprite JSON + PNG / Mori 动画包</span>
-                    <Upload size={17} />
-                  </button>
-                </div>
-                <div className="workbench">
-                  <div className="workbench-stage">
-                    {avatar}
-                    <span className="engine-tag">{engineName(skin)}</span>
-                  </div>
-                  <div className="workbench-controls">
-                    <h3>表现调节</h3>
-                    <label>
-                      角色缩放 <span>{Math.round(zoom * 100)}%</span>
-                      <input
-                        type="range"
-                        min="0.65"
-                        max="1.4"
-                        step=".05"
-                        value={zoom}
-                        onChange={(e) => setZoom(Number(e.target.value))}
-                      />
-                    </label>
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        disabled={skin?.kind !== 'live2d' && skin?.kind !== 'vrm'}
-                        checked={tracking}
-                        onChange={(e) => updatePlayback('trackingEnabled', e.target.checked)}
-                      />
-                      视线跟随光标
-                    </label>
-                    <h4>表情</h4>
-                    {skin &&
-                      (spriteAnimation(skin) ||
-                        skin.kind === 'live2d' ||
-                        skin.kind === 'vrm' ||
-                        skin.kind === 'glb') && (
-                        <div className="motion-settings">
-                          <label className="checkbox-label">
-                            <input
-                              type="checkbox"
-                              checked={motionEnabled}
-                              onChange={(e) => updatePlayback('motionEnabled', e.target.checked)}
-                            />
-                            {spriteAnimation(skin) ? '播放逐帧动画' : '播放角色动作'}
-                          </label>
-                          <p>
-                            {spriteAnimation(skin)
-                              ? animationDescription(skin)
-                              : '使用模型绑定与动作 · 遵循系统减少动态效果'}
-                          </p>
-                          {spriteAnimation(skin) && (
-                            <button
-                              className="button secondary full"
-                              disabled={previewSpeech || !spriteAnimation(skin)?.clips.talk}
-                              onClick={() => setPreviewSpeech(true)}
-                            >
-                              {previewSpeech ? '正在预览口型' : '预览说话口型'}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    <div className="emotion-grid">
-                      {emotions.map((e) => (
-                        <button
-                          key={e.id}
-                          className={emotion === e.id ? 'selected' : ''}
-                          disabled={!supportsEmotion(skin, e.id)}
-                          title={!supportsEmotion(skin, e.id) ? '此外观尚未制作此表情' : undefined}
-                          onClick={() => move('idle', e.id)}
-                        >
-                          <b>{e.mark}</b>
-                          {e.name}
-                        </button>
-                      ))}
-                    </div>
-                    <h4>动作</h4>
-                    <div className="action-list">
-                      {Object.entries(actionNames).map(([value, title]) => (
-                        <button
-                          key={value}
-                          disabled={!supportsAction(skin, value as PetAction)}
-                          title={
-                            !supportsAction(skin, value as PetAction) ? '此外观尚未制作此动作' : undefined
-                          }
-                          onClick={() => move(value as PetAction, value === 'sleep' ? 'sleepy' : emotion)}
-                        >
-                          {title}
-                        </button>
-                      ))}
-                    </div>
-                    {skin?.kind === 'live2d' && skin.model && (
-                      <button
-                        className="button secondary full"
-                        onClick={() => {
-                          setEditedModel(structuredClone(skin));
-                          setModelOpen(true);
-                        }}
-                      >
-                        <SlidersHorizontal size={15} />
-                        配置动作与表情映射
-                      </button>
-                    )}
-                    <p className="fine-print">
-                      {skin?.kind === 'live2d'
-                        ? '模型按自身绑定与动作文件播放。可将聊天情绪映射到已有表情。'
-                        : skin?.kind === 'vrm'
-                          ? '支持骨骼待机、眨眼与音频口型。实际表情取决于模型。'
-                          : skin && spriteAnimation(skin)
-                            ? '使用完整原画帧，按制作时序切换。招手结束回到待机；语音静音时闭嘴。未制作的动作不可用。'
-                            : skin?.style === '3d'
-                              ? '这是具有三维观感的 PNG 立绘。要旋转角色和驱动骨骼，请导入 VRM 模型。'
-                              : '此外观保持静态。导入逐帧动画或已绑定的 Live2D / VRM 模型后，可播放相应动作。'}
-                    </p>
-                  </div>
-                </div>
-                <div className="section-heading">
-                  <h2>外观收藏</h2>
-                  <button className="text-button" onClick={() => importAsset('image')}>
-                    <ImagePlus size={15} />
-                    导入现有立绘
-                  </button>
-                </div>
-                {allSkins.some(earlierArt) && (
-                  <button className="earlier-art-toggle" onClick={() => setShowEarlierArt(!showEarlierArt)}>
-                    {showEarlierArt ? '收起早期外观' : '查看早期外观'}
-                  </button>
-                )}
-                <div className="wardrobe-grid">
-                  {skins.map((item) => (
-                    <button
-                      className={`wardrobe-card ${skin?.id === item.id ? 'selected' : ''}`}
-                      key={item.id}
-                      onClick={() => chooseSkin(item)}
-                    >
-                      <div>
-                        {assetThumb(item)}
-                        <span>{engineName(item)}</span>
-                      </div>
-                      <strong>{item.name}</strong>
-                      <small>
-                        {styleName(item.style)} · {reviewLabel(item) || '导入外观'}
-                        {skin?.id === item.id && <Check size={14} />}
-                      </small>
+                <details className="creation-tools">
+                  <summary>
+                    <span>
+                      <Layers3 size={18} /> 已有素材，或需要其他制作方式？
+                    </span>
+                    <span>
+                      角色包 · 导入 · 3D <ChevronRight size={16} />
+                    </span>
+                  </summary>
+                  <div className="engine-grid">
+                    <button aria-label="使用预制角色包" onClick={() => setPacksOpen(true)}>
+                      <FolderHeart />
+                      <strong>角色包与本地互动</strong>
+                      <span>预制外观 / 真实动作 / 无图像 API</span>
+                      <ArrowUpRight size={17} />
                     </button>
-                  ))}
-                </div>
+                    <button aria-label="画风与素材制作" onClick={() => setArtWorkflowOpen(true)}>
+                      <Palette />
+                      <strong>画风与素材制作</strong>
+                      <span>{styles.length} 种制作说明 / 现成素材 / 动作预览</span>
+                      <ArrowUpRight size={17} />
+                    </button>
+                    <button aria-label="制作 3D 模型" onClick={() => setModelStudioOpen(true)}>
+                      <Box />
+                      <strong>制作 3D 模型</strong>
+                      <span>主参考原图 / 图生模型 / 骨骼绑定</span>
+                      <ArrowUpRight size={17} />
+                    </button>
+                    <button
+                      aria-label="制作立绘与像素动画"
+                      onClick={() => {
+                        pending.current = {};
+                        setJobError('');
+                        setGenerateOpen(true);
+                      }}
+                    >
+                      <WandSparkles />
+                      <strong>制作立绘与像素动画</strong>
+                      <span>原图编辑 / 可选像素绘图 / 候选核对</span>
+                      <ArrowUpRight size={17} />
+                    </button>
+                    <p className="tool-group-title">导入已有素材</p>
+                    <button disabled={jobBusy} onClick={() => importAsset('live2d')}>
+                      <Layers3 />
+                      <strong>导入 Live2D</strong>
+                      <span>model3.json / ZIP 模型包</span>
+                      <Upload size={17} />
+                    </button>
+                    <button disabled={jobBusy} onClick={() => importAsset('vrm')}>
+                      <Box />
+                      <strong>导入 VRM 3D</strong>
+                      <span>VRM 0.x / 1.0</span>
+                      <Upload size={17} />
+                    </button>
+                    <button disabled={jobBusy} onClick={() => importAsset('sprite')}>
+                      <Film />
+                      <strong>导入逐帧动画</strong>
+                      <span>Aseprite JSON + PNG / Mori 动画包</span>
+                      <Upload size={17} />
+                    </button>
+                  </div>
+                </details>
+                <section className="saved-appearances" aria-label="已保存的角色外观">
+                  <div className="section-heading">
+                    <div>
+                      <h2>
+                        我的外观 <span className="collection-count">{skins.length}</span>
+                      </h2>
+                      <p>点击切换当前角色的外观。</p>
+                    </div>
+                    <button className="text-button" onClick={() => importAsset('image')}>
+                      <ImagePlus size={15} />
+                      导入现有立绘
+                    </button>
+                  </div>
+                  {allSkins.some(earlierArt) && (
+                    <button className="earlier-art-toggle" onClick={() => setShowEarlierArt(!showEarlierArt)}>
+                      {showEarlierArt ? '收起早期外观' : '查看早期外观'}
+                    </button>
+                  )}
+                  <div className="wardrobe-grid">
+                    {skins.map((item) => (
+                      <button
+                        className={`wardrobe-card ${skin?.id === item.id ? 'selected' : ''}`}
+                        aria-pressed={skin?.id === item.id}
+                        key={item.id}
+                        onClick={() => chooseSkin(item)}
+                      >
+                        <div>
+                          {assetThumb(item)}
+                          <span>{engineName(item)}</span>
+                        </div>
+                        <strong>{item.name}</strong>
+                        <small>
+                          {styleName(item.style)} · {reviewLabel(item) || '导入外观'}
+                          {skin?.id === item.id && <Check size={14} />}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+                <details className="motion-workbench">
+                  <summary>
+                    <span>
+                      <Film size={18} /> 当前外观的表情与动作
+                    </span>
+                    <span>
+                      {skin?.name || '先选择一套外观'} <ChevronRight size={16} />
+                    </span>
+                  </summary>
+                  <div className="workbench">
+                    <div className="workbench-stage">
+                      {avatar}
+                      <span className="engine-tag">{engineName(skin)}</span>
+                    </div>
+                    <div className="workbench-controls">
+                      <h3>表现调节</h3>
+                      <label>
+                        角色缩放 <span>{Math.round(zoom * 100)}%</span>
+                        <input
+                          type="range"
+                          min="0.65"
+                          max="1.4"
+                          step=".05"
+                          value={zoom}
+                          onChange={(e) => setZoom(Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          disabled={skin?.kind !== 'live2d' && skin?.kind !== 'vrm'}
+                          checked={tracking}
+                          onChange={(e) => updatePlayback('trackingEnabled', e.target.checked)}
+                        />
+                        视线跟随光标
+                      </label>
+                      <h4>表情</h4>
+                      {skin &&
+                        (spriteAnimation(skin) ||
+                          skin.kind === 'live2d' ||
+                          skin.kind === 'vrm' ||
+                          skin.kind === 'glb') && (
+                          <div className="motion-settings">
+                            <label className="checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={motionEnabled}
+                                onChange={(e) => updatePlayback('motionEnabled', e.target.checked)}
+                              />
+                              {spriteAnimation(skin) ? '播放逐帧动画' : '播放角色动作'}
+                            </label>
+                            <p>
+                              {spriteAnimation(skin)
+                                ? animationDescription(skin)
+                                : '使用模型绑定与动作 · 遵循系统减少动态效果'}
+                            </p>
+                            {spriteAnimation(skin) && (
+                              <button
+                                className="button secondary full"
+                                disabled={previewSpeech || !spriteAnimation(skin)?.clips.talk}
+                                onClick={() => setPreviewSpeech(true)}
+                              >
+                                {previewSpeech ? '正在预览口型' : '预览说话口型'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      <div className="emotion-grid">
+                        {emotions.map((e) => (
+                          <button
+                            key={e.id}
+                            className={emotion === e.id ? 'selected' : ''}
+                            disabled={!supportsEmotion(skin, e.id)}
+                            title={!supportsEmotion(skin, e.id) ? '此外观尚未制作此表情' : undefined}
+                            onClick={() => move('idle', e.id)}
+                          >
+                            <b>{e.mark}</b>
+                            {e.name}
+                          </button>
+                        ))}
+                      </div>
+                      <h4>动作</h4>
+                      <div className="action-list">
+                        {Object.entries(actionNames).map(([value, title]) => (
+                          <button
+                            key={value}
+                            disabled={!supportsAction(skin, value as PetAction)}
+                            title={
+                              !supportsAction(skin, value as PetAction) ? '此外观尚未制作此动作' : undefined
+                            }
+                            onClick={() => move(value as PetAction, value === 'sleep' ? 'sleepy' : emotion)}
+                          >
+                            {title}
+                          </button>
+                        ))}
+                      </div>
+                      {skin?.kind === 'live2d' && skin.model && (
+                        <button
+                          className="button secondary full"
+                          onClick={() => {
+                            setEditedModel(structuredClone(skin));
+                            setModelOpen(true);
+                          }}
+                        >
+                          <SlidersHorizontal size={15} />
+                          配置动作与表情映射
+                        </button>
+                      )}
+                      <p className="fine-print">
+                        {skin?.kind === 'live2d'
+                          ? '模型按自身绑定与动作文件播放。可将聊天情绪映射到已有表情。'
+                          : skin?.kind === 'vrm'
+                            ? '支持骨骼待机、眨眼与音频口型。实际表情取决于模型。'
+                            : skin && spriteAnimation(skin)
+                              ? '使用完整原画帧，按制作时序切换。招手结束回到待机；语音静音时闭嘴。未制作的动作不可用。'
+                              : skin?.style === '3d'
+                                ? '这是具有三维观感的 PNG 立绘。要旋转角色和驱动骨骼，请导入 VRM 模型。'
+                                : '此外观保持静态。导入逐帧动画或已绑定的 Live2D / VRM 模型后，可播放相应动作。'}
+                      </p>
+                    </div>
+                  </div>
+                </details>
               </>
             )}
             {view === 'characters' && (
               <>
-                <div className="page-heading">
-                  <span className="page-kicker">角色档案</span>
-                  <h1>认真了解，才更靠近。</h1>
-                  <p>设定、语气与出处，让每一次回应有迹可循。</p>
-                </div>
                 <div className="profile-hero">
-                  <div className="profile-art">{assetThumb(skin)}</div>
-                  <div>
-                    <span>{character.work}</span>
-                    <h2>{character.name}</h2>
-                    <div className="tags">
-                      {character.personality.map((t, i) => (
-                        <span key={i}>{t}</span>
-                      ))}
-                    </div>
+                  <div className="tags">
+                    {character.personality.map((t, i) => (
+                      <span key={i}>{t}</span>
+                    ))}
                   </div>
                   <button className="button secondary" onClick={openProfile}>
                     <Pencil size={14} />
@@ -1992,11 +2088,6 @@ export default function App() {
             )}
             {view === 'memories' && (
               <>
-                <div className="page-heading">
-                  <span className="page-kicker">相处记忆</span>
-                  <h1>那些，被认真记住的小事。</h1>
-                  <p>{character.name}与你的记忆保存在本机，可以随时整理。</p>
-                </div>
                 <form
                   className="memory-compose"
                   onSubmit={(e) => {
@@ -2113,20 +2204,34 @@ export default function App() {
                 )}
               </>
             )}
-            {view === 'settings' && (
-              <SettingsPanel
-                settings={state.settings}
-                keys={keys}
-                notify={setToast}
-                onSaved={(_settings, value) => {
-                  setKeys(value);
-                  setToast('服务配置已保存。');
-                }}
-              />
-            )}
-          </main>
-        </div>
-      </section>
+          </StudioFrame>
+        )}
+        {settingsView && (
+          <SettingsFrame name={character.name} onBack={() => setView('home')}>
+            <DesktopPage
+              preview={avatar}
+              size={state.settings.petSize || 'medium'}
+              onSize={(petSize) => commit((s) => ({ ...s, settings: { ...s.settings, petSize } }))}
+              characterName={character.name}
+              skinName={skin?.name}
+              autonomous={state.settings.desktopLifeEnabled}
+              onAutonomous={desktopLifeEnabled=>commit(s=>({...s,settings:{...s.settings,desktopLifeEnabled}}))}
+              desktopAvailable={isDesktop}
+              onOpen={() => notifyError(bridge.openPet())}
+              onClose={() => notifyError(bridge.closePet())}
+            />
+            <SettingsPanel
+              settings={state.settings}
+              keys={keys}
+              notify={setToast}
+              onSaved={(_settings, value, manual) => {
+                setKeys(value);
+                if (manual) setToast('服务配置已保存。');
+              }}
+            />
+          </SettingsFrame>
+        )}
+      </main>
       {toast && (
         <div className="toast" role="status">
           <Check size={17} />
@@ -2442,8 +2547,8 @@ export default function App() {
           key={character.id}
           character={character}
           skins={skins}
-          imageReady={keys.imageKey && Boolean(state.settings.imageModel)}
-          llmReady={keys.llmKey && Boolean(state.settings.llmModel)}
+          imageReady={imageServiceReady(state.settings, keys)}
+          llmReady={chatServiceReady(state.settings, keys)}
           onReferences={updateReferences}
           onBusy={setJobBusy}
           onClose={() => setGenerateOpen(false)}
@@ -2465,7 +2570,7 @@ export default function App() {
           key={character.id}
           character={character}
           skins={skins}
-          imageReady={isDesktop && keys.imageKey && Boolean(state.settings.imageModel)}
+          imageReady={isDesktop && imageServiceReady(state.settings, keys)}
           onClose={() => setPetProductionOpen(false)}
           onBusy={setJobBusy}
           onOpenSettings={() => {

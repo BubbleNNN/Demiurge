@@ -2,6 +2,7 @@ import type { ReactNode, RefObject } from 'react';
 import {
   ArrowUp,
   ArrowUpRight,
+  History,
   ChevronDown,
   ChevronUp,
   Copy,
@@ -19,7 +20,8 @@ import {
 } from 'lucide-react';
 import type { Character, ChatMessage, ChatStatus, PetAction } from '../../types';
 
-export type ConversationMode = 'compact' | 'full' | 'pet';
+// room: the composer pill under the character. history: the message list inside the drawer.
+export type ConversationMode = 'compact' | 'full' | 'pet' | 'room' | 'history';
 interface Props {
   mode: ConversationMode;
   character: Pick<Character, 'id' | 'name'>;
@@ -35,6 +37,8 @@ interface Props {
   chatExpanded: boolean;
   audioBusy: boolean;
   talking: boolean;
+  // True only while synthesized speech is playing (talking also covers scripted mouth motion).
+  speaking?: boolean;
   newTopicPending: boolean;
   replyNeedsSave: boolean;
   historyRef: RefObject<HTMLDivElement | null>;
@@ -68,6 +72,7 @@ export function ConversationPanel({
   chatExpanded,
   audioBusy,
   talking,
+  speaking = false,
   newTopicPending,
   replyNeedsSave,
   historyRef,
@@ -86,10 +91,30 @@ export function ConversationPanel({
   onToggleExpanded,
 }: Props) {
   const petMode = mode === 'pet';
+  const room = mode === 'room';
+  const historyOnly = mode === 'history';
   const interactionBusy = chatBusy || sharedChatStatus.busy;
+  const connection = (
+    <span className="connection-text">
+      <i className={connected || localChat ? 'online' : ''} />
+      {chatBusy
+        ? '正在组织语言…'
+        : sharedChatStatus.busy
+          ? sharedChatStatus.mode === 'preview'
+            ? '正在试聊角色语气…'
+            : '另一窗口正在等待回复…'
+          : localChat
+            ? '本地台词 · 无模型请求'
+            : connected
+              ? '对话服务已配置'
+              : '等待连接对话服务'}
+    </span>
+  );
+  // Model chat without a configured service gets a visible warning on the mode pill.
+  const offline = !localChat && !connected;
   const chatPreferences = (
     <details
-      className="chat-preferences"
+      className={`chat-preferences ${room && offline ? 'offline' : ''}`}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
       }}
@@ -121,30 +146,200 @@ export function ConversationPanel({
         >
           本地台词
         </button>
-        <span>{localChat ? '按场景回应' : '自由聊天'}</span>
+        {room ? connection : <span>{localChat ? '按场景回应' : '自由聊天'}</span>}
       </div>
     </details>
   );
+  const history = (
+    <div className="chat-history" id="conversation-history" ref={historyRef} aria-label="展开的对话记录">
+      {!messages.length && (
+        <div className="conversation-empty">
+          <span className="empty-orbit">
+            <MessageCircle size={25} />
+            <i>✦</i>
+          </span>
+          <h3>故事，从一句你好开始</h3>
+          <p>
+            {localChat
+              ? '试试“你好”“给我一点鼓励”或“晚安”。本地模式使用已编写的台词。'
+              : connected
+                ? `和${character.name}说说今天发生的事。`
+                : '接入对话模型，让熟悉的角色回应你的日常。'}
+          </p>
+          {!connected && !localChat && (
+            <button className="button secondary" onClick={onOpenSettings}>
+              连接对话服务
+              <ArrowUpRight size={14} />
+            </button>
+          )}
+        </div>
+      )}
+      {messages.map((item) => (
+        <div key={item.id} data-message-id={item.id} className={`chat-message ${item.role}`}>
+          {item.contextStart && <div className="topic-divider">新话题</div>}
+          <div className="message-meta">
+            <span>{item.role === 'assistant' ? character.name : '你'}</span>
+            <time>
+              {new Date(item.createdAt).toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </time>
+          </div>
+          <div className="chat-bubble">{item.content}</div>
+          {item.role === 'assistant' && (
+            <div className="reply-tools">
+              <small>
+                {item.origin === 'script' ? '本地台词 · ' : ''}
+                {item.action && item.action !== 'idle' ? `${actionNames[item.action]}回应` : '轻声回应'}
+              </small>
+              <button
+                title="复制这条回复"
+                aria-label="复制这条回复"
+                onClick={() => copyMessage(item.content)}
+              >
+                <Copy size={13} />
+              </button>
+              <button
+                title="朗读这条回复"
+                aria-label="朗读这条回复"
+                onClick={() => speak(item.content)}
+                disabled={audioBusy || item.origin === 'script'}
+              >
+                <Volume2 size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+  if (historyOnly) return history;
+  const send = (
+    <button
+      className="send-button"
+      type="submit"
+      disabled={!message.trim() || interactionBusy}
+      aria-label="发送消息"
+    >
+      {interactionBusy ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={20} />}
+    </button>
+  );
+  const input = (
+    <textarea
+      aria-label="聊天消息"
+      placeholder={room ? `和${character.name}说点什么…` : `想对${character.name}说些什么？`}
+      value={message}
+      onChange={(e) => {
+        const value = e.target.value;
+        onDraft(value);
+      }}
+      maxLength={4000}
+      rows={petMode ? 2 : 1}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          void sendChat();
+        }
+      }}
+    />
+  );
+  const topicButton = messages.length > 0 && (
+    <button
+      type="button"
+      className="voice-button"
+      aria-label="开启新话题"
+      title="开启新话题 · 保留历史与长期记忆"
+      disabled={interactionBusy || replyNeedsSave || newTopicPending}
+      onClick={beginTopic}
+    >
+      <RefreshCw size={15} />
+    </button>
+  );
+  const feedback = (
+    <div className="chat-feedback" aria-live="polite">
+      {chatBusy && (
+        <div className="chat-waiting">
+          <div className="typing-indicator">
+            <i />
+            <i />
+            <i />
+          </div>
+          <button className="text-button" disabled={chatStopping} onClick={stopChat}>
+            <Square size={11} />
+            {chatStopping ? '正在停止…' : '停止等待'}
+          </button>
+        </div>
+      )}
+      {!chatBusy && sharedChatStatus.busy && (
+        <div className="chat-shared-wait" role="status">
+          <LoaderCircle className="spin" size={13} />
+          <span>
+            {sharedChatStatus.mode === 'preview' ? '语气试聊进行中' : '另一窗口正在等待回复'}
+            ，输入草稿会保留。
+          </span>
+        </div>
+      )}
+      {chatError && (
+        <div className="inline-error">
+          {chatError}
+          {(connected || replyNeedsSave) && (
+            <button disabled={interactionBusy} onClick={() => sendChat('', true)}>
+              {replyNeedsSave ? '仅重试本机保存' : '重试这次回复'}
+            </button>
+          )}
+        </div>
+      )}
+      {newTopicPending && (
+        <div className="topic-notice" role="status">
+          <span>下一句开启新话题，历史与长期记忆仍然保留。</span>
+          <button className="icon-button" aria-label="取消开启新话题" onClick={onCancelTopic}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  if (room)
+    return (
+      <>
+        {feedback}
+        <form
+          className="chat-compose room-compose"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void sendChat();
+          }}
+        >
+          <button
+            type="button"
+            className="voice-button"
+            aria-label={chatExpanded ? '收起对话记录' : '查看对话记录'}
+            aria-expanded={chatExpanded}
+            title="对话记录"
+            onClick={onToggleExpanded}
+          >
+            <History size={18} />
+          </button>
+          {input}
+          {speaking && (
+            <button type="button" className="voice-button speaking" aria-label="停止朗读" onClick={stopAudio}>
+              <VolumeX size={17} />
+            </button>
+          )}
+          {topicButton}
+          {chatPreferences}
+          {send}
+        </form>
+      </>
+    );
   return (
     <>
       <div className="chat-header">
         <span className="chat-avatar">{thumbnail}</span>
         <div>
           <strong>{petMode ? character.name : `和${character.name}聊聊`}</strong>
-          <span className="connection-text">
-            <i className={connected || localChat ? 'online' : ''} />
-            {chatBusy
-              ? '正在组织语言…'
-              : sharedChatStatus.busy
-                ? sharedChatStatus.mode === 'preview'
-                  ? '正在试聊角色语气…'
-                  : '另一窗口正在等待回复…'
-                : localChat
-                  ? '本地台词 · 无模型请求'
-                  : connected
-                    ? '对话服务已配置'
-                    : '等待连接对话服务'}
-          </span>
+          {connection}
         </div>
         <button
           className="icon-button"
@@ -174,113 +369,9 @@ export function ConversationPanel({
         )}
       </div>
       {petMode && chatPreferences}
-      {(mode !== 'compact' || chatExpanded) && (
-        <div className="chat-history" id="conversation-history" ref={historyRef} aria-label="展开的对话记录">
-          {!messages.length && (
-            <div className="conversation-empty">
-              <span className="empty-orbit">
-                <MessageCircle size={25} />
-                <i>✦</i>
-              </span>
-              <h3>故事，从一句你好开始</h3>
-              <p>
-                {localChat
-                  ? '试试“你好”“给我一点鼓励”或“晚安”。本地模式使用已编写的台词。'
-                  : connected
-                    ? `和${character.name}说说今天发生的事。`
-                    : '接入对话模型，让熟悉的角色回应你的日常。'}
-              </p>
-              {!connected && !localChat && (
-                <button className="button secondary" onClick={onOpenSettings}>
-                  连接对话服务
-                  <ArrowUpRight size={14} />
-                </button>
-              )}
-            </div>
-          )}
-          {messages.map((item) => (
-            <div key={item.id} data-message-id={item.id} className={`chat-message ${item.role}`}>
-              {item.contextStart && <div className="topic-divider">新话题</div>}
-              <div className="message-meta">
-                <span>{item.role === 'assistant' ? character.name : '你'}</span>
-                <time>
-                  {new Date(item.createdAt).toLocaleTimeString('zh-CN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </time>
-              </div>
-              <div className="chat-bubble">{item.content}</div>
-              {item.role === 'assistant' && (
-                <div className="reply-tools">
-                  <small>
-                    {item.origin === 'script' ? '本地台词 · ' : ''}
-                    {item.action && item.action !== 'idle' ? `${actionNames[item.action]}回应` : '轻声回应'}
-                  </small>
-                  <button
-                    title="复制这条回复"
-                    aria-label="复制这条回复"
-                    onClick={() => copyMessage(item.content)}
-                  >
-                    <Copy size={13} />
-                  </button>
-                  <button
-                    title="朗读这条回复"
-                    aria-label="朗读这条回复"
-                    onClick={() => speak(item.content)}
-                    disabled={audioBusy || item.origin === 'script'}
-                  >
-                    <Volume2 size={13} />
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="chat-feedback" aria-live="polite">
-        {chatBusy && (
-          <div className="chat-waiting">
-            <div className="typing-indicator">
-              <i />
-              <i />
-              <i />
-            </div>
-            <button className="text-button" disabled={chatStopping} onClick={stopChat}>
-              <Square size={11} />
-              {chatStopping ? '正在停止…' : '停止等待'}
-            </button>
-          </div>
-        )}
-        {!chatBusy && sharedChatStatus.busy && (
-          <div className="chat-shared-wait" role="status">
-            <LoaderCircle className="spin" size={13} />
-            <span>
-              {sharedChatStatus.mode === 'preview' ? '语气试聊进行中' : '另一窗口正在等待回复'}
-              ，输入草稿会保留。
-            </span>
-          </div>
-        )}
-        {chatError && (
-          <div className="inline-error">
-            {chatError}
-            {(connected || replyNeedsSave) && (
-              <button disabled={interactionBusy} onClick={() => sendChat('', true)}>
-                {replyNeedsSave ? '仅重试本机保存' : '重试这次回复'}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      {(mode !== 'compact' || chatExpanded) && history}
+      {feedback}
       <div className="chat-bottom">
-        {newTopicPending && (
-          <div className="topic-notice" role="status">
-            <span>下一句开启新话题，历史与长期记忆仍然保留。</span>
-            <button className="icon-button" aria-label="取消开启新话题" onClick={onCancelTopic}>
-              <X size={14} />
-            </button>
-          </div>
-        )}
         {messages.length < 2 && (
           <div className="quick-prompts">
             <button
@@ -301,23 +392,7 @@ export function ConversationPanel({
             void sendChat();
           }}
         >
-          <textarea
-            aria-label="聊天消息"
-            placeholder={`想对${character.name}说些什么？`}
-            value={message}
-            onChange={(e) => {
-              const value = e.target.value;
-              onDraft(value);
-            }}
-            maxLength={4000}
-            rows={petMode ? 2 : 1}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                void sendChat();
-              }
-            }}
-          />
+          {input}
           <div className="compose-bottom">
             <button
               type="button"
@@ -333,27 +408,9 @@ export function ConversationPanel({
                 <Volume2 size={17} />
               )}
             </button>
-            {messages.length > 0 && (
-              <button
-                type="button"
-                className="voice-button"
-                aria-label="开启新话题"
-                title="开启新话题 · 保留历史与长期记忆"
-                disabled={interactionBusy || replyNeedsSave || newTopicPending}
-                onClick={beginTopic}
-              >
-                <RefreshCw size={15} />
-              </button>
-            )}
+            {topicButton}
             <span>Enter 发送</span>
-            <button
-              className="send-button"
-              type="submit"
-              disabled={!message.trim() || interactionBusy}
-              aria-label="发送消息"
-            >
-              {interactionBusy ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={20} />}
-            </button>
+            {send}
           </div>
         </form>
         <div className="chat-footer">
