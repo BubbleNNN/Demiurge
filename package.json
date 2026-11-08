@@ -1,6 +1,6 @@
 {
   "name": "demiurge",
-  "version": "0.3.26",
+  "version": "0.3.27",
   "private": true,
   "description": "An API-powered character companion and desktop pet workshop.",
   "main": "electron/main.cjs",
