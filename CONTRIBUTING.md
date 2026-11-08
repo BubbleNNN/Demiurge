@@ -1,6 +1,6 @@
-# Contributing to Mori
+# Contributing to Demiurge
 
-Mori is an Electron / React / TypeScript desktop companion. Use Node.js 22.12 or newer and the pnpm version declared in `package.json`.
+Demiurge is an Electron / React / TypeScript desktop companion. Use Node.js 22.12 or newer and the pnpm version declared in `package.json`.
 
 ```sh
 pnpm install --frozen-lockfile

@@ -9,7 +9,7 @@ export interface PreviewTurn {
 }
 export const previewIssues = ['身份设定', '事实依据', '说话语气', '相处关系', '动作表现'] as const;
 export const previewActionNames = {
-  walk_left:'向左跑',walk_right:'向右跑',walk_up:'向后跑',walk_down:'向前跑',drag:'被拎起',listen:'倾听',
+  walk_left:'向左跑',walk_right:'向右跑',walk_up:'向后跑',walk_down:'向前跑',drag:'被拎起',listen:'倾听',sit:'坐下',lie:'趴着',
   office:'办公',
   idle: '待机',
   wave: '招手',
@@ -26,7 +26,7 @@ export const previewActionNames = {
 export function previewSummary(character: Pick<Character, 'name' | 'work'>, turns: PreviewTurn[]) {
   const excerpt = (text: string, limit: number) => (text.length > limit ? text.slice(0, limit) + '…' : text);
   return [
-    `Mori 试聊摘要 · ${excerpt(character.name, 80)} · ${excerpt(character.work, 120)}`,
+    `Demiurge 试聊摘要 · ${excerpt(character.name, 80)} · ${excerpt(character.work, 120)}`,
     '以下为用户人工标记；问答为摘录，不是模型自动评分。',
     ...turns
       .slice(-8)

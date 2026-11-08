@@ -29,8 +29,13 @@ export function CharacterRail({
 }: Props) {
   return (
     <nav className="room-rail" aria-label="角色列表">
-      <button className="rail-brand" aria-label="Mori 首页" title={`Mori v${packageInfo.version}`} onClick={onHome}>
-        m
+      <button
+        className="rail-brand"
+        aria-label="Demiurge 首页"
+        title={`Demiurge v${packageInfo.version}`}
+        onClick={onHome}
+      >
+        <img src="./favicon.svg" alt="" draggable={false} />
       </button>
       <div className="rail-characters">
         {characters.map((character) => (

@@ -182,12 +182,12 @@ export function ArtWorkflow({
                 <span>Krita、渲染或动画服务导出的帧</span>
               </button>
               <button
-                aria-label="Aseprite / Mori 图集"
+                aria-label="Aseprite / Demiurge 图集"
                 disabled={busy}
                 onClick={() => void run(() => importAsset('sprite'))}
               >
                 <Film />
-                <strong>Aseprite / Mori 图集</strong>
+                <strong>Aseprite / Demiurge 图集</strong>
                 <span>已有 PNG 图集与动作 JSON</span>
               </button>
               <button

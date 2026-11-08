@@ -1,6 +1,6 @@
-# Mori macOS 本地应用包
+# Demiurge macOS 本地应用包
 
-Mori 可以打包成独立的 `Mori.app` 和 ZIP。使用者打开应用不需要 Node.js、pnpm 或开发服务器。当前脚本按构建机器和已安装 Electron 的原生架构生成 arm64 或 x64 包；本轮验收目标是 Apple Silicon。
+Demiurge 可以打包成独立的 `Demiurge.app` 和 ZIP。使用者打开应用不需要 Node.js、pnpm 或开发服务器。当前脚本按构建机器和已安装 Electron 的原生架构生成 arm64 或 x64 包；本轮验收目标是 Apple Silicon。
 
 ## 构建与检查
 
@@ -19,7 +19,7 @@ pnpm test:package
 
 ```text
 release/Mori-0.3.7-macOS-arm64/
-  Mori.app
+  Demiurge.app
   package-manifest.json
   RELEASE_GUIDE.md
 release/Mori-0.3.7-macOS-arm64.zip
@@ -42,6 +42,6 @@ release/Mori-0.3.7-macOS-arm64.zip.sha256
 
 本轮生成的是本地验收包，没有 Apple Developer ID 签名、公证、自动更新或上传。macOS 最低版本取自所用 Electron 发行包，本轮为 macOS 12；没有在其他 macOS 版本或 Intel 机器上验收。换机器下载的未签名应用可能被 Gatekeeper 阻止，当前不能作为已公证的公开安装包宣传。
 
-Live2D Core 使用其专有许可。Mori 允许导入用户模型，公开发布时应针对这种可扩展应用用途确认 [Live2D SDK 许可](https://www.live2d.com/en/sdk/license/) 和 [专有软件许可协议](https://www.live2d.com/eula/live2d-proprietary-software-license-agreement_en.html) 的适用条件。当前未替用户申请任何授权。内置昔涟图片是带角色 IP 限制的 AI 同人素材，也不属于 Mori 源码的 MIT 授权；公开发布前应换成有分发权限的默认角色素材或取得相应授权。上述资源保留在本地验收包中，避免把缺少运行资源的包误称为完整版本。
+Live2D Core 使用其专有许可。Demiurge 允许导入用户模型，公开发布时应针对这种可扩展应用用途确认 [Live2D SDK 许可](https://www.live2d.com/en/sdk/license/) 和 [专有软件许可协议](https://www.live2d.com/eula/live2d-proprietary-software-license-agreement_en.html) 的适用条件。当前未替用户申请任何授权。内置昔涟图片是带角色 IP 限制的 AI 同人素材，也不属于 Demiurge 源码的 MIT 授权；公开发布前应换成有分发权限的默认角色素材或取得相应授权。上述资源保留在本地验收包中，避免把缺少运行资源的包误称为完整版本。
 
 公开发布还需在目标系统上复验、完成签名和公证、确认素材分发许可，并制定更新渠道。本轮只落地本地应用封装与自动验收，不执行这些外部发布动作。

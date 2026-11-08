@@ -13,7 +13,7 @@ const MAX_ATLAS_BYTES = 32 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 192 * 1024 * 1024;
 const EMOTIONS = ['neutral', 'happy', 'thinking', 'sad', 'sleepy', 'surprised'];
 const ACTIVITIES = require('../shared/activities.json').activities.map((activity) => activity.id);
-const ACTIONS = ['walk_left','walk_right','walk_up','walk_down','drag','listen','idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', ...ACTIVITIES];
+const ACTIONS = ['walk_left','walk_right','walk_up','walk_down','drag','listen','sit','lie','idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', ...ACTIVITIES];
 const KEY_NAMES = ['llmKey', 'searchKey', 'imageKey', 'ttsKey', 'modelKey'];
 
 function invalid(label, detail) {

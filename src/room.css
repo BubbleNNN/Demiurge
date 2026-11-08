@@ -43,17 +43,18 @@
   z-index: 20;
 }
 .rail-brand {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
-  background: var(--accent-ink);
-  color: #fff;
-  font-weight: 800;
-  font-size: 19px;
-  line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+}
+/* The app icon itself; its tile has the usual transparent margin. */
+.rail-brand > img {
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
 }
 .rail-characters {
   flex: 1;

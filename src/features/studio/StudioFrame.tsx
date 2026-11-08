@@ -85,7 +85,7 @@ export function SettingsFrame({
       <header className="page-frame-header">
         <BackButton name={name} onBack={onBack} />
         <div>
-          <span className="page-frame-kicker">Mori</span>
+          <span className="page-frame-kicker">Demiurge</span>
           <h1>连接与设置</h1>
         </div>
       </header>

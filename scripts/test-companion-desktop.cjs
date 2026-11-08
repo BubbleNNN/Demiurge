@@ -100,7 +100,7 @@ app.on('browser-window-created', (_event, created) => {
   win.webContents.once('did-finish-load', async () => {
     try {
       await wait(`!!document.querySelector('.room-rail')`);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
       await click('使用预制角色包');
@@ -162,7 +162,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(await js(`document.querySelector('.head-zone').disabled`));
       await click('唤醒角色');
       await wait(`document.querySelector('.scene-artwork canvas').dataset.clip==='wave'`);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
       await click('使用预制角色包');
@@ -192,7 +192,7 @@ app.on('browser-window-created', (_event, created) => {
         loaded.characters.find((c) => c.id === importedId).companion.replies.touch[0],
         '一起慢慢做眼前的小事吧。',
       );
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await js(
         `(async()=>{document.querySelector('.room-wardrobe-more[aria-expanded="false"]')?.click();await new Promise(r=>setTimeout(r,60));const b=[...document.querySelectorAll('.room-wardrobe button')].find(b=>(b.getAttribute('aria-label')||'').includes('记忆存档'));b.click()})()`,
       );

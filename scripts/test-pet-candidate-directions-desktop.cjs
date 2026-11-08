@@ -204,7 +204,7 @@ app.on('browser-window-created', (_event, created) => {
   const cardDirections = () =>
     js(`[...document.querySelectorAll('[aria-label="候选表现方向"]')].map(e=>e.textContent.trim())`);
   const open = async () => {
-    await click('Mori 首页');
+    await click('Demiurge 首页');
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');

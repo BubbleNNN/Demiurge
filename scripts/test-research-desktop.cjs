@@ -220,7 +220,7 @@ app.on('browser-window-created', (_, win) => {
       assert.doesNotMatch(current.sources[0].snippet, /广告|不应该执行/);
       const characterId = current.id;
       await click('稍后补充素材，保留角色档案');
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('角色档案');
       await js(
@@ -286,7 +286,7 @@ app.on('browser-window-created', (_, win) => {
       await wait(`window.mori.load().then(r=>r.state.settings.searchProvider==='searxng')`);
       refuseSearch = true;
       refuseSearchStatus = 567;
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('角色档案');
       const beforeBlockedUpdate = await load();

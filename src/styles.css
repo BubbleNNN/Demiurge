@@ -6512,3 +6512,78 @@ select:focus {
   font-size: 12px;
   padding: 0;
 }
+
+/* How she feels, as a little manga mark beside her head (desktop pet and home stage). */
+.mood-mark {
+  position: absolute;
+  top: 10%;
+  left: 63%;
+  z-index: 4;
+  font-size: 24px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  animation: mood-bob 2.4s ease-in-out infinite;
+}
+.room-figure .mood-mark {
+  top: 13%;
+  left: 61%;
+  font-size: 34px;
+}
+.mood-mark.angry {
+  animation: mood-pulse 1.1s ease-in-out infinite;
+}
+.mood-mark.lonely {
+  color: var(--muted, #8a7f8c);
+  font-weight: 700;
+  letter-spacing: 2px;
+  animation: mood-fade 3.2s ease-in-out infinite;
+}
+.mood-mark.happy {
+  color: var(--accent);
+  font-weight: 700;
+}
+@keyframes mood-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes mood-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.25);
+  }
+}
+@keyframes mood-fade {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mood-mark {
+    animation: none;
+  }
+}
+/* New motions to add to a finished pet task. */
+.production-add-motions {
+  display: grid;
+  gap: 8px;
+}
+.production-add-motions .checkbox-label > span {
+  display: grid;
+  gap: 2px;
+}
+.production-add-motions small {
+  color: var(--muted);
+}

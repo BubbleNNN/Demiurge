@@ -134,7 +134,7 @@ app.on('browser-window-created', (_event, created) => {
       `(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.textContent.trim()===${JSON.stringify(label)}||b.getAttribute('aria-label')===${JSON.stringify(label)})&&!b.disabled);if(!b)throw new Error('Missing button '+${JSON.stringify(label)});b.click()})()`,
     );
   const open = async () => {
-    await click('Mori 首页');
+    await click('Demiurge 首页');
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');

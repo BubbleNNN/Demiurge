@@ -207,18 +207,33 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         (job.revision.kind === 'motion' && !job.motions.includes(job.revision.motion)))
     )
       throw new Error('修正任务记录无效。');
+    if (
+      job.extension !== undefined &&
+      (!job.extension ||
+        typeof job.extension.sourceJobId !== 'string' ||
+        !Array.isArray(job.extension.motions) ||
+        !job.extension.motions.length ||
+        job.extension.motions.some((m) => !job.motions.includes(m)))
+    )
+      throw new Error('补充动作记录无效。');
     for (const step of job.steps) {
       if (
         !job.styles.includes(step.style) ||
         !['base', 'sheet', 'pack'].includes(step.kind) ||
         !['queued', 'working', 'done', 'failed', 'unsaved', 'uncertain'].includes(step.status) ||
         (step.kind === 'sheet' && !job.motions.includes(step.motion)) ||
-        (step.attempts !== undefined && !(Number.isInteger(step.attempts) && step.attempts >= 0 && step.attempts <= 9)) ||
+        (step.attempts !== undefined &&
+          !(Number.isInteger(step.attempts) && step.attempts >= 0 && step.attempts <= 9)) ||
         (step.hint !== undefined && (typeof step.hint !== 'string' || step.hint.length > 600)) ||
         (step.replaces !== undefined &&
-          (step.kind !== 'pack' || typeof step.replaces !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(step.replaces))) ||
+          (step.kind !== 'pack' ||
+            typeof step.replaces !== 'string' ||
+            !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(step.replaces))) ||
         (step.part !== undefined &&
-          (step.kind !== 'sheet' || !Number.isInteger(step.part) || step.part < 0 || step.part >= motionParts(step.motion, job)))
+          (step.kind !== 'sheet' ||
+            !Number.isInteger(step.part) ||
+            step.part < 0 ||
+            step.part >= motionParts(step.motion, job)))
       )
         throw new Error('桌宠任务阶段无效。');
     }
@@ -449,13 +464,20 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         style = job.styles[0];
       const images = [];
       if (revision.kind === 'base')
-        images.push((await readJson(path.join(root, `${job.id}.revision.json`), 12 * 1024 * 1024)).skin.images.neutral);
+        images.push(
+          (await readJson(path.join(root, `${job.id}.revision.json`), 12 * 1024 * 1024)).skin.images.neutral,
+        );
       else {
         // The motion as it is now, from the finished task being revised, then the master.
         try {
           const finished = await load(revision.sourceJobId);
           for (const [i, step] of finished.steps.entries())
-            if (step.kind === 'sheet' && step.style === style && step.motion === revision.motion && images.length < 2) {
+            if (
+              step.kind === 'sheet' &&
+              step.style === style &&
+              step.motion === revision.motion &&
+              images.length < 2
+            ) {
               const data = await pixels(finished, i);
               if (data?.image) images.push(data.image);
             }
@@ -471,7 +493,9 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
             style,
             feedback: revision.feedback,
             images,
-            ...(revision.kind === 'motion' ? { motion: revision.motion, motionName: motionNames[revision.motion] } : {}),
+            ...(revision.kind === 'motion'
+              ? { motion: revision.motion, motionName: motionNames[revision.motion] }
+              : {}),
           },
           settings,
           credentials,
@@ -507,7 +531,9 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       phase = 'planning';
     const key = `${job.id}:${edit.id}`;
     try {
-      const plan = resume ? null : await editPlan(job, edit, source, character, settings, credentials, progress);
+      const plan = resume
+        ? null
+        : await editPlan(job, edit, source, character, settings, credentials, progress);
       phase = 'generating';
       if (resume) {
         returned = await editPixels(job, edit);
@@ -560,7 +586,13 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       return job;
     } catch (error) {
       edit.status =
-        phase === 'planning' ? 'failed' : returned && phase !== 'checking' ? 'unsaved' : returned ? 'failed' : 'uncertain';
+        phase === 'planning'
+          ? 'failed'
+          : returned && phase !== 'checking'
+            ? 'unsaved'
+            : returned
+              ? 'failed'
+              : 'uncertain';
       edit.error = String(error.message || '角色修图未完成。').slice(0, 700);
       job.status = 'attention';
       try {
@@ -692,13 +724,86 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       for (let i = 1; i < job.steps.length - 1; i++)
         if (job.steps[i].status === 'done') {
           const original = source.steps.findIndex(
-            (s) => s.style === input.style && s.kind === 'sheet' && s.motion === job.steps[i].motion && s.part === job.steps[i].part,
+            (s) =>
+              s.style === input.style &&
+              s.kind === 'sheet' &&
+              s.motion === job.steps[i].motion &&
+              s.part === job.steps[i].part,
           );
           const data = await pixels(source, original);
           if (!data?.image) throw new Error('原动作素材缺失，无法复用。');
           await writeJson(artifact(job.id, i), data);
         }
     } else await writeJson(path.join(root, `${job.id}.revision.json`), { skin: master });
+    try {
+      return await persist(job);
+    } catch (error) {
+      cache.delete(job.id);
+      throw error;
+    }
+  }
+  // Adds motions a finished task does not have yet (sitting and lying down on a window, say):
+  // a new task that reuses the chosen master and every finished sheet as they are, draws only the
+  // new motions, and packs them all together. The original task and its looks stay unchanged.
+  async function extend(id, input, character, settings) {
+    const source = await load(id);
+    const added = Array.isArray(input.motions) ? [...new Set(input.motions)] : [];
+    if (
+      source.status !== 'ready' ||
+      !source.styles.includes(input.style) ||
+      !added.length ||
+      added.some((m) => !motions.includes(m) || source.motions.includes(m))
+    )
+      throw new Error('只能为已完成的任务补充它还没有的动作。');
+    if (
+      source.characterId !== character.id ||
+      source.referenceDigest !== referencePack(character).digest ||
+      source.configDigest !== configDigest(settings)
+    )
+      throw new Error('角色参考或图像服务已变化，请恢复原配置后补充动作。');
+    const duplicate = (await list(character.id)).find(
+      (j) => !['ready', 'cancelled'].includes(j.status) && j.styles.includes(input.style),
+    );
+    if (duplicate) throw new Error('这套画风已有未完成任务，请先继续或结束它。');
+    const master = await chosenMaster(source, input.style);
+    const guide = await readStyleReference(source);
+    const kept = source.steps.filter((s) => s.kind === 'sheet' && s.style === input.style);
+    const job = {
+      ...source,
+      id: randomUUID(),
+      styles: [input.style],
+      motions: [...source.motions, ...added],
+      candidateCount: 1,
+      status: 'queued',
+      createdAt: stamp(),
+      updatedAt: stamp(),
+      results: [],
+      selectedBases: { [input.style]: master.id },
+      extension: { sourceJobId: id, motions: added },
+      steps: [
+        { kind: 'base', style: input.style, status: 'done' },
+        ...kept.map((s) => ({
+          kind: 'sheet',
+          style: input.style,
+          motion: s.motion,
+          ...(s.part !== undefined ? { part: s.part } : {}),
+          status: 'done',
+        })),
+        ...added.flatMap((motion) => sheetSteps(input.style, motion, source)),
+        { kind: 'pack', style: input.style, status: 'queued' },
+      ],
+    };
+    delete job.revision;
+    delete job.awaitingSelection;
+    delete job.baseEdits;
+    if (guide) await writeJson(styleFile(job.id), { reference: guide });
+    await writeJson(artifact(job.id, 0), { skin: master });
+    for (let i = 1; i <= kept.length; i++) {
+      const original = source.steps.indexOf(kept[i - 1]);
+      const data = await pixels(source, original);
+      if (!data?.image) throw new Error('原动作素材缺失，无法补充动作。');
+      await writeJson(artifact(job.id, i), data);
+    }
     try {
       return await persist(job);
     } catch (error) {
@@ -764,8 +869,11 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         let chibiContext;
         if (step.kind === 'base' && step.style === 'chibi-pet' && !job.revision) {
           const saved = path.join(root, `${id}.chibi-reference.json`);
-          try { chibiContext = await readJson(saved, 12 * 1024 * 1024); }
-          catch(error) { if(error.code !== 'ENOENT') throw error; }
+          try {
+            chibiContext = await readJson(saved, 12 * 1024 * 1024);
+          } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
+          }
           if (!chibiContext) {
             chibiContext = await services.discoverChibiReferences(character, settings, credentials, progress);
             await writeJson(saved, chibiContext);
@@ -812,9 +920,19 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
               // A later part continues the earlier parts of the same motion: same size and props.
               for (let i = 0; i < index; i++) {
                 const previous = job.steps[i];
-                if (previous.kind === 'sheet' && previous.style === step.style && previous.motion === step.motion && previous.status === 'done') {
+                if (
+                  previous.kind === 'sheet' &&
+                  previous.style === step.style &&
+                  previous.motion === step.motion &&
+                  previous.status === 'done'
+                ) {
                   const asset = await pixels(job, i);
-                  if (asset?.image) continuityReferences.push({ motion: step.motion, part: previous.part, image: asset.image });
+                  if (asset?.image)
+                    continuityReferences.push({
+                      motion: step.motion,
+                      part: previous.part,
+                      image: asset.image,
+                    });
                 }
               }
               continuityReferences.splice(0, Math.max(0, continuityReferences.length - 2));
@@ -893,7 +1011,12 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       phase = 'checking';
       if (step.kind === 'base') inspectMaster(validateSkin(returned.skin).images.neutral, codec);
       if (step.kind === 'sheet')
-        inspectSheet(returned.image, codec, step.motion, step.part === undefined ? job : { ...job, part: step.part });
+        inspectSheet(
+          returned.image,
+          codec,
+          step.motion,
+          step.part === undefined ? job : { ...job, part: step.part },
+        );
       if (step.kind === 'pack') {
         const skin = validateSkin(returned.skin);
         phase = 'installing';
@@ -924,7 +1047,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       // rejection keeps its source output but needs a regeneration.
       const localSaveFailure = returned && phase !== 'checking';
       // Planning (chat model and search) fails before any image request.
-      step.status = phase === 'planning' ? 'failed' : localSaveFailure ? 'unsaved' : returned ? 'failed' : 'uncertain';
+      step.status =
+        phase === 'planning' ? 'failed' : localSaveFailure ? 'unsaved' : returned ? 'failed' : 'uncertain';
       if (step.kind === 'base' && job.awaitingSelection === step.style) delete job.awaitingSelection;
       if (step.kind === 'pack') step.status = returned ? 'unsaved' : 'failed';
       step.error = String(error.message || '桌宠制作未完成。').slice(0, 700);
@@ -932,7 +1056,12 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       // A pose sheet that fails the local quality check is regenerated automatically, a bounded
       // number of times, with the reason fed back into the next request. The rejected file is
       // kept as evidence, the same way an explicit retry keeps it.
-      if (step.kind === 'sheet' && step.status === 'failed' && phase !== 'planning' && (step.attempts || 0) < AUTO_RETRIES) {
+      if (
+        step.kind === 'sheet' &&
+        step.status === 'failed' &&
+        phase !== 'planning' &&
+        (step.attempts || 0) < AUTO_RETRIES
+      ) {
         try {
           await io.rename(artifact(id, index), path.join(root, `${id}-${index}.rejected-${Date.now()}.json`));
         } catch {
@@ -941,11 +1070,18 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         pendingPixels.delete(`${id}:${index}`);
         step.attempts = (step.attempts || 0) + 1;
         step.hint = retryHint(step.error);
-        step.error = `上一次结果未通过检查，正在自动重做（第 ${step.attempts}/${AUTO_RETRIES} 次）：${step.error}`.slice(0, 700);
+        step.error =
+          `上一次结果未通过检查，正在自动重做（第 ${step.attempts}/${AUTO_RETRIES} 次）：${step.error}`.slice(
+            0,
+            700,
+          );
         step.status = 'queued';
         job.status = 'queued';
       } else if (step.kind === 'sheet' && step.status === 'failed' && step.attempts)
-        step.error = `已自动重做 ${step.attempts} 次仍未通过检查，请手动重试或修正提示。${step.error}`.slice(0, 700);
+        step.error = `已自动重做 ${step.attempts} 次仍未通过检查，请手动重试或修正提示。${step.error}`.slice(
+          0,
+          700,
+        );
       try {
         await persist(job);
       } catch {
@@ -1056,6 +1192,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       serial(`job:${id}`, () => retryBaseEdit(id, editId, character, settings, credentials, progress)),
     revise: (id, input, character, settings) =>
       serial(`char:${character.id}`, () => revise(id, input, character, settings)),
+    extend: (id, input, character, settings) =>
+      serial(`char:${character.id}`, () => extend(id, input, character, settings)),
   };
 }
 module.exports = { createPetPipeline };

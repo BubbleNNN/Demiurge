@@ -67,7 +67,7 @@ async function run() {
   await evaluate(
     `(async () => { const s = (await window.mori.load()).state; await window.mori.saveSettings(s.settings, {imageKey:'local-transport-fixture'}); })()`,
   );
-  await click('Mori 首页');
+  await click('Demiurge 首页');
   await click('角色工作室');
   await click('外观与动作');
   await click('制作立绘与像素动画');

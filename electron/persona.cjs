@@ -1,6 +1,6 @@
 'use strict';
 const ACTIVITIES = require('../shared/activities.json').activities.map((activity) => activity.id);
-const ACTIONS = ['walk_left','walk_right','walk_up','walk_down','drag','listen','idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', ...ACTIVITIES];
+const ACTIONS = ['walk_left','walk_right','walk_up','walk_down','drag','listen','sit','lie','idle', 'bounce', 'nod', 'shake', 'sleep', 'wave', ...ACTIVITIES];
 const motionPack = require('../shared/cyrene-motion-pack.json');
 const EMOTIONS = ['neutral', 'happy', 'thinking', 'sad', 'sleepy', 'surprised'];
 function usableSkin(skin, character) {

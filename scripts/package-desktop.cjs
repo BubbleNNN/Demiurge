@@ -274,10 +274,10 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
     throw new Error('Missing production build. Run pnpm build.');
   const release = path.join(root, 'release');
   fs.mkdirSync(release, { recursive: true });
-  const stem = `Mori-${info.version}-macOS-${process.arch}`;
+  const stem = `Demiurge-${info.version}-macOS-${process.arch}`;
   const temporary = fs.mkdtempSync(path.join(release, '.package-'));
   const output = path.join(release, stem);
-  const app = path.join(temporary, 'Mori.app');
+  const app = path.join(temporary, 'Demiurge.app');
   try {
     run('/usr/bin/ditto', ['--noextattr', '--norsrc', electronApp, app], { stdio: 'pipe' });
     const contents = path.join(app, 'Contents');
@@ -300,6 +300,7 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
       JSON.stringify(
         {
           name: info.name,
+          // Internal name: keeps the data folder and Keychain item of earlier Mori versions.
           productName: 'Mori',
           version: info.version,
           description: info.description,
@@ -345,24 +346,25 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
         fs.copyFileSync(original, path.join(payload, 'licenses', `Electron-${file}`));
     }
     fs.copyFileSync(path.join(root,'docs/licenses/anime-codex-MIT.txt'),path.join(payload,'licenses/anime-codex-MIT.txt'));
+    // Kept from the Mori days: macOS permissions (Finder automation) stay granted after the rename.
     const bundleId = 'com.mori.companion';
     editPlist(
       path.join(contents, 'Info.plist'),
       {
         NSAppleEventsUsageDescription: '桌宠通过 Finder 获取桌面图标位置，寻找藏身处；不会读取文件内容。',
-        CFBundleDisplayName: 'Mori',
-        CFBundleName: 'Mori',
-        CFBundleExecutable: 'Mori',
+        CFBundleDisplayName: 'Demiurge',
+        CFBundleName: 'Demiurge',
+        CFBundleExecutable: 'Demiurge',
         CFBundleIdentifier: bundleId,
         CFBundleShortVersionString: info.version,
         CFBundleVersion: info.version,
-        CFBundleIconFile: 'mori.icns',
+        CFBundleIconFile: 'demiurge.icns',
         LSApplicationCategoryType: 'public.app-category.lifestyle',
-        NSHumanReadableCopyright: 'Mori contributors. Third-party code and artwork retain their own rights.',
+        NSHumanReadableCopyright: 'Demiurge (formerly Mori) contributors. Third-party code and artwork retain their own rights.',
       },
       ['ElectronAsarIntegrity'],
     );
-    fs.renameSync(path.join(contents, 'MacOS/Electron'), path.join(contents, 'MacOS/Mori'));
+    fs.renameSync(path.join(contents, 'MacOS/Electron'), path.join(contents, 'MacOS/Demiurge'));
     for (const helper of fs
       .readdirSync(path.join(contents, 'Frameworks'))
       .filter((name) => /^Electron Helper.*\.app$/.test(name))) {
@@ -370,13 +372,13 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
       const label = helper.replace(/\.app$/, '');
       const suffix = label === 'Electron Helper' ? '' : `.${label.match(/\(([^)]+)\)/)[1].toLowerCase()}`;
       editPlist(path.join(helperContents, 'Info.plist'), {
-        CFBundleDisplayName: label.replace('Electron', 'Mori'),
-        CFBundleName: label.replace('Electron', 'Mori'),
+        CFBundleDisplayName: label.replace('Electron', 'Demiurge'),
+        CFBundleName: label.replace('Electron', 'Demiurge'),
         CFBundleIdentifier: `${bundleId}.helper${suffix}`,
       });
       fs.rmSync(path.join(helperContents, '_CodeSignature'), { recursive: true, force: true });
     }
-    const iconDir = path.join(temporary, 'mori.iconset');
+    const iconDir = path.join(temporary, 'demiurge.iconset');
     fs.mkdirSync(iconDir);
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
@@ -386,13 +388,13 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
       [path.join(root, 'scripts/lib/package-icon.cjs'), path.join(root, 'public/favicon.svg'), iconDir],
       { env },
     );
-    run('/usr/bin/iconutil', ['-c', 'icns', iconDir, '-o', path.join(resources, 'mori.icns')], {
+    run('/usr/bin/iconutil', ['-c', 'icns', iconDir, '-o', path.join(resources, 'demiurge.icns')], {
       stdio: 'pipe',
     });
     fs.rmSync(iconDir, { recursive: true });
     fs.rmSync(path.join(resources, 'electron.icns'), { force: true });
     const manifest = {
-      product: 'Mori',
+      product: 'Demiurge',
       version: info.version,
       platform: 'darwin',
       arch: process.arch,
@@ -420,11 +422,11 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
       fs.writeFileSync(`${zip}.sha256`, `${hashFile(zip)}  ${path.basename(zip)}\n`);
       console.log(`ZIP: ${zip}`);
     }
-    console.log(`APP: ${path.join(output, 'Mori.app')}`);
+    console.log(`APP: ${path.join(output, 'Demiurge.app')}`);
     console.log(
       `Audited ${manifest.payload.length} payload entries; ${runtime.length} runtime packages. Local unsigned build; no upload.`,
     );
-    return { output, app: path.join(output, 'Mori.app'), manifest };
+    return { output, app: path.join(output, 'Demiurge.app'), manifest };
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }

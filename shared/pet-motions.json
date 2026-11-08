@@ -474,5 +474,57 @@
       "close and lower the same laptop",
       "put laptop away and return to neutral master"
     ]
+  },
+  {
+    "id": "sit",
+    "name": "坐下",
+    "description": "坐在窗口上沿或地面上，抱着膝盖看着你",
+    "staged": true,
+    "poses": [
+      "neutral standing",
+      "crouch down, knees bending",
+      "sit down on the ground line, knees drawn up",
+      "sitting, arms around knees, looking at viewer",
+      "sitting, head tilted, small smile",
+      "sitting, chin resting on knees",
+      "rise to a crouch",
+      "neutral standing"
+    ],
+    "poses8": [
+      "neutral standing",
+      "crouch down, knees bending",
+      "sit down on the ground line, knees drawn up",
+      "sitting, arms around knees, looking at viewer",
+      "sitting, head tilted, small smile",
+      "sitting, chin resting on knees",
+      "rise to a crouch",
+      "neutral standing"
+    ]
+  },
+  {
+    "id": "lie",
+    "name": "趴着",
+    "description": "趴在窗口上沿，托着下巴看你，小腿轻轻晃",
+    "staged": true,
+    "poses": [
+      "neutral standing",
+      "kneel down on the ground line",
+      "lie on the stomach, propped on elbows, chin in hands",
+      "lying on the stomach, chin in hands, one foot raised behind",
+      "same pose, the other foot raised, small smile",
+      "same pose, head tilted, feet crossed in the air",
+      "push up onto hands and knees",
+      "neutral standing"
+    ],
+    "poses8": [
+      "neutral standing",
+      "kneel down on the ground line",
+      "lie on the stomach, propped on elbows, chin in hands",
+      "lying on the stomach, chin in hands, one foot raised behind",
+      "same pose, the other foot raised, small smile",
+      "same pose, head tilted, feet crossed in the air",
+      "push up onto hands and knees",
+      "neutral standing"
+    ]
   }
 ]

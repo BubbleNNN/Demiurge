@@ -1,6 +1,6 @@
 # 陪伴主页的排版方向
 
-本轮依据实际界面与以下公开原始资料调整，保留 Mori 自己的角色素材、交互和主题系统：
+本轮依据实际界面与以下公开原始资料调整，保留 Demiurge 自己的角色素材、交互和主题系统：
 
 - [Anthropic frontend-design skill](https://github.com/anthropics/skills/blob/main/skills/frontend-design/SKILL.md)：先制定颜色、字体和空间方案，再以实际截图评审；减少无信息作用的装饰和重复卡片。
 - [AIRI 设计指南](https://github.com/moeru-ai/airi/blob/main/DESIGN.md)及 [Stage Web 页面](https://github.com/moeru-ai/airi/blob/main/apps/stage-web/src/pages/index.vue)：人物拥有连续空间，常用控制保持轻量，详细设置按需打开；强调色跟随角色。

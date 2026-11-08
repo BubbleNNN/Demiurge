@@ -101,7 +101,7 @@ app.on('browser-window-created', (_, created) => {
       assert.match(await js(`window.mori.openPet().then(()=>'',error=>error.message)`), /已核对的外观/);
       assert.equal(BrowserWindow.getAllWindows().length, 1);
       await click('稍后补充素材，保留角色档案');
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await wait(`!!document.querySelector('.character-readiness')`);
       await capture('new-character-setup');
       // Reopening with the same name/work resumes that profile without overwriting notes.
@@ -125,7 +125,7 @@ app.on('browser-window-created', (_, created) => {
         `[...document.querySelectorAll('.rail-avatar')].find(b=>b.getAttribute('aria-label').includes('昔涟')).click()`,
       );
       await wait(`window.mori.load().then(({state})=>state.activeSkinId==='cyrene-powerpuff-v1')`);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await wait(`!!document.querySelector('.scene-artwork canvas[data-figure-bounds]')`);
       // Real bitmap hit tests: transparent point must do nothing; head/body route separately.
       const points =

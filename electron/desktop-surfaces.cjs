@@ -108,11 +108,13 @@ async function desktopSurfaces(origin) {
     return { surfaces: [], supported: false, reason: '当前窗口感知仅支持 macOS；可以标记藏身处。' };
   try {
     let raw = latest && Date.now() - latest.at < 1000 ? latest.raw : null;
+    // When this picture of the desktop was taken: window speeds are measured between pictures.
+    let at = raw ? latest.at : Date.now();
     if (!raw) {
       const { stdout } = await promisify(execFile)(helper(), [], { timeout: 4000, maxBuffer: 1024 * 1024 });
       raw = JSON.parse(stdout);
     }
-    return { ...normalizeScene(raw, origin, process.pid), supported: true };
+    return { ...normalizeScene(raw, origin, process.pid), at, supported: true };
   } catch {
     return { surfaces: [], supported: false, reason: '暂时无法读取窗口位置，可以使用标记的藏身处。' };
   }

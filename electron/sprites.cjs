@@ -5,7 +5,7 @@ const { randomUUID } = require('node:crypto');
 const { safePath } = require('./models.cjs');
 const CLIPS = new Set([
   'idle',
-  ...['walk_left','walk_right','walk_up','walk_down','drag','listen','sleep'].flatMap(id=>[id,`enter_${id}`,`exit_${id}`]),
+  ...['walk_left','walk_right','walk_up','walk_down','drag','listen','sit','lie','sleep'].flatMap(id=>[id,`enter_${id}`,`exit_${id}`]),
   ...require('../shared/activities.json').activities.flatMap(({ id }) => [id, `enter_${id}`, `exit_${id}`]),
   'wave',
   'nod',

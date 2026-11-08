@@ -38,7 +38,7 @@ app.on('browser-window-created', (_, w) => {
           `[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')===${JSON.stringify(label)}||b.textContent.trim()===${JSON.stringify(label)})&&!b.disabled).click()`,
         );
       const go = async (view) => {
-        await press(view === 'settings' ? '连接与设置' : 'Mori 首页');
+        await press(view === 'settings' ? '连接与设置' : 'Demiurge 首页');
         if (view === 'chat') await press('查看对话记录');
         const tab = { characters: '角色档案', wardrobe: '外观与动作', memories: '相处记忆' }[view];
         if (tab) {

@@ -205,7 +205,7 @@ app.on('browser-window-created', (_event, created) => {
       `(()=>{const e=document.querySelector('[aria-label=${JSON.stringify(label)}]');if(!e)throw new Error('Missing control');Object.getOwnPropertyDescriptor(${kind === 'textarea' ? 'HTMLTextAreaElement' : kind === 'range' ? 'HTMLInputElement' : 'HTMLSelectElement'}.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('${kind === 'select' ? 'change' : 'input'}',{bubbles:true}));})()`,
     );
   const open = async () => {
-    await click('Mori 首页');
+    await click('Demiurge 首页');
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');

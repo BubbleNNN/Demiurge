@@ -4,7 +4,7 @@ Live2D从同一设计的分层原画开始：分离前后发、脸、眼睑、�
 
 Spine采用骨骼、附件、网格权重和时间线。关键帧与曲线需要在实际运行时检查混合效果。[Spine官方流程与功能](https://esotericsoftware.com/spine-in-depth)。这些原理不能由无分层完整图上的任意拉伸替代。
 
-像素角色制作姿势原画帧，通过时间线、逐帧时长、帧标签和洋葱皮检查衔接，再导出图集。[Aseprite官方动画流程](https://www.aseprite.org/docs/animation/)。Mori内置8-bit走此路线：AI生成关键姿势素材，测量注册锚点，编排动作时序，实际预览检查；仍需人工审阅。
+像素角色制作姿势原画帧，通过时间线、逐帧时长、帧标签和洋葱皮检查衔接，再导出图集。[Aseprite官方动画流程](https://www.aseprite.org/docs/animation/)。Demiurge内置8-bit走此路线：AI生成关键姿势素材，测量注册锚点，编排动作时序，实际预览检查；仍需人工审阅。
 
 真正3D需要网格/拓扑、骨架/权重、面部形变目标、动作和物理。VRM导入后驱动真实骨骼与已有表情。[Blender官方蒙皮说明](https://docs.blender.org/manual/en/5.0/animation/armatures/skinning/introduction.html)与[动画/绑定手册](https://docs.blender.org/manual/en/5.2/animation/index.html)。3D风格PNG只是渲染图。
 
@@ -56,7 +56,7 @@ idle、sleep、talk 默认循环，其他动作默认有限播放。像素使用
 
 idle、talk、sleep默认循环；wave等手势有限播放。动作优先于眨眼/说话，避免相互切换产生跳帧。暂停/系统减少动态效果停在稳定帧。音频采用音量开合；具有明确口型映射的动画按音量选择闭嘴、小口型、大口型，没有映射的旧素材继续使用振幅门控，不宣称音素级口型。
 
-## Mori自定义格式
+## Demiurge自定义格式
 
 version=1的JSON，image为同目录/子目录PNG相对路径。animation定义逻辑画布、原图帧坐标、毫秒时长和动作序列：
 
@@ -82,6 +82,6 @@ version=1的JSON，image为同目录/子目录PNG相对路径。animation定义�
 
 palette可选1–256个#RRGGBB颜色，不设时保留原画。offset为逻辑像素整体注册偏移，只用于制作测量的对齐。PNG最多8MiB、JSON最多512KiB、最多256原画帧、逻辑画布边长最多2048。拒绝目录逃逸、外部URL、帧越界、无效索引和时长。导入后图集自包含，随角色包导出。
 
-`animation.mouthFrames` 可选，需要同时提供 `clips.talk`。例如完整动画的闭嘴、小口型和大口型分别位于索引 0、4、5 时，可添加 `"mouthFrames": { "closed": 0, "small": 4, "wide": 5 }`。这些索引必须指向实际存在的帧，口型映射会随 Mori 动画包与角色包保存；新自动制作结果也提供该映射。此字段属于动画结构验收，修改后需要重新核对。Aseprite 或 PNG 文件夹导入没有该映射时仍按原有 talk 时序播放。
+`animation.mouthFrames` 可选，需要同时提供 `clips.talk`。例如完整动画的闭嘴、小口型和大口型分别位于索引 0、4、5 时，可添加 `"mouthFrames": { "closed": 0, "small": 4, "wide": 5 }`。这些索引必须指向实际存在的帧，口型映射会随 Demiurge 动画包与角色包保存；新自动制作结果也提供该映射。此字段属于动画结构验收，修改后需要重新核对。Aseprite 或 PNG 文件夹导入没有该映射时仍按原有 talk 时序播放。
 
 API 图像编辑可以产生候选立绘、表情和姿势帧，本机流程再将它们整理为待核对逐帧动画包；不会输出已绑定 Live2D 或 VRM。自动语义拆层、遮挡补画、拓扑/权重和高流畅度动画仍需专门模型或编辑流程，视觉审查没有自动完成。

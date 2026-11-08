@@ -7,13 +7,28 @@ import {
   advanceLife,
   createLife,
   lifeSituation,
-  momentOffers,
   recordMoment,
   restoreLife,
   settleInvite,
   type LifeState,
   type MomentId,
+  offerText,
+  isMoment,
+  type Offer,
 } from './life';
+import {
+  ANGRY,
+  feel,
+  moodFace,
+  moodLine,
+  moodMark,
+  moodName,
+  moodWords,
+  restoreMood,
+  settle as settleMood,
+  type Mood,
+  type MoodEvent,
+} from './mood';
 import { CharacterRail } from './features/shell/CharacterRail';
 import { startupView, type AppView } from './features/navigation';
 import { StudioFrame, SettingsFrame, isStudioTab } from './features/studio/StudioFrame';
@@ -146,6 +161,8 @@ const actionNames: Record<PetAction, string> = {
   walk_down: '向前跑',
   drag: '被拎起',
   listen: '倾听',
+  sit: '坐下',
+  lie: '趴着',
   office: '办公',
   idle: '待机',
   bounce: '小跳',
@@ -228,7 +245,12 @@ export default function App() {
   const liveScale = useRef<number | null>(null);
   const petScaleRef = useRef(1);
   const [, setLifeVersion] = useState(0);
-  const [invitation, setInvitation] = useState<MomentId | null>(null);
+  const [invitation, setInvitation] = useState<Offer | null>(null);
+  // She asked for a pat on the head and is waiting for it (until this time).
+  const awaitingPat = useRef(0);
+  // Since when she has been asleep (resting) or napping on the desktop, to know when waking her
+  // up is waking her from real sleep.
+  const asleepSince = useRef(0);
   const [moment, setMoment] = useState<MomentId | null>(null);
   // Games and shared moments act themselves out through her motions; one stable callback, so a
   // game's effects do not run again on every render.
@@ -372,7 +394,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('pet-window', petMode);
     document.body.classList.toggle('pet-window', petMode);
-    document.title = petMode ? 'Mori 桌宠' : 'Mori · 角色陪伴';
+    document.title = petMode ? 'Demiurge 桌宠' : 'Demiurge · 角色陪伴';
     let mounted = true;
     bridge
       .load()
@@ -543,11 +565,38 @@ export default function App() {
     setLifeVersion((v) => v + 1);
   }
   function readLife() {
+    let life: LifeState;
     try {
-      return restoreLife(JSON.parse(localStorage.getItem(lifeKey) || 'null'));
+      life = restoreLife(JSON.parse(localStorage.getItem(lifeKey) || 'null'));
     } catch {
-      return createLife();
+      life = createLife();
     }
+    life.mood = restoreMood(life.mood);
+    return life;
+  }
+  // How she feels (mood.ts), kept with her daily life.
+  function moodOf(): Mood {
+    const life = lifeRef.current;
+    if (!life.mood) life.mood = restoreMood(undefined);
+    return life.mood;
+  }
+  // Something happened between her and the user: her feelings change, and she may say so.
+  // Comforted out of being cross, she stops sulking on the desktop.
+  function feelNow(event: MoodEvent): string | null {
+    const m = moodOf();
+    const wasAngry = m.anger >= ANGRY;
+    feel(m, event);
+    persistLife();
+    if (wasAngry && m.anger < ANGRY) {
+      desktop.forgive();
+      return moodLine('comforted', m);
+    }
+    return moodLine(event, m);
+  }
+  function say(line: string | null) {
+    if (!line) return;
+    setInteractionLine(line);
+    setBubbleHidden(false);
   }
   const attentionKey = `mori-attention-${character.id}`;
   function persistAttention() {
@@ -588,6 +637,10 @@ export default function App() {
     activityEnd.current = 0;
     setLifeVersion((v) => v + 1);
   }, [character.id]);
+  useEffect(() => {
+    if (!resting && action !== 'sleep') asleepSince.current = 0;
+    else if (!asleepSince.current) asleepSince.current = Date.now();
+  }, [resting, action]);
   // What the user is doing, from the desktop pet's view of the desktop (see userContext.ts).
   const contextRef = useRef<UserContext | null>(null);
   const desktop = useDesktopLife({
@@ -633,10 +686,24 @@ export default function App() {
     onContext: (context) => {
       contextRef.current = context;
     },
-    // Beside the user's window: carry on with what her routine has her doing.
-    onCompany: () => {
+    // At the user's window, she may do the thing her routine has her doing.
+    onCompany: (own) => {
       const doing = lifeRef.current.activity;
-      if (motionEnabled && isActivity(doing) && supportsAction(skin, doing)) move(doing, 'neutral', true);
+      if (!own || !motionEnabled || !isActivity(doing) || !supportsAction(skin, doing)) return false;
+      move(doing, 'neutral', true);
+      return true;
+    },
+    supports: (a) => supportsAction(skin, a),
+    onFall: (cause) => {
+      if (cause === 'gone') {
+        say('诶？窗口不见了……');
+        return false;
+      }
+      say(feelNow('flung'));
+      if (moodOf().anger < ANGRY || Math.random() >= 0.6) return false;
+      // Cross enough to sit there sulking until she is comforted.
+      setTimeout(() => say(moodLine('sulk', moodOf())), 2600);
+      return true;
     },
     onResult: (found) => {
       settleInvite(lifeRef.current, found ? 'accept' : 'ignored');
@@ -668,6 +735,9 @@ export default function App() {
     const life = lifeRef.current;
     const now = Date.now(),
       attention = attentionRef.current;
+    const context = contextRef.current;
+    // Time passes for her feelings too: alone, she grows lonely; anger cools down.
+    settleMood(moodOf(), now, context?.mode !== 'away');
     if (
       state.settings.proactiveEnabled !== false &&
       noticeReturn(attention, now, userIdleRef.current, openedAt.current) &&
@@ -678,13 +748,15 @@ export default function App() {
       persistAttention();
       if (motionEnabled && supportsAction(skin, 'wave')) interact('greet', true);
       setInteractionLine(
-        ['你回来啦！', '欢迎回来，刚才去做什么了？', '回来啦。我一直在这边等你哦。'][
-          Math.floor(Math.random() * 3)
-        ],
+        feelNow('greet') ||
+          ['你回来啦！', '欢迎回来，刚才去做什么了？', '回来啦。我一直在这边等你哦。'][
+            Math.floor(Math.random() * 3)
+          ],
       );
       setBubbleHidden(false);
     }
-    const context = contextRef.current;
+    const asking = life.pending;
+    const feeling = moodName(moodOf());
     const step = advanceLife(life, {
       available: activities.map((item) => item.id),
       temperament: character.behavior,
@@ -704,6 +776,7 @@ export default function App() {
             },
           }
         : {}),
+      feelings: { lonely: feeling === 'lonely', angry: feeling === 'angry' },
       blocked:
         interactionBusy ||
         talking ||
@@ -715,6 +788,8 @@ export default function App() {
         Boolean(drag.current) ||
         (behavior.current.priority >= 100 && behavior.current.until > performance.now()),
     });
+    // She asked and nobody answered.
+    if (asking && !life.pending) feelNow('ignored');
     if (!step) return;
     if (!life.pending) setInvitation(null);
     if (
@@ -765,7 +840,27 @@ export default function App() {
     setPetComposer(true);
     setTimeout(() => composerRef.current?.focus(), 0);
   }
+  // Accepting what she asked for: a game, a chat, or a pat on the head.
+  function acceptInvitation(offer: Offer) {
+    if (isMoment(offer)) return openMoment(offer);
+    settleInvite(lifeRef.current, 'accept');
+    setInvitation(null);
+    persistLife();
+    if (offer === 'pat') return touchCharacter('headpat');
+    say(
+      ['那……你今天过得怎么样？', '嘿嘿，那我们聊聊天吧。最近有什么开心的事吗？'][
+        Math.floor(Math.random() * 2)
+      ],
+    );
+    if (petMode) openPetComposer();
+    else document.querySelector<HTMLTextAreaElement>('[aria-label="聊天消息"]')?.focus();
+  }
   function openMoment(id: MomentId) {
+    // Still cross: no games until she has been comforted.
+    if (moodName(moodOf()) === 'angry') {
+      say(moodLine('refuse', moodOf()));
+      return;
+    }
     desktop.stop();
     if (invitation) settleInvite(lifeRef.current, 'accept');
     setInvitation(null);
@@ -785,6 +880,7 @@ export default function App() {
     move('idle', 'neutral', true);
   }
   function declineInvitation() {
+    feelNow('declined');
     settleInvite(lifeRef.current, 'decline');
     setInvitation(null);
     setInteractionLine('好，那我先自己找点事做，你忙完再来找我。');
@@ -792,6 +888,7 @@ export default function App() {
   }
   function finishMoment(result: MomentResult) {
     if (!moment) return;
+    feelNow('play');
     recordMoment(lifeRef.current, moment, result.outcome);
     setMoment(null);
     setInteractionLine(result.line);
@@ -1084,7 +1181,20 @@ export default function App() {
     return true;
   }
   function touchCharacter(kind: 'headpat' | 'poke') {
-    if (interact(kind)) setTouchFeedback({ kind, key: performance.now() });
+    // Touched while napping on the desktop: she wakes up, grumpy if she was really asleep.
+    const napping = action === 'sleep' && !resting && Date.now() - asleepSince.current > 60000;
+    if (!interact(kind)) return;
+    setTouchFeedback({ kind, key: performance.now() });
+    if (napping) return say(feelNow('woken'));
+    const asked = kind === 'headpat' && awaitingPat.current > Date.now();
+    if (asked) awaitingPat.current = 0;
+    const line = feelNow(kind === 'headpat' ? 'headpat' : 'poke');
+    say(line || (asked ? '嘿嘿……谢谢你。' : null));
+  }
+  // Woken up by the user: grumpy after real sleep.
+  function wakeUp() {
+    const slept = Date.now() - asleepSince.current > 60000;
+    if (interact('wake') && slept) say(feelNow('woken'));
   }
   async function switchChatMode(mode: 'model' | 'local') {
     if (interactionBusy) return;
@@ -1165,6 +1275,8 @@ export default function App() {
       setChatError('自由聊天需要对话 API Key 与模型；也可以选择上方的「本地台词」，使用已编写的日常回应。');
       return;
     }
+    // Being talked to cheers her up and keeps her from feeling alone.
+    if (!retry) feelNow('chat');
     const currentCharacter = character;
     setChatBusy(true);
     chatCancelled.current = false;
@@ -1228,6 +1340,8 @@ export default function App() {
               situation: lifeSituation(
                 lifeRef.current,
                 Object.fromEntries(activities.map((item) => [item.id, item.doing])),
+                Date.now(),
+                moodWords(moodOf()),
               ),
             };
       failedChat.current = request;
@@ -1605,21 +1719,39 @@ export default function App() {
   const notifyError = (job: Promise<unknown>) => {
     void job.catch((e) => setToast(errorText(e)));
   };
+  // How she feels shows when nothing else does: a frown when cross or very lonely, a smile when
+  // happy, and a little mark above her head.
+  const mood = moodOf(),
+    feeling = moodName(mood);
+  const restingFace = feeling === 'lonely' && mood.lonely < 75 ? 'neutral' : moodFace(feeling);
+  const shownEmotion: Emotion =
+    emotion !== 'neutral' || talking || resting || !supportsEmotion(skin, restingFace)
+      ? emotion
+      : restingFace;
+  const mark = resting || !skin ? '' : moodMark(feeling);
+  const feelingLabel = { angry: '有点生气', lonely: '有点寂寞', happy: '心情很好', calm: '' }[feeling];
   const avatar = (
-    <AvatarStage
-      skin={skin}
-      emotion={emotion}
-      action={action}
-      actionKey={actionKey}
-      talking={talking || previewSpeech}
-      audioDriven={Boolean(audioRef.current)}
-      motionEnabled={motionEnabled}
-      mouth={mouth}
-      tracking={tracking}
-      zoom={view === 'desktop' || view === 'home' ? 1 : zoom}
-      compact={petMode}
-      glance={petMode ? desktop.glance : null}
-    />
+    <>
+      <AvatarStage
+        skin={skin}
+        emotion={shownEmotion}
+        action={action}
+        actionKey={actionKey}
+        talking={talking || previewSpeech}
+        audioDriven={Boolean(audioRef.current)}
+        motionEnabled={motionEnabled}
+        mouth={mouth}
+        tracking={tracking}
+        zoom={view === 'desktop' || view === 'home' ? 1 : zoom}
+        compact={petMode}
+        glance={petMode ? desktop.glance : null}
+      />
+      {mark && (
+        <span className={`mood-mark ${feeling}`} aria-label={feelingLabel} role="img">
+          {mark}
+        </span>
+      )}
+    </>
   );
   const assetThumb = (item?: Skin) =>
     skinImage(item) ? <SkinArtwork skin={item} /> : item?.kind === 'live2d' ? <Layers3 /> : <Box />;
@@ -1776,8 +1908,10 @@ export default function App() {
       </div>
     ) : invitation && !moment && !petChat ? (
       <div className="pet-invite" role="status">
-        <p>{momentOffers[invitation].invite}</p>
-        <button onClick={() => openMoment(invitation)}>好呀，一起</button>
+        <p>{offerText(invitation).invite}</p>
+        <button onClick={() => acceptInvitation(invitation)}>
+          {isMoment(invitation) ? '好呀，一起' : invitation === 'chat' ? '好呀，聊聊' : '摸摸头'}
+        </button>
         <button onClick={declineInvitation}>等会儿</button>
       </div>
     ) : toast ? (
@@ -1892,7 +2026,7 @@ export default function App() {
             </button>
             <button
               aria-label="打开工坊"
-              title="打开 Mori"
+              title="打开 Demiurge"
               onClick={() => notifyError(bridge.openWorkshop())}
             >
               <Flower2 size={16} />
@@ -2009,6 +2143,9 @@ export default function App() {
             if (Math.abs(x) + Math.abs(y) > 2) {
               if (!drag.current.moved) {
                 drag.current.moved = true;
+                // Picked up in the middle of something, or out of her sleep.
+                if (action === 'sleep' && Date.now() - asleepSince.current > 60000) say(feelNow('woken'));
+                else if (isActivity(action)) say(feelNow('interrupted'));
                 desktop.lift();
                 swing.current.lifted = true;
                 bodyRef.current?.classList.add('lifted');
@@ -2038,7 +2175,7 @@ export default function App() {
                   interact('drag');
                 }
               });
-            } else if (resting) interact('wake');
+            } else if (resting) wakeUp();
             else touchCharacter(drag.current.hit);
             drag.current = null;
             if (event.currentTarget.hasPointerCapture(event.pointerId))
@@ -2175,13 +2312,14 @@ export default function App() {
             tracking={tracking}
             motionEnabled={motionEnabled}
             presence={
-              lifeRef.current.activity === 'sleep'
+              (lifeRef.current.activity === 'sleep'
                 ? '在休息'
                 : activities.find((item) => item.id === lifeRef.current.activity)?.doing ||
-                  `${actionNames[action]} · ${emotions.find((e) => e.id === emotion)?.name}`
+                  `${actionNames[action]} · ${emotions.find((e) => e.id === emotion)?.name}`) +
+              (feelingLabel ? ` · ${feelingLabel}` : '')
             }
-            invitation={invitation ? momentOffers[invitation].invite : ''}
-            onAcceptInvitation={() => invitation && openMoment(invitation)}
+            invitation={invitation ? offerText(invitation).invite : ''}
+            onAcceptInvitation={() => invitation && acceptInvitation(invitation)}
             onDeclineInvitation={declineInvitation}
             onOpenMoment={openMoment}
             momentPanel={
@@ -2300,7 +2438,7 @@ export default function App() {
                     <button disabled={jobBusy} onClick={() => importAsset('sprite')}>
                       <Film />
                       <strong>导入逐帧动画</strong>
-                      <span>Aseprite JSON + PNG / Mori 动画包</span>
+                      <span>Aseprite JSON + PNG / Demiurge 动画包</span>
                       <Upload size={17} />
                     </button>
                   </div>

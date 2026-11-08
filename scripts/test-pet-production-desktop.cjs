@@ -177,7 +177,7 @@ app.on('browser-window-created', (_event, created) => {
       `!document.querySelector('.production-step.working')&&!document.querySelector('.pet-production .progress-card')`,
     );
   const open = async () => {
-    await click('Mori 首页');
+    await click('Demiurge 首页');
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');
@@ -351,7 +351,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(pet);
       assert.ok(await pet.webContents.executeJavaScript(`!!document.querySelector('canvas[data-clip]')`));
       await click('关闭弹窗');
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await wait(`!!document.querySelector('.scene-artwork canvas[data-clip]')`);
       await click('摸摸角色的头');
       await wait(`document.querySelector('.scene-artwork canvas').dataset.clip==='nod'`);

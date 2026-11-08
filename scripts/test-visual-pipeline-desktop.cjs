@@ -177,7 +177,7 @@ app.on('browser-window-created', (_event, win) => {
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,modelBaseUrl:'https://model.mori.example',modelVersion:'latest'}, {modelKey:'native-model-fixture'}))`,
       );
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('角色档案');
       await wait(`!!document.querySelector('[aria-label="角色参考原图"]')`);
@@ -217,7 +217,7 @@ app.on('browser-window-created', (_event, win) => {
       });
       await wait(`!!document.querySelector('.room-rail')`);
       assert.equal((await js(`window.mori.load().then(r=>r.keys)`)).modelKey, true);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
       await wait(`!!document.querySelector('[aria-label="制作 3D 模型"]')`);

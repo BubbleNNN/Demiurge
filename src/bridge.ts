@@ -12,7 +12,7 @@ const storageKey = 'mori-workspace-v2';
 let browserState = initialState();
 const desktopRequired = async (): Promise<never> => {
   throw new Error(
-    '请使用桌面开发版执行真实 API 调用与本地模型导入。运行 pnpm desktop，或双击 Start Mori.command。',
+    '请使用桌面开发版执行真实 API 调用与本地模型导入。运行 pnpm desktop，或双击 Start Demiurge.command。',
   );
 };
 export const isDesktop = Boolean(window.mori);
@@ -67,6 +67,7 @@ export const bridge: MoriBridge = window.mori ?? {
   refinePetBase: desktopRequired,
   retryPetBaseEdit: desktopRequired,
   revisePetJob: desktopRequired,
+  extendPetJob: desktopRequired,
   importReferences: desktopRequired,
   importStyleReference: desktopRequired,
   discoverReferences: desktopRequired,

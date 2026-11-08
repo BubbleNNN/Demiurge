@@ -1,4 +1,4 @@
-# Mori implementation
+# Demiurge implementation
 
 Current local release: **0.3.0**. See [the current release record](MORI_0_3_RELEASE.md) for candidate selection, independent revisions, storage recovery, workspace ZIP backups and macOS packaging. The dated sections below retain earlier implementation and verification history; their test counts and asset lists describe those earlier stages.
 
@@ -73,7 +73,7 @@ Update verification passed: 43 unit tests, TypeScript/build, and the native Elec
 
 The earlier v4 image rig was withdrawn after user review found unnatural movement. Gaussian mesh deformation and rectangular face patches have been deleted. Earlier assets retain their original files and display only the neutral cel. Their old locality tests did not establish natural motion.
 
-Eight appearances now ship: the accepted v3 drawing, explicit 48×64/16-color sprite playback, realistic fantasy photography, geometric low-poly PNG, chibi, watercolor, plush and figurine. Only complete authored frames are animated for 2D artwork. Imported Aseprite or Mori manifests preserve timing and validated frame rectangles; static artwork cannot advertise absent gestures. See [the current production record](./CYRENE_STYLES_AND_MOTION.md) and [animation pipeline](./ANIMATION_PIPELINE.md).
+Eight appearances now ship: the accepted v3 drawing, explicit 48×64/16-color sprite playback, realistic fantasy photography, geometric low-poly PNG, chibi, watercolor, plush and figurine. Only complete authored frames are animated for 2D artwork. Imported Aseprite or Demiurge manifests preserve timing and validated frame rectangles; static artwork cannot advertise absent gestures. See [the current production record](./CYRENE_STYLES_AND_MOTION.md) and [animation pipeline](./ANIMATION_PIPELINE.md).
 
 VRM uses finite normalized bone key tracks for greeting, nodding, shaking the head and jumping. Rest poses remain still. Live2D runs its existing motion resources with explicit mapped actions. Both runtimes follow the persisted motion preference and the OS reduced-motion preference; pointer tracking is independently saved. These runtime capabilities do not turn the low-poly PNG into a 3D model.
 
@@ -169,7 +169,7 @@ Drawing recipes now persist with candidates and bundles. Explicit feedback revis
 
 ## Authored art styles and animation assets (2026-10-01)
 
-Primary-source study is recorded in `docs/PET_ART_WORKFLOWS.md`. Shared `shared/art-styles.json` defines nine distinct shape/material/canvas/motion briefs and image-generation instructions. The wardrobe's ArtWorkflow opens source tutorials, copies character-specific production instructions and previews imported PNG sequences, Aseprite/Mori atlases, Live2D or VRM before explicit save/use. Existing generation retains its optional program route and links to asset workflows.
+Primary-source study is recorded in `docs/PET_ART_WORKFLOWS.md`. Shared `shared/art-styles.json` defines nine distinct shape/material/canvas/motion briefs and image-generation instructions. The wardrobe's ArtWorkflow opens source tutorials, copies character-specific production instructions and previews imported PNG sequences, Aseprite/Demiurge atlases, Live2D or VRM before explicit save/use. Existing generation retains its optional program route and links to asset workflows.
 
 `electron/sprite-sequences.cjs` consumes authored PNG frames from bounded named-action directories, naturally sorts filenames, preserves native decoded pixels and alpha in a packed atlas, and validates timing, uniform canvas, resource limits and local-file boundaries. No generation service is used. Pixel styles use nearest-neighbor; other styles use smooth display. Aseprite imports now respect nonpixel style selection. Unavailable talk preview is disabled.
 

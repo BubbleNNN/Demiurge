@@ -113,7 +113,7 @@ app.on('browser-window-created', (_event, created) => {
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings(r.state.settings,{llmKey:'program-fixture-key'}))`,
       );
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
       await click('制作立绘与像素动画');

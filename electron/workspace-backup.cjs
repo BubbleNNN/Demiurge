@@ -84,7 +84,7 @@ function parseZip(input) {
     bytes.readUInt16LE(end + 4) !== 0 ||
     bytes.readUInt16LE(end + 6) !== 0
   )
-    throw fault('只支持 Mori 生成的单卷 ZIP。');
+    throw fault('只支持 Demiurge（原 Mori）生成的单卷 ZIP。');
   const count = bytes.readUInt16LE(end + 10);
   const centralSize = bytes.readUInt32LE(end + 12);
   const centralStart = bytes.readUInt32LE(end + 16);
@@ -629,7 +629,7 @@ function createWorkspaceBackup({ io = fs } = {}) {
             await rollback(root, onDisk || journal);
           } catch (restoreError) {
             throw recoveryRequired(
-              `工作区恢复中断，自动回滚尚未完成。请重启 Mori 继续恢复；原数据仍在 ${journal.recovery}。${restoreError.message}`,
+              `工作区恢复中断，自动回滚尚未完成。请重启 Demiurge 继续恢复；原数据仍在 ${journal.recovery}。${restoreError.message}`,
               error,
             );
           }

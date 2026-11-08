@@ -145,7 +145,7 @@ app.on('browser-window-created', (_event, created) => {
       `(()=>{const e=document.querySelector('[aria-label=${JSON.stringify(label)}]');if(!e)throw new Error('Missing control');Object.getOwnPropertyDescriptor(${textarea ? 'HTMLTextAreaElement' : 'HTMLSelectElement'}.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('${textarea ? 'input' : 'change'}',{bubbles:true}));})()`,
     );
   const open = async () => {
-    await click('Mori 首页');
+    await click('Demiurge 首页');
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');
@@ -327,6 +327,15 @@ app.on('browser-window-created', (_event, created) => {
         `document.querySelector('[aria-label="修正桌宠成品"]').scrollIntoView({block:'center',behavior:'instant'})`,
       );
       await capture('single-action-revision.png');
+      // A finished task offers the motions added since (sitting and lying on a window), ticked.
+      await wait(`!!document.querySelector('[aria-label="补充新动作"]')`);
+      const added = await js(
+        `[...document.querySelectorAll('.production-add-motions label')].filter(l=>l.querySelector('input').checked).map(l=>l.textContent)`,
+      );
+      assert.equal(added.length, 2);
+      assert.ok(added[0].startsWith('坐下') && added[1].startsWith('趴着'), added.join());
+      assert.match(await js(`document.querySelector('[aria-label="补充新动作"]').textContent`), /预计 \d+ 次图像请求，不调用对话模型/);
+      assert.equal(calls.length, 5, 'Offering new motions calls nothing');
       win.setSize(900, 800);
       await new Promise((resolve) => setTimeout(resolve, 100));
       assert.equal(

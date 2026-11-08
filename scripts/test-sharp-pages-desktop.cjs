@@ -133,7 +133,7 @@ app.on('browser-window-created', (_e, win) => {
   win.webContents.on('console-message', (_ev, level, message) => {
     if (level >= 3) exceptions.push(message.slice(0, 300));
   });
-  if (win.getTitle() === 'Mori 桌宠' || started) return;
+  if (win.getTitle() === 'Demiurge 桌宠' || started) return;
   started = true;
   win.webContents.once('did-finish-load', async () => {
     const report = { pages: packed.sprite.pages.length, frames: packed.sprite.frames.length };

@@ -116,7 +116,7 @@ app.on('browser-window-created', (_event, window) => {
       assert.equal(loaded.skins.filter((s) => s.characterId === simpleId).length, 0);
       assert.equal(requests, 0);
       await click('稍后补充素材，保留角色档案');
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
       await click('使用预制角色包');
@@ -174,7 +174,7 @@ app.on('browser-window-created', (_event, window) => {
         initial.characters,
       );
       assert.deepEqual(loaded.memories, initial.memories);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await fill('聊天消息', '你好');
       await click('发送消息');
       await wait(

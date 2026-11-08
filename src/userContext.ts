@@ -112,6 +112,8 @@ export function userContext(activity: UserActivity | undefined | null): UserCont
 export interface Spot {
   /** Where her feet go. */
   to: { x: number; y: number };
+  /** On the window's top edge (sitting or lying there), rather than beside it. */
+  perch?: boolean;
   /** The side of the user's window she stands on; she looks the other way, toward it. */
   side: 'left' | 'right';
   /** No room beside the window: she stands at its lower corner, over its edge. */
@@ -148,6 +150,31 @@ export function companySpot(
     ? Math.min(area.x + area.width, focus.x + focus.width) - half - 6
     : Math.max(area.x, focus.x) + half + 6;
   return { to: { x: Math.round(x), y: ground }, side: right ? 'right' : 'left', over: true };
+}
+
+/**
+ * A place on the top edge of the user's window to sit or lie on and watch them: near the end of
+ * the edge closer to her, her whole body on the edge. None when the window reaches so high that
+ * her head would leave the screen (a maximized window), or the edge is too short for her.
+ */
+export function perchSpot(
+  area: DesktopRect,
+  body: { width: number; height: number },
+  focus: DesktopRect,
+  feet: { x: number; y: number },
+): Spot | null {
+  // She lands standing before she sits or lies down: her whole height must fit above the edge.
+  if (focus.y - body.height * 1.02 < area.y || focus.y > area.y + area.height - 60) return null;
+  const left = Math.max(area.x, focus.x),
+    right = Math.min(area.x + area.width, focus.x + focus.width);
+  if (right - left < body.width * 1.2) return null;
+  const inset = Math.min((right - left) / 2, body.width * 0.8);
+  const ends = [
+    ['left', Math.round(left + inset)],
+    ['right', Math.round(right - inset)],
+  ] as const;
+  const [side, x] = [...ends].sort((a, b) => Math.abs(a[1] - feet.x) - Math.abs(b[1] - feet.x))[0];
+  return { to: { x, y: Math.round(focus.y) }, side, over: false, perch: true };
 }
 
 /** Share of her body (feet to head, her width) that covers the user's window. */

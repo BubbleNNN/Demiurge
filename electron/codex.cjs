@@ -336,7 +336,7 @@ function createCodex({
           ];
           if (!allowed.includes(item.type))
             return finish(
-              new Error('本机 Codex 尝试调用未允许的工具，已停止。Mori 只使用对话、网页搜索与图像生成。'),
+              new Error('本机 Codex 尝试调用未允许的工具，已停止。Demiurge 只使用对话、网页搜索与图像生成。'),
             );
           if (event.type !== 'item.completed') return;
           if (item.type === 'agent_message' && typeof item.text === 'string') text = item.text;

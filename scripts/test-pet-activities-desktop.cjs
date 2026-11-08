@@ -142,7 +142,7 @@ app.on('browser-window-created', (_event, created) => {
       await js(
         `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'sticker-fixture'},{imageKey:'isolated-key'}))`,
       );
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
       await click('自动制作多画风桌宠');
@@ -221,10 +221,10 @@ app.on('browser-window-created', (_event, created) => {
       await wait(`!!document.querySelector('.candidate-animation canvas[data-clip="exit_gaming"]')`);
       await wait(`!!document.querySelector('.candidate-animation canvas[data-clip="idle"]')`);
       // Approve synthetic test pixels only inside this disposable workspace.
-      const count = await js(`document.querySelectorAll('.production-review input[type="checkbox"]').length`);
+      const count = await js(`document.querySelectorAll('.production-review input[type="checkbox"]:not(.production-add-motions input)').length`);
       assert.equal(count, 31);
       for (let i = 0; i < count; i++) {
-        await js(`document.querySelectorAll('.production-review input[type="checkbox"]')[${i}].click()`);
+        await js(`document.querySelectorAll('.production-review input[type="checkbox"]:not(.production-add-motions input)')[${i}].click()`);
       }
       await wait(`!document.querySelector('[aria-label="确认形象并启用桌宠"]').disabled`);
       await click('确认形象并启用桌宠');

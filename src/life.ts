@@ -1,8 +1,11 @@
 // Daily life: a small clock of needs decides what the character does on her own, why, and when she
 // would like company. Adapted from Anime Codex's routine (MIT). Pure logic; the app supplies time.
 import type { Activity } from './types';
+import type { Mood } from './mood';
 
 export type MomentId = 'snack' | 'guess' | 'stars' | 'read';
+/** What she can ask the user for: a game or moment together, a chat, or a pat on the head. */
+export type Offer = MomentId | 'chat' | 'pat';
 export type LifeActivity = Activity | 'idle' | 'sleep';
 export interface Moment {
   id: MomentId;
@@ -24,12 +27,14 @@ export interface LifeState {
   nextSpeech: number;
   nextInvite: number;
   missed: number;
-  pending: { offer: MomentId; expires: number } | null;
-  lastOffer?: MomentId;
+  pending: { offer: Offer; expires: number } | null;
+  lastOffer?: Offer;
   moments: Moment[];
   desktopEvents?: { at: number; text: string }[];
   /** The app the user was working in when she last chose something to do alongside them. */
   contextKey?: string;
+  /** How she feels (mood.ts); restored and checked by the app. */
+  mood?: Mood;
 }
 /** What the user is doing (see userContext.ts), as far as her routine needs to know. */
 export interface LifeContext {
@@ -50,7 +55,7 @@ export interface LifeStep {
   activity: LifeActivity;
   changed: boolean;
   speech: string | null;
-  invite: MomentId | null;
+  invite: Offer | null;
 }
 
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
@@ -93,6 +98,8 @@ export function restoreLife(value: unknown, now = Date.now()): LifeState {
     moments: Array.isArray(saved.moments) ? saved.moments.slice(-12) : [],
     lastOffer: saved.lastOffer,
     desktopEvents: Array.isArray(saved.desktopEvents) ? saved.desktopEvents.slice(-12) : [],
+    // Feelings outlast the half-hour cut below: she is still lonely after a long absence.
+    ...(saved.mood && typeof saved.mood === 'object' ? { mood: saved.mood } : {}),
   };
   // Within half an hour she simply continues what she was doing; after that she starts fresh.
   if (now - number(saved.updatedAt, 0) < 30 * 60000)
@@ -167,7 +174,24 @@ export const momentOffers: Record<MomentId, { title: string; invite: string }> =
   read: { title: '一起读一段', invite: '我找到一段很好的文字，想念给你听，好吗？' },
 };
 
-function offerFor(s: LifeState, random: () => number): MomentId {
+/** Asking for a chat or a pat rather than a game. */
+export const requestOffers: Record<'chat' | 'pat', { title: string; invite: string }> = {
+  chat: { title: '陪我聊聊', invite: '我有点想和你说说话……现在有空吗？' },
+  pat: { title: '摸摸头', invite: '可以摸摸我的头吗？就一下下。' },
+};
+export const offerText = (offer: Offer) =>
+  offer === 'chat' || offer === 'pat' ? requestOffers[offer] : momentOffers[offer];
+export const isMoment = (offer: Offer): offer is MomentId => offer !== 'chat' && offer !== 'pat';
+/** How she feels, as far as her routine needs to know (see mood.ts). */
+export interface Feelings {
+  lonely: boolean;
+  angry: boolean;
+}
+
+function offerFor(s: LifeState, random: () => number, feelings?: Feelings): Offer {
+  // Cross with the user: she only wants to be comforted. Lonely: she asks for company first.
+  if (feelings?.angry) return 'pat';
+  if (feelings?.lonely && random() < 0.6) return random() < 0.55 ? 'chat' : 'pat';
   if (s.hunger > 55) return 'snack';
   const choices = (Object.keys(momentOffers) as MomentId[]).filter((id) => id !== s.lastOffer);
   return pick(choices, random);
@@ -213,6 +237,8 @@ export function advanceLife(
     canRemark = true,
     // What the user is doing, when the desktop pet can see it (macOS).
     context = undefined as LifeContext | undefined,
+    // How she feels: lonely, she asks for company sooner; cross, only to be comforted.
+    feelings = undefined as Feelings | undefined,
   } = {},
 ): LifeStep | null {
   const elapsed = Math.max(0, now - s.updatedAt);
@@ -298,14 +324,14 @@ export function advanceLife(
   }
 
   let speech: string | null = null;
-  let invite: MomentId | null = null;
+  let invite: Offer | null = null;
   if (proactive && !s.pending && s.activity !== 'sleep' && !quiet(hour)) {
-    if (now >= s.nextInvite && s.social >= 50 && canInvite) {
-      invite = offerFor(s, random);
+    if (now >= s.nextInvite && (s.social >= 50 || feelings?.lonely || feelings?.angry) && canInvite) {
+      invite = offerFor(s, random, feelings);
       s.pending = { offer: invite, expires: now + 60000 };
       s.lastOffer = invite;
       s.nextSpeech = now + 180000;
-    } else if ((announce || now >= s.nextSpeech) && canRemark) {
+    } else if ((announce || now >= s.nextSpeech) && canRemark && !feelings?.angry) {
       speech = s.reason || null;
       s.nextSpeech = now + 360000 + random() * 360000;
     }
@@ -336,12 +362,19 @@ const momentWords: Record<MomentId, string> = {
 };
 
 // A short, factual description of the moment for the chat model; never presented as canon.
-export function lifeSituation(s: LifeState, doing: Record<string, string>, now = Date.now()) {
+export function lifeSituation(
+  s: LifeState,
+  doing: Record<string, string>,
+  now = Date.now(),
+  // How she feels, in words (mood.ts), for the chat model.
+  mood = '',
+) {
   const hour = new Date(now).getHours();
   const needs = [
     s.energy < 30 ? '有点困' : '',
     s.hunger > 60 ? '有点饿' : '',
     s.social > 70 ? '想有人陪' : '',
+    mood,
   ].filter(Boolean);
   return {
     timeOfDay: timeOfDay(hour),

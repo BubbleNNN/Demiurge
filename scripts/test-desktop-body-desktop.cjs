@@ -58,7 +58,7 @@ app.on('browser-window-created', (_e, win) => {
   win.webContents.on('console-message', (_ev, level, message) => {
     if (level >= 3) exceptions.push(message.slice(0, 300));
   });
-  if (win.getTitle() === 'Mori 桌宠' || started) return;
+  if (win.getTitle() === 'Demiurge 桌宠' || started) return;
   started = true;
   win.webContents.once('did-finish-load', async () => {
     if (win.webContents.getURL().includes('pet=1')) return;
@@ -215,6 +215,84 @@ app.on('browser-window-created', (_e, win) => {
       activity = () => undefined;
       editor.destroy();
       surfaces = () => [];
+      await sleep(1600);
+
+      // 1c. Typing in a window with room above it: she runs over and sits or lies on its top
+      // edge. Dragged slowly she keeps her spot on it; yanked away she falls to the bottom of the
+      // screen and sulks until a pat on the head, then goes back.
+      const desk = new BrowserWindow({
+        x: area.x + 260,
+        y: area.y + 430,
+        width: 640,
+        height: 300,
+        show: true,
+        title: 'desk',
+      });
+      await desk.loadURL('data:text/html,<p>Typing fixture window</p>');
+      const deskFocus = () => ({ id: 'desk', ...desk.getBounds() });
+      surfaces = () =>
+        desk.isDestroyed() ? [] : [{ ...desk.getBounds(), id: 'desk', app: 'com.microsoft.VSCode' }];
+      activity = () =>
+        desk.isDestroyed()
+          ? undefined
+          : {
+              app: { bundle: 'com.microsoft.VSCode', name: 'Code' },
+              self: false,
+              keyIdle: 1,
+              pointerIdle: 1,
+              focus: deskFocus(),
+            };
+      // Her choices (sit or lie, sulk or not) are fixed for the test.
+      await pj('window.__random = Math.random; Math.random = () => 0.1; true');
+      await wait(async () => (await status()).includes('在你的窗口上'), 'perched on the window', 500);
+      const top0 = desk.getBounds();
+      const perched = await feet();
+      assert.ok(near(perched.y, top0.y), 'feet on the window top edge');
+      assert.ok(perched.x > top0.x && perched.x < top0.x + top0.width);
+      fs.writeFileSync(path.join(dir, 'pet-perch.png'), (await pet.webContents.capturePage()).toPNG());
+      // Slowly to the right: she keeps her place on it.
+      for (let i = 1; i <= 16; i++) {
+        desk.setPosition(top0.x + i * 10, top0.y + Math.round(i * 2));
+        await sleep(60);
+      }
+      await wait(
+        async () => {
+          const f = await feet();
+          return near(f.y, top0.y + 32) && near(f.x, perched.x + 160, 4);
+        },
+        'kept her spot while the window moved slowly',
+        200,
+      );
+      assert.ok((await status()).includes('在你的窗口上'));
+      // Yanked away: she falls to the bottom of the screen, cross.
+      const slow = desk.getBounds();
+      desk.setPosition(slow.x - 420, slow.y);
+      const floor = async () =>
+        area.y + area.height - (pet.getBounds().height - bands.bottom - (await body()).footY);
+      await wait(async () => (await status()).includes('等你哄'), 'sulking after the fall', 300);
+      const fallen = await feet();
+      assert.ok(fallen.y > slow.y + slow.height, 'fell well below the window');
+      assert.ok(near(fallen.y, await floor()), 'down at the bottom of the screen');
+      assert.equal(await pj('document.querySelector(".mood-mark")?.textContent'), '💢');
+      fs.writeFileSync(path.join(dir, 'pet-sulk.png'), (await pet.webContents.capturePage()).toPNG());
+      // A pat on the head: forgiven, and back to the window.
+      await sleep(2000);
+      const head = await pj(
+        `(() => { const c = document.querySelector('.pet-draggable canvas'); const f = JSON.parse(c.dataset.figureBounds); let x = 0, y = 0; for (let n = c; n; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } const sx = c.offsetWidth / c.width, sy = c.offsetHeight / c.height; return { x: x + (f.x + f.width / 2) * sx, y: y + (f.y + f.height * 0.12) * sy }; })()`,
+      );
+      input('mouseMove', head.x, head.y);
+      input('mouseDown', head.x, head.y, { button: 'left', clickCount: 1 });
+      input('mouseUp', head.x, head.y, { button: 'left', clickCount: 1 });
+      await wait(async () => !(await status()).includes('等你哄'), 'comforted', 100);
+      assert.notEqual(await pj('document.querySelector(".mood-mark")?.textContent || ""'), '💢');
+      await wait(async () => (await status()).includes('在你的窗口上'), 'back on the window', 500);
+      report.perch = { window: top0, feet: perched, fallen };
+      await pj('Math.random = window.__random; true');
+      activity = () => undefined;
+      desk.destroy();
+      surfaces = () => [];
+      // Back down off the window for the next steps.
+      await sleep(1500);
 
       // 2. Lift her and let go in the middle of the screen: she swings while carried and then
       // stays exactly where she was put. There is no gravity.
@@ -316,12 +394,13 @@ app.on('browser-window-created', (_e, win) => {
       );
       report.ride = { from: start, to: await feet() };
 
-      // 6. Close the window: she stays where she is.
+      // 6. Close the window: it is gone from under her and she falls to the bottom.
       const riding = await feet();
       fixture.destroy();
-      await sleep(3000);
+      const bottom = area.y + area.height - (pet.getBounds().height - bands.bottom - (await body()).footY);
+      await wait(async () => near((await feet()).y, bottom), 'fell when the window closed', 200);
       const after = await feet();
-      assert.ok(near(after.x, riding.x, 1) && near(after.y, riding.y, 1), 'she stays when the window goes');
+      assert.ok(near(after.x, riding.x, 1), 'straight down');
       report.closed = { before: riding, after };
 
       // 7. The toolbar is invisible until the pointer is over it; over her, a faint handle shows

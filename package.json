@@ -1,6 +1,6 @@
 {
-  "name": "mori-companion",
-  "version": "0.3.25",
+  "name": "demiurge",
+  "version": "0.3.26",
   "private": true,
   "description": "An API-powered character companion and desktop pet workshop.",
   "main": "electron/main.cjs",

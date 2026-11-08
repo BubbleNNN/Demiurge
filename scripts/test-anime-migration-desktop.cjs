@@ -33,7 +33,7 @@ function finish(error) {
 app.on('browser-window-created', (_e, win) => {
   // Animation state is read from the page; a window behind other apps must keep its frames.
   win.webContents.setBackgroundThrottling(false);
-  if (win.getTitle() === 'Mori 桌宠') return;
+  if (win.getTitle() === 'Demiurge 桌宠') return;
   win.webContents.once('did-finish-load', async () => {
     // Only the workshop drives the test: not the pet, and not the fixture window made below.
     const url = win.webContents.getURL();

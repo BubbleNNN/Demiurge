@@ -1,10 +1,10 @@
 'use strict';
-// Rasterize the existing Mori SVG at macOS icon sizes, using the installed Electron runtime.
+// Rasterize the app icon SVG at macOS icon sizes, using the installed Electron runtime.
 const { app, BrowserWindow, nativeImage } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'mori-package-icon-'));
+const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'demiurge-package-icon-'));
 app.setPath('userData', temporary);
 app.commandLine.appendSwitch('disable-http-cache');
 const timeout = setTimeout(() => app.exit(1), 20000);
@@ -27,7 +27,7 @@ app
     await new Promise((resolve) => setTimeout(resolve, 150));
     const capture = await win.webContents.capturePage();
     const image = nativeImage.createFromBuffer(capture.toPNG());
-    if (image.isEmpty()) throw new Error('Failed to render Mori icon.');
+    if (image.isEmpty()) throw new Error('Failed to render the app icon.');
     for (const size of [16, 32, 128, 256, 512]) {
       for (const scale of [1, 2]) {
         const png = image.resize({ width: size * scale, height: size * scale, quality: 'best' }).toPNG();

@@ -2,10 +2,10 @@
 
 调研时间：2026-10-01。实际阅读下列项目文档、动作定义与官方教程；没有复制第三方角色素材。
 
-| 项目 / 工具                                                                                                                                                                                | 阅读内容与对 Mori 的启发                                                                                        |
+| 项目 / 工具                                                                                                                                                                                | 阅读内容与对 Demiurge 的启发                                                                                        |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | [VPet](https://github.com/LorisYounger/VPet) / [ModMaker](https://github.com/LorisYounger/VPet.ModMaker)                                                                                   | PNGAnimation、Picture、模组与分层显示；素材包和行为逻辑分离，画风不绑定播放器。原画和代码有不同授权。           |
-| [Shimeji-Desktop](https://github.com/DalekCraft2/Shimeji-Desktop/blob/main/README.md) / [actions.xml](https://raw.githubusercontent.com/DalekCraft2/Shimeji-Desktop/main/conf/actions.xml) | 图片集、Pose、ImageAnchor、Duration、动作序列；保留具体姿势、锚点和时序。Mori 不执行其 XML，也未直接兼容原包。  |
+| [Shimeji-Desktop](https://github.com/DalekCraft2/Shimeji-Desktop/blob/main/README.md) / [actions.xml](https://raw.githubusercontent.com/DalekCraft2/Shimeji-Desktop/main/conf/actions.xml) | 图片集、Pose、ImageAnchor、Duration、动作序列；保留具体姿势、锚点和时序。Demiurge 不执行其 XML，也未直接兼容原包。  |
 | [Clover Shimeji](https://github.com/Stuocs/Clover_Shimeji)                                                                                                                                 | 原游戏像素素材、走路、坐下、跳舞、睡眠；像素识别度来自真实素材与角色动作。未复制游戏图片。                      |
 | [Open-LLM-VTuber](https://docs.llmvtuber.com/en/docs/user-guide/live2d/)                                                                                                                   | idleMotionGroupName、emotionMap、tapMotions 匹配实际模型名称；对话只调用已有动作与表情。                        |
 | [Aseprite](https://www.aseprite.org/docs/animation/) / [图集](https://www.aseprite.org/docs/sprite-sheet/)                                                                                 | 洋葱皮、帧标签、逐帧时长与图集导出；像素保持逻辑网格，播放器保留原画。                                          |
@@ -17,7 +17,7 @@
 
 桌宠项目消费已制作的素材；编辑器与生成服务制作素材。以上资料不能证明“角色名字自动变成多种忠实且动作完整的形象”。
 
-## Mori 的制作规格
+## Demiurge 的制作规格
 
 以下是本项目的设计选择，集中在 `shared/art-styles.json`，供界面和图像生成同时使用，不是上述工具强制的标准。
 
@@ -40,7 +40,7 @@
 ## 本轮实现与边界
 
 - 「画风与素材制作」入口当前有七种规格、教程与可复制的当前角色说明：原作画风、精绘、Q 版、飞天小女警、复古像素、8-bit 和低多边形 3D。上方材质对照表保留调研记录，写实、水彩、毛绒和手办已不作为可选画风。
-- 无生成 Key 可导入 PNG 动作文件夹、Aseprite / Mori 图集、Live2D 或 VRM，先预览后选择保存或使用。
+- 无生成 Key 可导入 PNG 动作文件夹、Aseprite / Demiurge 图集、Live2D 或 VRM，先预览后选择保存或使用。
 - PNG 自动合成图集，保留作者像素、透明度和时序，不猜动作或重绘。
 - 像素最近邻、其他画风平滑显示；修复 Aseprite 导入把所有风格标成像素的问题。
 - 图像生成使用同一份规格；旧素材不自动重生成，生成质量仍需核对。

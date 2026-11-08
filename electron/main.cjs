@@ -13,6 +13,7 @@ const {
   nativeImage,
   clipboard,
   powerMonitor,
+  Menu,
 } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -44,7 +45,11 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+// The app is called Demiurge (it was Mori until 0.3.26). The internal name stays "Mori": it names
+// the data folder (~/Library/Application Support/Mori) and the Keychain item that encrypts saved
+// API keys, so existing workspaces and keys carry over untouched. Everything shown is Demiurge.
 app.setName('Mori');
+const DISPLAY_NAME = 'Demiurge';
 if (process.env.MORI_DATA_DIR) app.setPath('userData', path.resolve(process.env.MORI_DATA_DIR));
 if (!require('./instance.cjs').acquireWorkspaceInstance(app, () => createWorkshop())) return;
 const devUrl = process.env.MORI_DEV_URL;
@@ -219,7 +224,7 @@ function createWorkshop() {
     return workshop;
   }
   workshop = new BrowserWindow({
-    title: 'Mori · 角色陪伴工坊',
+    title: `${DISPLAY_NAME} · 角色陪伴工坊`,
     width: 1400,
     height: 960,
     minWidth: 880,
@@ -241,7 +246,7 @@ function createWorkshop() {
   workshop.on('closed', () => {
     workshop = null;
   });
-  loadWindow(workshop).catch((error) => dialog.showErrorBox('无法启动 Mori', error.message));
+  loadWindow(workshop).catch((error) => dialog.showErrorBox(`无法启动 ${DISPLAY_NAME}`, error.message));
   return workshop;
 }
 function updatePetLayout(state) {
@@ -350,7 +355,7 @@ async function createPet() {
   );
   lastRoom = '';
   pet = new BrowserWindow({
-    title: 'Mori 桌宠',
+    title: `${DISPLAY_NAME} 桌宠`,
     ...start,
     frame: false,
     transparent: true,
@@ -391,6 +396,31 @@ async function createPet() {
 }
 
 app.whenReady().then(async () => {
+  // Menus and the About panel say Demiurge (the default menu would use the internal name).
+  app.setAboutPanelOptions({
+    applicationName: DISPLAY_NAME,
+    applicationVersion: app.getVersion(),
+    copyright: 'Demiurge（原 Mori）',
+  });
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      {
+        label: DISPLAY_NAME,
+        submenu: [
+          { role: 'about', label: `关于 ${DISPLAY_NAME}` },
+          { type: 'separator' },
+          { role: 'hide', label: `隐藏 ${DISPLAY_NAME}` },
+          { role: 'hideOthers', label: '隐藏其他' },
+          { role: 'unhide', label: '全部显示' },
+          { type: 'separator' },
+          { role: 'quit', label: `退出 ${DISPLAY_NAME}` },
+        ],
+      },
+      { role: 'editMenu', label: '编辑' },
+      { role: 'viewMenu', label: '显示' },
+      { role: 'windowMenu', label: '窗口' },
+    ]),
+  );
   try {
     await workspaceBackup.recoverInterruptedImport(app.getPath('userData'));
   } catch (error) {
@@ -803,12 +833,22 @@ app.whenReady().then(async () => {
       return petPipeline.revise(input.jobId, input, character, state.settings);
     }),
   );
+  handle('extend-pet-job', (event, input) =>
+    job(event, 'skin', async () => {
+      bound(input, 4000);
+      const task = await petPipeline.load(input.jobId);
+      const state = await store.loadState();
+      const character = state?.characters.find((c) => c.id === task.characterId);
+      if (!character) throw new Error('角色不存在。');
+      return petPipeline.extend(input.jobId, input, character, state.settings);
+    }),
+  );
   handle('export-workspace', async () => {
     if (runningJobs.size || chatStatus.busy) throw new Error('请等待当前任务完成后备份工作区。');
     const { canceled, filePath } = await dialog.showSaveDialog(workshop, {
       title: '导出工作区备份',
-      defaultPath: `Mori-workspace-${new Date().toISOString().slice(0, 10)}.zip`,
-      filters: [{ name: 'Mori 工作区备份', extensions: ['zip'] }],
+      defaultPath: `Demiurge-workspace-${new Date().toISOString().slice(0, 10)}.zip`,
+      filters: [{ name: 'Demiurge 工作区备份', extensions: ['zip'] }],
     });
     if (canceled || !filePath) return false;
     const state = await store.loadState();
@@ -830,7 +870,7 @@ app.whenReady().then(async () => {
       const { canceled, filePaths } = await dialog.showOpenDialog(workshop, {
         title: '从备份恢复工作区',
         properties: ['openFile'],
-        filters: [{ name: 'Mori 工作区备份', extensions: ['zip'] }],
+        filters: [{ name: 'Demiurge 工作区备份', extensions: ['zip'] }],
       });
       if (canceled || !filePaths[0]) return false;
       const stat = await fs.stat(filePaths[0]);
@@ -845,7 +885,7 @@ app.whenReady().then(async () => {
         relaunch = true;
         dialog.showErrorBox(
           '工作区恢复尚未完成',
-          error.message + '\nMori 将重新启动以继续恢复，原工作区副本仍保留。',
+          error.message + '\nDemiurge 将重新启动以继续恢复，原工作区副本仍保留。',
         );
       }
       throw error;
@@ -1113,7 +1153,7 @@ app.whenReady().then(async () => {
     const state = await store.loadState();
     if (!state?.characters.some((c) => c.id === characterId)) throw new Error('角色无效。');
     const selected = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
-      title: '导入逐帧动画（Aseprite JSON 或 Mori 动画包，PNG 与 JSON 放在一起）',
+      title: '导入逐帧动画（Aseprite JSON 或 Demiurge / Mori 动画包，PNG 与 JSON 放在一起）',
       properties: ['openFile'],
       filters: [{ name: '动画时间线', extensions: ['json'] }],
     });
@@ -1203,6 +1243,7 @@ app.whenReady().then(async () => {
       area,
       // How far the window may hang past the top and bottom of the work area.
       margins: { top, bottom },
+      at: Number.isFinite(windows.at) ? windows.at : Date.now(),
       surfaces: windows.surfaces,
       // What the user is doing: the front app, its window, and seconds since typing or pointing.
       ...(windows.activity ? { activity: windows.activity } : {}),
@@ -1249,8 +1290,8 @@ app.whenReady().then(async () => {
     );
     const selected = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
       title: '导出角色包',
-      defaultPath: `mori-${bundle.character.name.replace(/[^\p{L}\p{N}_-]/gu, '_')}.json`,
-      filters: [{ name: 'Mori 角色包', extensions: ['json'] }],
+      defaultPath: `demiurge-${bundle.character.name.replace(/[^\p{L}\p{N}_-]/gu, '_')}.json`,
+      filters: [{ name: 'Demiurge 角色包', extensions: ['json'] }],
     });
     if (selected.canceled || !selected.filePath) return false;
     await fs.writeFile(selected.filePath, JSON.stringify(bundle, null, 2), { mode: 0o600 });
@@ -1260,7 +1301,7 @@ app.whenReady().then(async () => {
     const selected = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
       title: '导入角色包',
       properties: ['openFile'],
-      filters: [{ name: 'Mori 角色包', extensions: ['json'] }],
+      filters: [{ name: 'Demiurge 角色包', extensions: ['json'] }],
     });
     if (selected.canceled || !selected.filePaths[0]) return null;
     const file = selected.filePaths[0];

@@ -16,7 +16,7 @@ function requestHistory(messages, latestMessageId) {
 function formatChat(character, messages) {
   const oneLine = (value) => String(value || '').replace(/[\r\n]+/g, ' ');
   return [
-    `Mori · ${oneLine(character.name)}`,
+    `Demiurge · ${oneLine(character.name)}`,
     character.work ? `作品：${oneLine(character.work)}` : '原创角色',
     `共 ${messages.length} 条消息`,
     '',

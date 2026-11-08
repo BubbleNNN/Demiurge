@@ -50,7 +50,7 @@ async function desktopIcons(origin) {
       icons: [],
       supported: false,
       reason: denied
-        ? '请在系统设置 → 隐私与安全性 → 自动化中，允许 Mori 访问 Finder，才能自动获取桌面图标位置。'
+        ? '请在系统设置 → 隐私与安全性 → 自动化中，允许 Demiurge 访问 Finder，才能自动获取桌面图标位置。'
         : '暂时无法获取 Finder 图标位置；如果系统正在询问，请允许访问 Finder 后重试。',
     };
   }

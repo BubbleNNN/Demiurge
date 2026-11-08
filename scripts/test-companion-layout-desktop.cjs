@@ -205,7 +205,7 @@ app.on('browser-window-created', (_event, created) => {
       await click('收起桌宠');
       await delay(200);
       assert.ok(pet.isDestroyed(), 'Settings closes its pet');
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       assert.equal(
         await js(`document.querySelector('[aria-label="聊天消息"]').value`),
         '切换模块后继续输入的草稿',

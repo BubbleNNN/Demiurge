@@ -344,12 +344,7 @@ test('failed candidate selection remains selectable and does not silently accept
     },
   });
   const p = context.pipeline;
-  let job = await p.start(
-    character,
-    { styles: ['3d'], motions: ['wave'], candidateCount: 2 },
-    settings,
-    {},
-  );
+  let job = await p.start(character, { styles: ['3d'], motions: ['wave'], candidateCount: 2 }, settings, {});
   job = await p.advance(job.id, character, settings, {});
   job = await p.advance(job.id, character, settings, {});
   const candidates = await p.masters(job.id);
@@ -368,7 +363,12 @@ test('a motion revision plans once: planning failures stop before the image requ
     source = await finished(context),
     p = context.pipeline,
     services = context.options.services;
-  let revision = await p.revise(source.id, { style: '3d', motion: 'wave', feedback: '挥手更轻' }, character, settings);
+  let revision = await p.revise(
+    source.id,
+    { style: '3d', motion: 'wave', feedback: '挥手更轻' },
+    character,
+    settings,
+  );
   const index = revision.steps.findIndex((s) => s.motion === 'wave');
   const plan = services.planRevision,
     sheet = services.generatePetSheet;
@@ -389,7 +389,11 @@ test('a motion revision plans once: planning failures stop before the image requ
   };
   const before = context.calls.length;
   revision = await p.advance(revision.id, character, settings, {});
-  assert.equal(revision.steps[index].status, 'failed', 'no automatic retry and no image request after a planning failure');
+  assert.equal(
+    revision.steps[index].status,
+    'failed',
+    'no automatic retry and no image request after a planning failure',
+  );
   assert.equal(revision.steps[index].attempts, undefined);
   assert.equal(context.calls.length, before);
   failPlan = false;
@@ -404,4 +408,60 @@ test('a motion revision plans once: planning failures stop before the image requ
   assert.equal(plans, 2, 'the saved plan is reused');
   const drawn = context.calls.filter((call) => call.kind === 'sheet').at(-1);
   assert.equal(drawn.input.correction, 'Planned correction for: 挥手更轻');
+});
+
+test('new motions are added to a finished task: one request per new image, every finished sheet reused, the original kept', async (t) => {
+  const context = await setup(t),
+    source = await finished(context, ['wave', 'talk']),
+    p = context.pipeline;
+  const sourceBytes = await fs.readFile(path.join(context.root, `${source.id}.json`));
+  const requestsBefore = context.calls.length;
+  await assert.rejects(
+    p.extend(source.id, { style: '3d', motions: ['wave'] }, character, settings),
+    /还没有的动作/,
+  );
+  await assert.rejects(
+    p.extend(source.id, { style: '3d', motions: [] }, character, settings),
+    /还没有的动作/,
+  );
+  let added = await p.extend(source.id, { style: '3d', motions: ['blink'] }, character, settings);
+  assert.notEqual(added.id, source.id);
+  assert.deepEqual(added.extension, { sourceJobId: source.id, motions: ['blink'] });
+  assert.deepEqual(added.motions, ['wave', 'talk', 'blink']);
+  assert.deepEqual(
+    added.steps.map((s) => `${s.kind}:${s.motion || ''}:${s.status}`),
+    ['base::done', 'sheet:wave:done', 'sheet:talk:done', 'sheet:blink:queued', 'pack::queued'],
+  );
+  for (const motion of ['wave', 'talk'])
+    assert.deepEqual(
+      JSON.parse(await fs.readFile(artifactPath(context.root, added, motion), 'utf8')).image,
+      JSON.parse(await fs.readFile(artifactPath(context.root, source, motion), 'utf8')).image,
+      `${motion} is reused as it was drawn`,
+    );
+  // A restart keeps the record valid.
+  added = await createPetPipeline(context.options).load(added.id);
+  added = await complete(p, added);
+  const requests = context.calls.slice(requestsBefore);
+  assert.deepEqual(
+    requests.map((c) => `${c.kind}:${c.input.motion?.id || c.input.motion || ''}`),
+    ['sheet:blink'],
+  );
+  assert.equal(
+    requests[0].input.skin.id,
+    context.calls.find((c) => c.kind === 'base') ? requests[0].input.skin.id : '',
+  );
+  const [result] = await p.results(added.id);
+  assert.ok(result.sprite.clips.wave && result.sprite.clips.talk && result.sprite.clips.blink);
+  assert.deepEqual(
+    await fs.readFile(path.join(context.root, `${source.id}.json`)),
+    sourceBytes,
+    'the original task is unchanged',
+  );
+  // One unfinished task per style at a time.
+  const again = await p.extend(source.id, { style: '3d', motions: ['nod'] }, character, settings);
+  await assert.rejects(
+    p.extend(source.id, { style: '3d', motions: ['shake'] }, character, settings),
+    /未完成任务/,
+  );
+  await p.cancel(again.id);
 });

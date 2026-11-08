@@ -120,7 +120,7 @@ app.on('browser-window-created', (_event, created) => {
   win.webContents.once('did-finish-load', async () => {
     try {
       await wait(`!!document.querySelector('.room-rail')`);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
       await click('画风与素材制作');

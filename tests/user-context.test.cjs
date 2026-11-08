@@ -192,3 +192,16 @@ test('the helper snapshot: visible windows only, not Mori, and the user window i
   assert.equal(old.surfaces.length, 2);
   assert.equal(old.activity, undefined);
 });
+
+test('typing in a window with room above it, she perches on its top edge near the nearer end', () => {
+  const window = { x: 300, y: 400, width: 800, height: 400 };
+  const spot = u.perchSpot(area, body, window, { x: 1400, y: 900 });
+  assert.equal(spot.perch, true);
+  assert.equal(spot.to.y, 400);
+  assert.equal(spot.side, 'right');
+  assert.ok(spot.to.x + body.width / 2 <= window.x + window.width && spot.to.x > window.x + window.width / 2);
+  assert.equal(u.perchSpot(area, body, window, { x: 10, y: 900 }).side, 'left');
+  // A tall window leaves no room for her head above it, a narrow one no room to sit.
+  assert.equal(u.perchSpot(area, body, { x: 300, y: 60, width: 800, height: 800 }, { x: 0, y: 0 }), null);
+  assert.equal(u.perchSpot(area, body, { x: 300, y: 400, width: 150, height: 300 }, { x: 0, y: 0 }), null);
+});

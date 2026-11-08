@@ -280,7 +280,7 @@ export function SettingsPanel({
                     onChange={(e) => setDraft({ ...draft, codexHome: e.target.value.trim() })}
                     placeholder="留空使用默认登录；也可填写另一个账号目录的完整路径"
                   />
-                  <span className="form-hint">聊天、资料搜索与图片生成共用此账号。目录需已登录 ChatGPT；只影响 Mori，保存后新请求生效。</span>
+                  <span className="form-hint">聊天、资料搜索与图片生成共用此账号。目录需已登录 ChatGPT；只影响 Demiurge，保存后新请求生效。</span>
                 </label>
               )}
               {codex ? (
@@ -739,7 +739,7 @@ export function SettingsPanel({
                 </button>
               </div>
               <p className="form-hint">
-                恢复会替换当前工作区；Mori 会先验证备份，并在还原前保留当前副本。恢复成功后自动重新打开。
+                恢复会替换当前工作区；Demiurge 会先验证备份，并在还原前保留当前副本。恢复成功后自动重新打开。
               </p>
             </div>
           </details>

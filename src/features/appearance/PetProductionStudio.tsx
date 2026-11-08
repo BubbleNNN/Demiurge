@@ -72,10 +72,15 @@ const baseEditStatusName = {
   unsaved: '已生成，待本机保存',
   uncertain: '请求中断',
 };
+// Motions added in later versions, offered first to finished tasks that lack them.
+const NEWEST_MOTIONS = ['sit', 'lie'];
+const motionName = (id: string) => motions.find((motion) => motion.id === id)?.name || id;
 const revisionName = (job: PetJob) =>
-  job.revision?.kind === 'base'
-    ? '修正形象'
-    : `修正${motions.find((motion) => motion.id === job.revision?.motion)?.name || '动作'}`;
+  job.extension
+    ? `补充${job.extension.motions.map(motionName).join('、')}`
+    : job.revision?.kind === 'base'
+      ? '修正形象'
+      : `修正${motionName(job.revision?.motion || '动作')}`;
 
 // What the chat model made of a correction before the image model saw it.
 function RevisionPlanNote({ plan }: { plan: RevisionPlanSummary }) {
@@ -158,6 +163,8 @@ export function PetProductionStudio({
   const [selectedSkinId, setSelectedSkinId] = useState('');
   const [revisionTarget, setRevisionTarget] = useState<PetMotion | 'base'>('base');
   const [revisionFeedback, setRevisionFeedback] = useState('');
+  // Motions chosen to add to a finished task; until changed, the newest ones it lacks.
+  const [addChoice, setAddChoice] = useState<string[] | null>(null);
   const [checked, setChecked] = useState<boolean[]>(checks.map(() => false));
   const [frameReview, setFrameReview] = useState<FrameReviewInput | null>(null);
   const [busy, setBusy] = useState(false);
@@ -193,6 +200,15 @@ export function PetProductionStudio({
     selectedStyles.length *
     (selectedMotions.reduce((n, id) => n + motionImages(id, quality), 0) + (sourceId ? 0 : candidateCount));
   const revisionRequests = revisionTarget === 'base' ? 1 + (job?.motions.length || 0) : 1;
+  // Motions this finished task does not have yet, and how many images adding them takes.
+  const missingMotions = job ? motions.filter((m) => !job.motions.includes(m.id as PetMotion)) : [];
+  const addedMotions = missingMotions
+    .filter((m) => (addChoice ? addChoice.includes(m.id) : NEWEST_MOTIONS.includes(m.id)))
+    .map((m) => m.id as PetMotion);
+  const addRequests = addedMotions.reduce(
+    (n, id) => n + motionImages(id, job?.quality === 'sharp' ? 'sharp' : 'standard'),
+    0,
+  );
   const styleReferenceNeedsStyle =
     !sourceId &&
     !!styleReference &&
@@ -446,6 +462,23 @@ export function PetProductionStudio({
     setOutputs([]);
     setMasters([]);
     setSelectedSkinId('');
+    requestAnimationFrame(() => taskRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    await execute(created);
+  }
+  async function addMotions() {
+    if (!job || job.status !== 'ready' || !candidate || !addedMotions.length) return;
+    resultRequest.current++;
+    const created = await bridge.extendPetJob({
+      jobId: job.id,
+      style: candidate.style,
+      motions: addedMotions,
+    });
+    updateJob(created);
+    setSelectedJobId(created.id);
+    setOutputs([]);
+    setMasters([]);
+    setSelectedSkinId('');
+    setAddChoice(null);
     requestAnimationFrame(() => taskRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
     await execute(created);
   }
@@ -895,7 +928,7 @@ export function PetProductionStudio({
                 >
                   {item.styles.map(styleName).join(' / ')}
                   <small>
-                    {item.revision ? `${revisionName(item)} · ` : ''}
+                    {item.revision || item.extension ? `${revisionName(item)} · ` : ''}
                     {item.awaitingSelection
                       ? '待选角色图'
                       : item.status === 'ready'
@@ -1419,6 +1452,50 @@ export function PetProductionStudio({
                       >
                         <WandSparkles size={15} />
                         制作修正版
+                      </button>
+                    </div>
+                  </section>
+                )}
+                {job?.status === 'ready' && missingMotions.length > 0 && (
+                  <section className="production-revision" aria-label="补充新动作">
+                    <div>
+                      <h4>补充新动作</h4>
+                      <p>
+                        沿用这套画风已确认的角色图和已有的全部动作，只画新动作，再一起整理成一份新成品。原成品仍保留，新成品核对后再启用。
+                      </p>
+                    </div>
+                    <div className="production-add-motions" role="group" aria-label="要补充的动作">
+                      {missingMotions.map((m) => (
+                        <label className="checkbox-label" key={m.id}>
+                          <input
+                            type="checkbox"
+                            checked={addedMotions.includes(m.id as PetMotion)}
+                            disabled={busy}
+                            onChange={(e) =>
+                              setAddChoice(
+                                e.target.checked
+                                  ? [...addedMotions, m.id]
+                                  : addedMotions.filter((id) => id !== m.id),
+                              )
+                            }
+                          />
+                          <span>
+                            {m.name}
+                            <small>{m.description}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="production-revision-actions">
+                      <p>预计 {addRequests} 次图像请求，不调用对话模型；已有动作不会重画。</p>
+                      <button
+                        className="button secondary"
+                        aria-label="补充桌宠动作"
+                        disabled={busy || !imageReady || !addedMotions.length}
+                        onClick={() => void run(addMotions)}
+                      >
+                        <WandSparkles size={15} />
+                        补充动作
                       </button>
                     </div>
                   </section>

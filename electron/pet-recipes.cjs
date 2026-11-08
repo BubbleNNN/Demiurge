@@ -115,7 +115,8 @@ function partRecipe(id, input, options) {
     count: per,
     columns: 2,
     rows: per / 2,
-    size: per === 2 ? '1536x1024' : id === 'sleep' ? '1024x1024' : '1024x1536',
+    // Lying down needs width; standing, walking and sitting fit tall cells.
+    size: per === 2 ? '1536x1024' : id === 'sleep' || id === 'lie' ? '1024x1024' : '1024x1536',
     poses: full.poses.slice(part * per, part * per + per),
     // Frame numbers of this image within the whole motion, counted from 1.
     firstFrame: part * per + 1,
@@ -134,7 +135,11 @@ function motionClip(name, indices, input = {}, rest = 0) {
         ? [1500, 1100, 1500, 1100]
         : name === 'listen'
           ? [1200, 600, 900, 600]
-          : [1500, 500, 1100, 500];
+          : name === 'sit'
+            ? [1600, 1100, 1400, 1100]
+            : name === 'lie'
+              ? [700, 700, 900, 700]
+              : [1500, 500, 1100, 500];
     return { frames: indices.slice(4, 8), durations: time(durations), loop: true };
   }
   if (recipe.staged && name !== 'sleep')

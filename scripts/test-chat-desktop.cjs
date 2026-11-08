@@ -158,7 +158,7 @@ app.on('browser-window-created', (_, win) => {
       await click('保存设置');
       await wait(`window.mori.load().then(r=>r.state.settings.llmEndpointMode==='exact')`);
       assert.equal((await js(`window.mori.load().then(r=>r.state)`)).settings.llmBaseUrl, exactAddress);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await fill('聊天消息', '原生检查：今天想看星星');
       await click('发送消息');
       for (let n = 0; n < 100 && requests === 0; n++) await delay(30);
@@ -221,7 +221,7 @@ app.on('browser-window-created', (_, win) => {
       const merged = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(merged.characters[0].summary, '两个窗口的独立更新');
       assert.ok(merged.memories.some((m) => m.id === 'native-pet-memory'));
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('角色档案');
       await click('编辑档案');
@@ -256,7 +256,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(final.characters[0].name, '合并后的名字');
       assert.equal(final.characters[0].summary, '远端更新简介，保留独立编辑');
       assert.equal(final.characters[0].behavior.energy, 25);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       respondNext = true;
       if (await js(`!!document.querySelector('[aria-label="查看对话记录"]')`)) await click('查看对话记录');
       await fill('聊天消息', '仅测试本机保存恢复');
@@ -269,7 +269,7 @@ app.on('browser-window-created', (_, win) => {
       const restored = await js(`window.mori.load().then(r=>r.state.messages[r.state.activeCharacterId])`);
       assert.equal(restored.filter((m) => m.content === '本机保存恢复验证完成').length, 1);
       const beforePreview = await js(`window.mori.load().then(r=>r.state)`);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       await click('角色工作室');
       await click('角色档案');
       await click('角色试聊');
@@ -323,7 +323,7 @@ app.on('browser-window-created', (_, win) => {
       const configured = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(configured.settings.llmModel, 'unsaved-native-draft');
       assert.equal(configured.settings.motionEnabled, false);
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       const topicBefore = await js(`window.mori.load().then(r=>r.state)`);
       await click('查找与导出对话');
       await click('开启新话题');
@@ -470,7 +470,7 @@ app.on('browser-window-created', (_, win) => {
         path.join(dir, 'anthropic-settings.png'),
         (await win.webContents.capturePage()).toPNG(),
       );
-      await click('Mori 首页');
+      await click('Demiurge 首页');
       respondNext = true;
       await fill('聊天消息', 'Claude 接入方式验证');
       await click('发送消息');

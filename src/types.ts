@@ -1,7 +1,15 @@
 export type Emotion = 'neutral' | 'happy' | 'thinking' | 'sad' | 'sleepy' | 'surprised';
 // Life activities (shared/activities.json): take out a prop, loop, put it away.
 export type Activity = 'office' | 'read' | 'gaming' | 'snack' | 'music' | 'diary';
-export type DesktopAction = 'walk_left' | 'walk_right' | 'walk_up' | 'walk_down' | 'drag' | 'listen';
+export type DesktopAction =
+  | 'walk_left'
+  | 'walk_right'
+  | 'walk_up'
+  | 'walk_down'
+  | 'drag'
+  | 'listen'
+  | 'sit'
+  | 'lie';
 export type PetAction = DesktopAction | 'idle' | 'bounce' | 'nod' | 'shake' | 'sleep' | 'wave' | Activity;
 export type CompanionEvent =
   | 'greet'
@@ -407,6 +415,8 @@ export interface PetJob extends PetProductionOptions {
     error?: string;
     plan?: RevisionPlanSummary;
   }[];
+  /** Motions added to a finished task (sourceJobId), reusing everything it already drew. */
+  extension?: { sourceJobId: string; motions: PetMotion[] };
   revision?: {
     sourceJobId: string;
     kind: 'base' | 'motion';
@@ -533,6 +543,8 @@ export interface MoriBridge {
     motion?: PetMotion;
     feedback: string;
   }): Promise<PetJob>;
+  /** Adds motions a finished task does not have, reusing everything it already drew. */
+  extendPetJob(input: { jobId: string; style: ArtStyle; motions: PetMotion[] }): Promise<PetJob>;
   importReferences(): Promise<VisualReference[]>;
   importStyleReference(): Promise<VisualReference | null>;
   discoverReferences(characterId: string): Promise<AppState>;
@@ -587,6 +599,8 @@ export interface DesktopScene {
   area: DesktopRect;
   /** How far the pet window may hang past the top and bottom of the work area. */
   margins?: { top: number; bottom: number };
+  /** When the window positions were taken (ms); speeds are measured between such moments. */
+  at?: number;
   /** Visible app windows, front to back; `app` is the owning app's bundle identifier or name. */
   surfaces: (DesktopRect & { id: string; app?: string })[];
   icons: (DesktopRect & { id: string })[];

@@ -10,9 +10,9 @@ const { auditPayload } = require('./package-desktop.cjs');
 const root = path.resolve(__dirname, '..');
 const info = require('../package.json');
 const appPath = path.resolve(
-  process.argv[2] || path.join(root, `release/Mori-${info.version}-macOS-${process.arch}/Mori.app`),
+  process.argv[2] || path.join(root, `release/Demiurge-${info.version}-macOS-${process.arch}/Demiurge.app`),
 );
-const binary = path.join(appPath, 'Contents/MacOS/Mori');
+const binary = path.join(appPath, 'Contents/MacOS/Demiurge');
 const payload = path.join(appPath, 'Contents/Resources/app');
 const output = path.join(root, `artifacts/macos-release-${process.arch}`);
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mori-packaged-smoke-'));
