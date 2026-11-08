@@ -7,7 +7,10 @@ export interface FigureBounds {
 export const fullFigure: FigureBounds = { x: 0, y: 0, width: 1, height: 1 };
 
 // One shared crop for the entire sequence: a raised arm must not resize the body.
-export function measureSequenceBounds(cells: HTMLCanvasElement[]): FigureBounds {
+type MeasuredCell =
+  | HTMLCanvasElement
+  | { image: HTMLCanvasElement; width: number; height: number; x: number; y: number };
+export function measureSequenceBounds(cells: MeasuredCell[]): FigureBounds {
   const probe = document.createElement('canvas');
   probe.width = probe.height = 128;
   const context = probe.getContext('2d', { willReadFrequently: true });
@@ -19,7 +22,16 @@ export function measureSequenceBounds(cells: HTMLCanvasElement[]): FigureBounds 
   try {
     for (const cell of cells) {
       context.clearRect(0, 0, 128, 128);
-      context.drawImage(cell, 0, 0, 128, 128);
+      // A trimmed cell is drawn at its place inside its full canvas, at the same probe scale.
+      if ('image' in cell)
+        context.drawImage(
+          cell.image,
+          (cell.x * 128) / cell.width,
+          (cell.y * 128) / cell.height,
+          (cell.image.width * 128) / cell.width,
+          (cell.image.height * 128) / cell.height,
+        );
+      else context.drawImage(cell, 0, 0, 128, 128);
       const data = context.getImageData(0, 0, 128, 128).data;
       for (let y = 0; y < 128; y++)
         for (let x = 0; x < 128; x++) {

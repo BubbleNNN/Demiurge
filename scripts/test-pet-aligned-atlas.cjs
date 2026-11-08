@@ -49,8 +49,8 @@ app.whenReady().then(() => {
       assert.ok(result.sprite.clips['enter_' + id]);
       assert.ok(result.sprite.clips['exit_' + id]);
     }
-    // Each frame's renderer canvas is its `cell`; the stored rect holds only the visible pixels.
-    const pixels = result.sprite.frames.reduce((s, f) => s + f.cell[0] * f.cell[1], 0);
+    // The renderer decodes each trimmed frame at its stored size only.
+    const pixels = result.sprite.frames.reduce((s, f) => s + f.rect[2] * f.rect[3], 0);
     assert.ok(pixels <= 32 * 1024 * 1024, `renderer needs ${pixels} pixels`);
     assert.ok(!result.warnings.some((w) => w.includes('% 保存')));
     fs.mkdirSync(root, { recursive: true });

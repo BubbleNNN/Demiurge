@@ -2,9 +2,29 @@ import type { SpriteAnimation } from '../types';
 import { spriteCellSize, spritePlacement } from './resolution';
 import type { FigureBounds } from './framing';
 
+/**
+ * A decoded frame that keeps only its visible pixels. `image` holds them; `width` and `height`
+ * are the frame's full canvas, and `x`, `y` are where `image` sits inside it.
+ */
+export interface SpriteCell {
+  image: HTMLCanvasElement;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
+type Drawable = SpriteCell | HTMLCanvasElement;
+const isCell = (value: Drawable): value is SpriteCell => 'image' in value;
+export function asSpriteCell(value: Drawable): SpriteCell {
+  return isCell(value) ? value : { image: value, width: value.width, height: value.height, x: 0, y: 0 };
+}
+
 // Convert to display cells once. Indexed pixel rendering is an explicit art
 // constraint. Other styles retain their authored RGBA pixels with no warping.
 export function prepareSpriteFrame(image: HTMLImageElement, animation: SpriteAnimation, index: number) {
+  return paint(image, animation, index, false).image;
+}
+function paint(image: HTMLImageElement, animation: SpriteAnimation, index: number, trim: boolean): SpriteCell {
   const frame = animation.frames[index];
   if (!frame) throw new Error('动画帧索引无效');
   const palette = animation.palette?.map((color) =>
@@ -14,16 +34,20 @@ export function prepareSpriteFrame(image: HTMLImageElement, animation: SpriteAni
   const size = spriteCellSize(animation, frame);
   if (size.width > 8192 || size.height > 8192 || size.width * size.height > 16 * 1024 * 1024)
     throw new Error('单帧纹理超过安全尺寸，请拆分动画素材');
-  canvas.width = size.width;
-  canvas.height = size.height;
+  const [x, y, width, height] = frame.rect;
+  // A trimmed frame decodes into a canvas of its stored size only; the transparent rest of its
+  // full canvas is never allocated.
+  const piece = trim && Boolean(frame.cell);
+  canvas.width = piece ? width : size.width;
+  canvas.height = piece ? height : size.height;
   const context = canvas.getContext('2d', { willReadFrequently: Boolean(palette) });
   if (!context) throw new Error('无法创建逐帧画布');
-  const [x, y, width, height] = frame.rect;
   if (x + width > image.naturalWidth || y + height > image.naturalHeight)
     throw new Error('动画帧超出图集边界');
   context.imageSmoothingEnabled = !animation.pixelated;
   if (!animation.pixelated) context.imageSmoothingQuality = 'high';
-  if (frame.cell) {
+  if (piece) context.drawImage(image, x, y, width, height, 0, 0, width, height);
+  else if (frame.cell) {
     // Trimmed frame: the stored pixels go back where they came from, one to one.
     context.drawImage(image, x, y, width, height, frame.offset?.[0] || 0, frame.offset?.[1] || 0, width, height);
   } else {
@@ -64,23 +88,28 @@ export function prepareSpriteFrame(image: HTMLImageElement, animation: SpriteAni
     }
     context.putImageData(pixels, 0, 0);
   }
-  return canvas;
+  return piece
+    ? { image: canvas, width: size.width, height: size.height, x: frame.offset?.[0] || 0, y: frame.offset?.[1] || 0 }
+    : { image: canvas, width: canvas.width, height: canvas.height, x: 0, y: 0 };
 }
-export function prepareSpriteFrames(image: HTMLImageElement, animation: SpriteAnimation) {
+export function prepareSpriteFrames(image: HTMLImageElement, animation: SpriteAnimation): SpriteCell[] {
+  // Budget what is actually decoded: a trimmed frame costs its stored pixels, not its canvas.
   const pixels = animation.frames.reduce((sum, frame) => {
+    if (frame.cell) return sum + frame.rect[2] * frame.rect[3];
     const size = spriteCellSize(animation, frame);
     return sum + size.width * size.height;
   }, 0);
   if (pixels > 32 * 1024 * 1024) throw new Error('动画解码超过内存预算，请拆分素材包');
-  return animation.frames.map((_, index) => prepareSpriteFrame(image, animation, index));
+  return animation.frames.map((_, index) => paint(image, animation, index, true));
 }
 export function drawSpriteFrame(
   canvas: HTMLCanvasElement,
-  cell: HTMLCanvasElement,
+  drawable: Drawable,
   pixelated: boolean,
   zoom = 1,
   figure?: FigureBounds,
 ) {
+  const cell = asSpriteCell(drawable);
   const context = canvas.getContext('2d');
   if (!context) throw new Error('无法绘制动画');
   const bounds = canvas.getBoundingClientRect();
@@ -109,11 +138,11 @@ export function drawSpriteFrame(
     zoom,
   );
   context.drawImage(
-    cell,
-    placement.x - (figure?.x || 0) * cell.width * placement.scale,
-    placement.y - (figure?.y || 0) * cell.height * placement.scale,
-    cell.width * placement.scale,
-    cell.height * placement.scale,
+    cell.image,
+    placement.x + (cell.x - (figure?.x || 0) * cell.width) * placement.scale,
+    placement.y + (cell.y - (figure?.y || 0) * cell.height) * placement.scale,
+    cell.image.width * placement.scale,
+    cell.image.height * placement.scale,
   );
   canvas.dataset.figureBounds = JSON.stringify({
     x: placement.x,

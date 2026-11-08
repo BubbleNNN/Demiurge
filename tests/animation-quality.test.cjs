@@ -130,6 +130,45 @@ test('preparation and Retina drawing use native source pixels and report enlarge
     global.devicePixelRatio = old.devicePixelRatio;
   }
 });
+test('trimmed frames decode only their stored pixels and draw back at their place in the full canvas', () => {
+  const old = { document: global.document, devicePixelRatio: global.devicePixelRatio };
+  const made = [];
+  global.document = {
+    createElement: () => {
+      const canvas = { getContext: () => ({ drawImage() {} }) };
+      made.push(canvas);
+      return canvas;
+    },
+  };
+  global.devicePixelRatio = 1;
+  try {
+    // 177 frames whose full canvases total 38M pixels but whose visible pixels total 15M:
+    // the shape of a complete twenty-motion pack.
+    const frame = { rect: [0, 0, 300, 290], duration: 100, cell: [360, 480], offset: [30, 170] };
+    const animation = { width: 384, height: 512, frames: Array.from({ length: 177 }, () => frame), clips: { idle: { frames: [0] } } };
+    const cells = sprites.prepareSpriteFrames({ naturalWidth: 300, naturalHeight: 290 }, animation);
+    assert.equal(cells.length, 177);
+    assert.deepEqual([made[0].width, made[0].height], [300, 290], 'only the stored piece is allocated');
+    assert.deepEqual([cells[0].width, cells[0].height, cells[0].x, cells[0].y], [360, 480, 30, 170]);
+    const draws = [];
+    const canvas = {
+      width: 0,
+      height: 0,
+      dataset: {},
+      getBoundingClientRect: () => ({ width: 360, height: 480 }),
+      getContext: () => ({ clearRect() {}, drawImage: (...args) => draws.push(args) }),
+    };
+    const placement = sprites.drawSpriteFrame(canvas, cells[0], false);
+    const [, dx, dy, dw, dh] = draws[0];
+    assert.ok(Math.abs(dx - (placement.x + 30 * placement.scale)) < 1e-9, 'piece keeps its horizontal place');
+    assert.ok(Math.abs(dy - (placement.y + 170 * placement.scale)) < 1e-9, 'piece keeps its vertical place');
+    assert.ok(Math.abs(dw - 300 * placement.scale) < 1e-9 && Math.abs(dh - 290 * placement.scale) < 1e-9, 'no stretching');
+    assert.equal(canvas.dataset.sourceSize, '360x480', 'the frame still reports its full canvas');
+  } finally {
+    global.document = old.document;
+    global.devicePixelRatio = old.devicePixelRatio;
+  }
+});
 test('physical shelf packing retains different frame resolutions and never silently downgrades oversized HD atlases', () => {
   const layout = layoutFrames([
     { width: 1024, height: 1536 },

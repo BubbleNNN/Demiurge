@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import type { Emotion, PetAction, Skin } from '../types';
 import { spriteAnimation } from '../artwork';
 import { skinImage } from '../theme';
-import { drawSpriteFrame, prepareSpriteFrames } from '../animation/sprites';
+import { drawSpriteFrame, prepareSpriteFrames, type SpriteCell } from '../animation/sprites';
 import { selectSpriteFrame } from '../animation/timeline';
 import { advanceActivityPlayback, newActivityPlayback, isActivity } from '../animation/activities';
 import { measureSequenceBounds, type FigureBounds } from '../animation/framing';
@@ -43,7 +43,7 @@ export function AnimatedIllustration(props: Props) {
       time = 0,
       last = 0,
       inView = true;
-    let cells: HTMLCanvasElement[] | undefined;
+    let cells: SpriteCell[] | undefined;
     let figure: FigureBounds | undefined;
     let previous = '',
       redraw = true;
