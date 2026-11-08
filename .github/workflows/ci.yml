@@ -1,17 +1,11 @@
-name: Check source
-
+name: CI
 on:
   push:
     branches: [main]
   pull_request:
-
-permissions:
-  contents: read
-
 jobs:
-  check:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,5 +14,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm build
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npx tsc -b
+      - run: node --test --test-timeout=120000 tests/*.test.cjs
+      - name: Community catalogue
+        run: node scripts/community-index.cjs --check

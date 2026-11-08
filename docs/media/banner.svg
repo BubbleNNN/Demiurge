@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 440" font-family="-apple-system, 'PingFang SC', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1736"/><stop offset="0.6" stop-color="#33265f"/><stop offset="1" stop-color="#6b3d7c"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffc9ec" stop-opacity="0.5"/><stop offset="1" stop-color="#ffc9ec" stop-opacity="0"/></radialGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbf7ff"/><stop offset="1" stop-color="#e2d6fb"/></linearGradient>
+    <linearGradient id="left" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9ccf7"/><stop offset="1" stop-color="#bba7ee"/></linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ad97e6"/><stop offset="1" stop-color="#8c72d6"/></linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0d0a1f" flood-opacity="0.45"/></filter>
+  </defs>
+  <rect width="1280" height="440" rx="28" fill="url(#bg)"/>
+  <g fill="#ffffff">
+    <circle cx="90" cy="70" r="2" opacity="0.6"/><circle cx="420" cy="42" r="1.6" opacity="0.5"/><circle cx="1200" cy="60" r="2" opacity="0.6"/>
+    <circle cx="640" cy="400" r="1.6" opacity="0.4"/><circle cx="1240" cy="380" r="2" opacity="0.5"/><circle cx="60" cy="390" r="1.6" opacity="0.45"/>
+  </g>
+  <text x="72" y="168" font-size="76" font-weight="800" fill="#ffffff" letter-spacing="1">Demiurge</text>
+  <text x="76" y="222" font-size="26" fill="#e9defc">Give your characters a life on your desktop.</text>
+  <text x="76" y="262" font-size="24" fill="#cdbdf3">让你喜欢的角色，在桌面上真正生活。</text>
+  <g font-size="15" fill="#ffffff">
+    <rect x="76" y="300" width="166" height="34" rx="17" fill="#ffffff" fill-opacity="0.12"/><text x="159" y="322" text-anchor="middle">Living desktop pet</text>
+    <rect x="252" y="300" width="136" height="34" rx="17" fill="#ffffff" fill-opacity="0.12"/><text x="320" y="322" text-anchor="middle">Moods &amp; habits</text>
+    <rect x="398" y="300" width="160" height="34" rx="17" fill="#ffffff" fill-opacity="0.12"/><text x="478" y="322" text-anchor="middle">Auto-made motions</text>
+    <rect x="568" y="300" width="104" height="34" rx="17" fill="#ffffff" fill-opacity="0.12"/><text x="620" y="322" text-anchor="middle">Community</text>
+  </g>
+  <circle cx="1000" cy="230" r="230" fill="url(#glow)"/>
+  <!-- A code editor window the little cube spirit keeps company on. -->
+  <g filter="url(#soft)">
+    <rect x="770" y="190" width="430" height="210" rx="14" fill="#141225"/>
+    <rect x="770" y="190" width="430" height="34" rx="14" fill="#26213f"/>
+    <rect x="770" y="210" width="430" height="14" fill="#26213f"/>
+    <circle cx="794" cy="207" r="6" fill="#ff6f8f"/><circle cx="814" cy="207" r="6" fill="#ffc96b"/><circle cx="834" cy="207" r="6" fill="#7fd99a"/>
+    <g font-family="'SF Mono', Menlo, monospace" font-size="15">
+      <text x="796" y="258" fill="#c792ea">function</text><text x="874" y="258" fill="#82aaff">companion</text><text x="960" y="258" fill="#d6d1f0">() {</text>
+      <text x="818" y="286" fill="#d6d1f0">return</text><text x="878" y="286" fill="#c3e88d">'always here'</text><text x="1002" y="286" fill="#d6d1f0">;</text>
+      <text x="796" y="314" fill="#d6d1f0">}</text>
+      <text x="796" y="350" fill="#676089">// she glances over now and then</text>
+      <rect x="796" y="366" width="9" height="18" fill="#ffc9ec" opacity="0.8"/>
+    </g>
+  </g>
+  <!-- Demi, an original cube spirit, sitting on the window's top edge. -->
+  <g transform="translate(1046 104)">
+    <ellipse cx="0" cy="86" rx="46" ry="7" fill="#000000" opacity="0.25"/>
+    <path d="M-14 74 q-6 14 -2 24" stroke="#8c72d6" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M14 74 q8 12 4 24" stroke="#8c72d6" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <polygon points="0,-6 52,22 0,50 -52,22" fill="url(#top)"/>
+    <polygon points="-52,22 0,50 0,92 -52,64" fill="url(#left)"/>
+    <polygon points="0,50 52,22 52,64 0,92" fill="url(#right)"/>
+    <g stroke="#ffffff" stroke-opacity="0.7" stroke-width="1.5" fill="none">
+      <path d="M-26 8 L26 36 M26 8 L-26 36"/>
+    </g>
+    <ellipse cx="-24" cy="56" rx="6.5" ry="8.5" fill="#2b2147"/><ellipse cx="-22" cy="53" rx="2.2" ry="2.8" fill="#ffffff"/>
+    <ellipse cx="-8" cy="64" rx="6.5" ry="8.5" fill="#2b2147"/><ellipse cx="-6" cy="61" rx="2.2" ry="2.8" fill="#ffffff"/>
+    <path d="M-20 76 q4 4 8 2" stroke="#2b2147" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <ellipse cx="-35" cy="66" rx="5" ry="3" fill="#ff9ccc" opacity="0.7"/>
+    <ellipse cx="2" cy="80" rx="5" ry="3" fill="#ff9ccc" opacity="0.7"/>
+    <path d="M0 -6 v-22" stroke="#d9ccf7" stroke-width="3" stroke-linecap="round"/>
+    <path d="M0 -44 l5 9 10 2 -8 6 2 10 -9 -5 -9 5 2 -10 -8 -6 10 -2z" fill="#ffe3a6"/>
+  </g>
+  <g transform="translate(866 70)" filter="url(#soft)">
+    <rect x="0" y="0" width="164" height="54" rx="18" fill="#ffffff"/>
+    <path d="M128 50 l14 16 -2 -18z" fill="#ffffff"/>
+    <text x="82" y="24" font-size="15" text-anchor="middle" fill="#3a2d63">陪你一起写代码～</text>
+    <text x="82" y="43" font-size="12" text-anchor="middle" fill="#7a6aa6">keeping you company ♪</text>
+  </g>
+  <g fill="#cdbdf3" opacity="0.85">
+    <rect x="720" y="120" width="16" height="16" rx="3" transform="rotate(18 728 128)"/>
+    <rect x="1222" y="150" width="12" height="12" rx="2" transform="rotate(-24 1228 156)" opacity="0.7"/>
+    <rect x="1150" y="62" width="10" height="10" rx="2" transform="rotate(30 1155 67)" opacity="0.6"/>
+  </g>
+</svg>

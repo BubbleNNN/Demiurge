@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Plus, Settings, Upload } from 'lucide-react';
+import { Plus, Settings, Store, Upload } from 'lucide-react';
 import packageInfo from '../../../package.json';
 import type { Character } from '../../types';
 
@@ -11,6 +11,8 @@ interface Props {
   onSelect: (character: Character) => void;
   onCreate: () => void;
   onImport: () => void;
+  /** Pets and plugins people share (the community catalogue). */
+  onCommunity?: () => void;
   onHome: () => void;
   onSettings: () => void;
 }
@@ -24,6 +26,7 @@ export function CharacterRail({
   onSelect,
   onCreate,
   onImport,
+  onCommunity,
   onHome,
   onSettings,
 }: Props) {
@@ -64,6 +67,11 @@ export function CharacterRail({
         <button className="rail-import" aria-label="导入角色包" title="导入角色包" onClick={onImport}>
           <Upload size={16} />
         </button>
+        {onCommunity && (
+          <button className="rail-import" aria-label="社区桌宠与插件" title="社区：下载别人分享的桌宠和插件" onClick={onCommunity}>
+            <Store size={16} />
+          </button>
+        )}
       </div>
       <button
         className={`rail-settings ${settingsActive ? 'active' : ''}`}

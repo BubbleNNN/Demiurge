@@ -87,6 +87,39 @@ function webUrl(value, label, allowEmpty = false) {
   return parsed.href;
 }
 
+// How a character lives on the desktop (src/characterBehavior.ts): carried in character packs and
+// set by behaviour plugins. Every part is optional; what is missing comes from her profile.
+const HABITS = ['sit', 'lie', 'lookAround', 'stretch', 'hum'];
+const TRAVEL = ['walk', 'run', 'hop', 'fly'];
+const MANNERS = ['shy', 'teasing', 'playful', 'calm'];
+const LINE_KEYS = ['arrive', 'seek', 'headpat', 'poke', 'hum', 'peek'];
+function validateDesktopProfile(value, label) {
+  const p = record(value, label);
+  const out = {};
+  if (p.hobbies !== undefined)
+    out.hobbies = array(p.hobbies, `${label}.hobbies`, 6, (v, l) => enumValue(v, ACTIVITIES, l));
+  if (p.habits !== undefined)
+    out.habits = array(p.habits, `${label}.habits`, 5, (v, l) => enumValue(v, HABITS, l));
+  if (p.travel !== undefined) out.travel = enumValue(p.travel, TRAVEL, `${label}.travel`);
+  if (p.manner !== undefined) {
+    const manner = record(p.manner, `${label}.manner`);
+    out.manner = {};
+    for (const key of Object.keys(manner)) {
+      if (!MANNERS.includes(key) || typeof manner[key] !== 'number' || !(manner[key] >= 0 && manner[key] <= 1))
+        invalid(`${label}.manner.${key}`, 'expected shy, teasing, playful or calm from 0 to 1');
+      out.manner[key] = manner[key];
+    }
+  }
+  if (p.lines !== undefined) {
+    const lines = record(p.lines, `${label}.lines`);
+    out.lines = {};
+    for (const key of Object.keys(lines)) {
+      if (!LINE_KEYS.includes(key)) invalid(`${label}.lines.${key}`, 'unknown line kind');
+      out.lines[key] = array(lines[key], `${label}.lines.${key}`, 8, (v, l) => string(v, l, 200, false));
+    }
+  }
+  return out;
+}
 function validateCharacter(value, label = 'character', budget = { bytes: 0 }) {
   const c = record(value, label);
   const behavior = record(c.behavior, `${label}.behavior`);
@@ -139,6 +172,9 @@ function validateCharacter(value, label = 'character', budget = { bytes: 0 }) {
       : {}),
     ...(c.roleplay !== undefined ? { roleplay: validateRoleplay(c.roleplay, `${label}.roleplay`) } : {}),
     ...(c.companion !== undefined ? { companion: validateCompanion(c.companion, `${label}.companion`) } : {}),
+    ...(c.desktopProfile !== undefined
+      ? { desktopProfile: validateDesktopProfile(c.desktopProfile, `${label}.desktopProfile`) }
+      : {}),
     ...(c.visualReferences !== undefined
       ? { visualReferences: validateReferences(c.visualReferences, `${label}.visualReferences`, budget) }
       : {}),
@@ -1176,5 +1212,6 @@ module.exports = {
   validateSkin,
   validateBundle,
   createBundle,
+  validateDesktopProfile,
   MAX_FILE_BYTES,
 };

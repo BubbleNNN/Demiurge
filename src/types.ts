@@ -1,3 +1,4 @@
+import type { DesktopProfile } from './characterBehavior';
 export type Emotion = 'neutral' | 'happy' | 'thinking' | 'sad' | 'sleepy' | 'surprised';
 // Life activities (shared/activities.json): take out a prop, loop, put it away.
 export type Activity = 'office' | 'read' | 'gaming' | 'snack' | 'music' | 'diary';
@@ -124,6 +125,8 @@ export interface Character {
     spoilerPolicy: 'avoid' | 'allow';
   };
   companion?: CompanionProfile;
+  /** How she lives on the desktop, when set by her pack or a plugin (characterBehavior.ts). */
+  desktopProfile?: Partial<Omit<DesktopProfile, 'manner'>> & { manner?: Partial<DesktopProfile['manner']> };
   visualReferences?: VisualReference[];
   referenceCandidates?: VisualReference[];
   referenceWarnings?: string[];
@@ -576,6 +579,15 @@ export interface MoriBridge {
   openWorkshop(): Promise<void>;
   exportCharacter(input: { character: Character; skins: Skin[] }): Promise<boolean>;
   importCharacter(): Promise<{ character: Character; skins: Skin[] } | null>;
+  /** The community catalogue of shared pets and plugins (electron/community.cjs). */
+  communityCatalogue(): Promise<CommunityCatalogue>;
+  /** A shared pet, downloaded, checked and validated like a local character pack. */
+  communityPet(id: string): Promise<{ character: Character; skins: Skin[] }>;
+  installCommunityPlugin(id: string): Promise<CommunityPlugin[]>;
+  communityPlugins(): Promise<CommunityPlugin[]>;
+  removeCommunityPlugin(id: string): Promise<CommunityPlugin[]>;
+  /** Opens the page for sharing a pet with the community. */
+  openCommunityShare(): Promise<void>;
   openExternal(url: string): Promise<void>;
   onProgress(callback: (event: ProgressEvent) => void): () => void;
   onStateChanged(callback: (state: AppState) => void): () => void;
@@ -622,4 +634,31 @@ export interface UserActivity {
   pointerIdle: number;
   /** The front app's front window. */
   focus?: DesktopRect & { id: string };
+}
+export interface CommunityEntry {
+  id: string;
+  name: string;
+  author: string;
+  description: string;
+  license: string;
+  path: string;
+  size: number;
+  sha256: string;
+}
+export interface CommunityCatalogue {
+  version: 1;
+  updated: string;
+  pets: (CommunityEntry & { work: string; preview?: string; previewImage?: string })[];
+  plugins: (CommunityEntry & { kind: 'behavior' })[];
+}
+/** A data plugin: a behaviour profile and lines for one character, or for all of them. */
+export interface CommunityPlugin {
+  version: 1;
+  id: string;
+  name: string;
+  author: string;
+  description: string;
+  kind: 'behavior';
+  target: 'all' | string;
+  profile: NonNullable<Character['desktopProfile']>;
 }

@@ -97,6 +97,12 @@ export const bridge: MoriBridge = window.mori ?? {
   },
   exportCharacter: desktopRequired,
   importCharacter: desktopRequired,
+  communityCatalogue: desktopRequired,
+  communityPet: desktopRequired,
+  installCommunityPlugin: desktopRequired,
+  communityPlugins: async () => [],
+  removeCommunityPlugin: desktopRequired,
+  openCommunityShare: desktopRequired,
   async openExternal(url) {
     if (/^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener,noreferrer');
   },

@@ -6614,3 +6614,77 @@ select:focus {
     transition: none;
   }
 }
+/* The community catalogue: pets and plugins people share. */
+.community {
+  display: grid;
+  gap: 14px;
+}
+.community-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.community-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.community-tabs button.active {
+  background: var(--accent-soft, var(--tint));
+  color: var(--accent-ink, var(--accent));
+  border-color: transparent;
+}
+.community-list {
+  display: grid;
+  gap: 10px;
+}
+.community-card {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.community-card img,
+.community-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: var(--tint);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+.community-card strong {
+  display: block;
+}
+.community-card small {
+  color: var(--muted);
+}
+.community-card p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.community-license {
+  display: block;
+  margin-top: 4px;
+}
+.community-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.community-share {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}

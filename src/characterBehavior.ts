@@ -88,7 +88,28 @@ const say: Record<keyof Manner, Partial<Record<LineKey, string[]>>> = {
   },
 };
 
+/** Her profile with what her pack or a plugin sets laid over it. */
 export function desktopProfile(
+  character: Parameters<typeof derivedProfile>[0] & { desktopProfile?: Character['desktopProfile'] },
+  plugin?: Character['desktopProfile'],
+): DesktopProfile {
+  const base = derivedProfile(character);
+  const merged = [character.desktopProfile, plugin].reduce<DesktopProfile>(
+    (profile, extra) =>
+      extra
+        ? {
+            hobbies: extra.hobbies?.length ? [...extra.hobbies] : profile.hobbies,
+            habits: extra.habits?.length ? [...extra.habits] : profile.habits,
+            travel: extra.travel || profile.travel,
+            manner: { ...profile.manner, ...extra.manner },
+            lines: { ...profile.lines, ...extra.lines },
+          }
+        : profile,
+    base,
+  );
+  return merged;
+}
+function derivedProfile(
   character: Pick<
     Character,
     'id' | 'summary' | 'personality' | 'speakingStyle' | 'appearance' | 'work' | 'behavior'

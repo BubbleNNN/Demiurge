@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "id": "night-owl",
+  "name": "夜猫子 · Night owl",
+  "author": "Demiurge",
+  "description": "精力充沛、爱玩游戏和吃零食的作息，跑来跑去，时不时找你玩。适用于所有角色。An energetic routine of games and snacks; she runs about and asks you to play.",
+  "kind": "behavior",
+  "target": "all",
+  "profile": {
+    "hobbies": ["gaming", "snack", "music"],
+    "habits": ["stretch", "hum", "lookAround"],
+    "travel": "run",
+    "manner": { "playful": 0.8 },
+    "lines": {
+      "seek": ["来一局吗？就一局！", "零食分你一半，陪我玩会儿嘛。"],
+      "hum": ["♪ 叮叮咚～"]
+    }
+  }
+}

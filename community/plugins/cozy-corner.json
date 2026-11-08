@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "cozy-corner",
+  "name": "安静角落 · Cozy corner",
+  "author": "Demiurge",
+  "description": "让角色更爱坐着、趴着看书听歌，说话轻声细语。适用于所有角色。Makes any character prefer sitting, lying down, reading and music, and speak softly.",
+  "kind": "behavior",
+  "target": "all",
+  "profile": {
+    "hobbies": ["read", "music", "diary"],
+    "habits": ["sit", "lie", "lookAround"],
+    "lines": {
+      "arrive": ["我在旁边看会儿书，你忙你的。"],
+      "seek": ["要不要歇一会儿？我给你留了个位置。"],
+      "peek": ["（从书页后面看了你一眼）"]
+    }
+  }
+}

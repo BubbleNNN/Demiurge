@@ -247,6 +247,70 @@ function editPlist(file, values, remove = []) {
     run('/usr/bin/plutil', ['-replace', key, '-string', value, file], { stdio: 'pipe' });
 }
 
+// The app itself inside a packaged Electron (resources/app): code, shared data, the built page,
+// artwork, runtime dependencies and licenses. The same for every platform except the macOS
+// desktop helper.
+function writePayload(payload, info, platform) {
+  fs.mkdirSync(payload, { recursive: true });
+  const imports = runtimeImports(path.join(root, 'electron'));
+  const dependencies = Object.fromEntries(
+    imports.map((name) => {
+      const metadata = JSON.parse(
+        fs.readFileSync(path.join(resolvePackage(name, root), 'package.json'), 'utf8'),
+      );
+      return [name, metadata.version];
+    }),
+  );
+  fs.writeFileSync(
+    path.join(payload, 'package.json'),
+    JSON.stringify(
+      {
+        name: info.name,
+        // Internal name: keeps the data folder and Keychain item of earlier Mori versions.
+        productName: 'Mori',
+        version: info.version,
+        description: info.description,
+        main: info.main,
+        license: info.license,
+        dependencies,
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+  if (platform === 'darwin') run(process.execPath, [path.join(root, 'scripts/build-desktop-helper.cjs')]);
+  copyDirectory(
+    path.join(root, 'electron'),
+    path.join(payload, 'electron'),
+    (file) =>
+      fs.statSync(file).isDirectory() ||
+      file.endsWith('.cjs') ||
+      (platform === 'darwin' && file === path.join(root, 'electron/native/desktop-bounds')),
+  );
+  copyDirectory(
+    path.join(root, 'shared'),
+    path.join(payload, 'shared'),
+    (file) => fs.statSync(file).isDirectory() || file.endsWith('.json'),
+  );
+  for (const name of ['index.html', 'favicon.svg', 'assets'])
+    copyDirectory(path.join(root, 'dist', name), path.join(payload, 'dist', name));
+  const artwork = path.join(root, 'dist/art');
+  const pngOnly = (file) => fs.statSync(file).isDirectory() || file.endsWith('.png');
+  copyDirectory(artwork, path.join(payload, 'dist/art'), pngOnly);
+  copyDirectory(
+    path.join(root, 'dist/vendor/live2dcubismcore.min.js'),
+    path.join(payload, 'dist/vendor/live2dcubismcore.min.js'),
+  );
+  copyDirectory(artwork, path.join(payload, 'public/art'), pngOnly);
+  copyDirectory(path.join(root, 'LICENSE'), path.join(payload, 'LICENSE'));
+  const runtime = installRuntimeDependencies(root, payload, imports);
+  collectNotices(root, path.join(payload, 'licenses'), Object.keys(info.dependencies));
+  fs.copyFileSync(path.join(root, 'docs/THIRD_PARTY.md'), path.join(payload, 'licenses/THIRD_PARTY.md'));
+  const artNotice = path.join(root, 'public/art/README.md');
+  if (fs.existsSync(artNotice)) fs.copyFileSync(artNotice, path.join(payload, 'licenses/ARTWORK.md'));
+  return runtime;
+}
+
 function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
   if (process.platform !== 'darwin' || !['arm64', 'x64'].includes(process.arch))
     throw new Error('This packaging command currently supports native macOS arm64 or x64 only.');
@@ -287,62 +351,7 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
     fs.rmSync(path.join(contents, '_CodeSignature'), { recursive: true, force: true });
     const payload = path.join(resources, 'app');
     fs.mkdirSync(payload, { recursive: true });
-    const imports = runtimeImports(path.join(root, 'electron'));
-    const dependencies = Object.fromEntries(
-      imports.map((name) => {
-        const metadata = JSON.parse(
-          fs.readFileSync(path.join(resolvePackage(name, root), 'package.json'), 'utf8'),
-        );
-        return [name, metadata.version];
-      }),
-    );
-    fs.writeFileSync(
-      path.join(payload, 'package.json'),
-      JSON.stringify(
-        {
-          name: info.name,
-          // Internal name: keeps the data folder and Keychain item of earlier Mori versions.
-          productName: 'Mori',
-          version: info.version,
-          description: info.description,
-          main: info.main,
-          license: info.license,
-          dependencies,
-        },
-        null,
-        2,
-      ) + '\n',
-    );
-    run(process.execPath, [path.join(root, 'scripts/build-desktop-helper.cjs')]);
-    copyDirectory(
-      path.join(root, 'electron'),
-      path.join(payload, 'electron'),
-      (file) =>
-        fs.statSync(file).isDirectory() ||
-        file.endsWith('.cjs') ||
-        file === path.join(root, 'electron/native/desktop-bounds'),
-    );
-    copyDirectory(
-      path.join(root, 'shared'),
-      path.join(payload, 'shared'),
-      (file) => fs.statSync(file).isDirectory() || file.endsWith('.json'),
-    );
-    for (const name of ['index.html', 'favicon.svg', 'assets'])
-      copyDirectory(path.join(root, 'dist', name), path.join(payload, 'dist', name));
-    const artwork = path.join(root, 'dist/art');
-    const pngOnly = (file) => fs.statSync(file).isDirectory() || file.endsWith('.png');
-    copyDirectory(artwork, path.join(payload, 'dist/art'), pngOnly);
-    copyDirectory(
-      path.join(root, 'dist/vendor/live2dcubismcore.min.js'),
-      path.join(payload, 'dist/vendor/live2dcubismcore.min.js'),
-    );
-    copyDirectory(artwork, path.join(payload, 'public/art'), pngOnly);
-    copyDirectory(path.join(root, 'LICENSE'), path.join(payload, 'LICENSE'));
-    const runtime = installRuntimeDependencies(root, payload, imports);
-    collectNotices(root, path.join(payload, 'licenses'), Object.keys(info.dependencies));
-    fs.copyFileSync(path.join(root, 'docs/THIRD_PARTY.md'), path.join(payload, 'licenses/THIRD_PARTY.md'));
-    const artNotice = path.join(root, 'public/art/README.md');
-    if (fs.existsSync(artNotice)) fs.copyFileSync(artNotice, path.join(payload, 'licenses/ARTWORK.md'));
+    const runtime = writePayload(payload, info, 'darwin');
     fs.copyFileSync(path.join(root, 'docs/MACOS_RELEASE.md'), path.join(temporary, 'RELEASE_GUIDE.md'));
     for (const file of ['LICENSE', 'LICENSES.chromium.html']) {
       const original = path.join(path.dirname(electronApp), file);
@@ -449,7 +458,16 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
   }
 }
 
-module.exports = { runtimeImports, installRuntimeDependencies, auditPayload, safeName, packageDesktop };
+module.exports = {
+  runtimeImports,
+  installRuntimeDependencies,
+  auditPayload,
+  safeName,
+  packageDesktop,
+  writePayload,
+  hashFile,
+  run,
+};
 if (require.main === module) {
   const args = process.argv.slice(2);
   if (args.some((arg) => !['--skip-build', '--no-zip'].includes(arg))) {

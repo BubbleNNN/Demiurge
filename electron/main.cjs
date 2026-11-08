@@ -50,6 +50,12 @@ protocol.registerSchemesAsPrivileged([
 // API keys, so existing workspaces and keys carry over untouched. Everything shown is Demiurge.
 app.setName('Mori');
 const DISPLAY_NAME = 'Demiurge';
+// Windows takes the window and taskbar icon from each window (macOS from the app bundle).
+const windowIcon = (() => {
+  if (process.platform !== 'win32') return undefined;
+  const file = path.join(__dirname, '../dist/app-icon.png');
+  return require('node:fs').existsSync(file) ? file : undefined;
+})();
 if (process.env.MORI_DATA_DIR) app.setPath('userData', path.resolve(process.env.MORI_DATA_DIR));
 if (!require('./instance.cjs').acquireWorkspaceInstance(app, () => createWorkshop())) return;
 const devUrl = process.env.MORI_DEV_URL;
@@ -225,6 +231,7 @@ function createWorkshop() {
   }
   workshop = new BrowserWindow({
     title: `${DISPLAY_NAME} · 角色陪伴工坊`,
+    ...(windowIcon ? { icon: windowIcon } : {}),
     width: 1400,
     height: 960,
     minWidth: 880,
@@ -363,6 +370,7 @@ async function createPet() {
   lastRoom = '';
   pet = new BrowserWindow({
     title: `${DISPLAY_NAME} 桌宠`,
+    ...(windowIcon ? { icon: windowIcon } : {}),
     ...start,
     frame: false,
     transparent: true,
@@ -1316,6 +1324,31 @@ app.whenReady().then(async () => {
     if (selected.canceled || !selected.filePath) return false;
     await fs.writeFile(selected.filePath, JSON.stringify(bundle, null, 2), { mode: 0o600 });
     return true;
+  });
+  // The community catalogue (electron/community.cjs): read-only downloads, checked and validated.
+  const community = () =>
+    require('./community.cjs').createCommunity({
+      fetch: (...args) => globalThis.fetch(...args),
+      dir: app.getPath('userData'),
+      validateBundle,
+      validateDesktopProfile: require('./store.cjs').validateDesktopProfile,
+    });
+  handle('community-catalogue', () => community().catalogue());
+  handle('community-pet', (_event, id) => {
+    if (typeof id !== 'string' || id.length > 64) throw new Error('桌宠编号无效。');
+    return community().pet(id, MAX_FILE_BYTES);
+  });
+  handle('community-install-plugin', (_event, id) => {
+    if (typeof id !== 'string' || id.length > 64) throw new Error('插件编号无效。');
+    return community().installPlugin(id);
+  });
+  handle('community-plugins', () => community().plugins());
+  handle('community-remove-plugin', (_event, id) => {
+    if (typeof id !== 'string' || id.length > 64) throw new Error('插件编号无效。');
+    return community().removePlugin(id);
+  });
+  handle('community-share', async () => {
+    await shell.openExternal(require('./community.cjs').SHARE_URL);
   });
   handle('import-character', async (event) => {
     const selected = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {

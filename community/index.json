@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "updated": "2026-11-08",
+  "pets": [],
+  "plugins": [
+    {
+      "id": "cozy-corner",
+      "name": "安静角落 · Cozy corner",
+      "author": "Demiurge",
+      "description": "让角色更爱坐着、趴着看书听歌，说话轻声细语。适用于所有角色。Makes any character prefer sitting, lying down, reading and music, and speak softly.",
+      "license": "MIT",
+      "path": "plugins/cozy-corner.json",
+      "size": 661,
+      "sha256": "9319c43f93f11f38f01635aba3baa49d2ea698202249bfe8fdeec58d9bd33559",
+      "kind": "behavior"
+    },
+    {
+      "id": "night-owl",
+      "name": "夜猫子 · Night owl",
+      "author": "Demiurge",
+      "description": "精力充沛、爱玩游戏和吃零食的作息，跑来跑去，时不时找你玩。适用于所有角色。An energetic routine of games and snacks; she runs about and asks you to play.",
+      "license": "MIT",
+      "path": "plugins/night-owl.json",
+      "size": 667,
+      "sha256": "5d7e053ded5c24076f9c6fe62fdfcaad66c663e8de696acfccba33fadb796942",
+      "kind": "behavior"
+    }
+  ]
+}

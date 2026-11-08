@@ -1,4 +1,5 @@
 import { useDesktopLife } from './features/desktop/useDesktopLife';
+import { CommunityPanel } from './features/community/CommunityPanel';
 import { desktopProfile, pickLine, touchMark } from './characterBehavior';
 import type { UserContext } from './userContext';
 import { isActivity, activityDuration, activities } from './animation/activities';
@@ -134,6 +135,7 @@ import { appendCompletedReply, type CompletedReply } from './conversation';
 import type {
   AppState,
   Character,
+  CommunityPlugin,
   CompanionEvent,
   ChatStatus,
   Emotion,
@@ -647,8 +649,27 @@ export default function App() {
   }, [resting, action]);
   // What the user is doing, from the desktop pet's view of the desktop (see userContext.ts).
   const contextRef = useRef<UserContext | null>(null);
-  // How this particular character lives on the desktop (characterBehavior.ts).
-  const petProfile = desktopProfile(character);
+  // Data plugins from the community (a behaviour profile and lines for one character or all).
+  const [plugins, setPlugins] = useState<CommunityPlugin[]>([]);
+  const [communityOpen, setCommunityOpen] = useState(false);
+  useEffect(() => {
+    if (!ready) return;
+    void bridge.communityPlugins().then(setPlugins, () => {});
+  }, [ready]);
+  // How this particular character lives on the desktop (characterBehavior.ts): her own profile,
+  // what her pack sets, then any plugin for her or for everyone.
+  const pluginProfile = plugins
+    .filter((p) => p.target === 'all' || p.target === character.id)
+    .reduce<NonNullable<Character['desktopProfile']>>(
+      (all, p) => ({
+        ...all,
+        ...p.profile,
+        manner: { ...all.manner, ...p.profile.manner },
+        lines: { ...all.lines, ...p.profile.lines },
+      }),
+      {},
+    );
+  const petProfile = desktopProfile(character, plugins.length ? pluginProfile : undefined);
   const actionNow = useRef(action);
   actionNow.current = action;
   // A small mark she shows for a moment (a blush after a pat, a note while humming).
@@ -1805,9 +1826,9 @@ export default function App() {
       setProgress(null);
     }
   }
-  async function importCharacter() {
+  async function importCharacter(shared?: { character: Character; skins: Skin[] }) {
     try {
-      const pack = await bridge.importCharacter();
+      const pack = shared || (await bridge.importCharacter());
       if (!pack) return;
       const char = { ...pack.character, id: id() };
       const skinIds = new Map(pack.skins.map((a) => [a.id, id()]));
@@ -2395,6 +2416,7 @@ export default function App() {
         onSelect={selectCharacter}
         onCreate={openCreate}
         onImport={importCharacter}
+        onCommunity={() => setCommunityOpen(true)}
         onHome={() => setView('home')}
         onSettings={() => setView('settings')}
       />
@@ -3600,6 +3622,30 @@ export default function App() {
               openProfile();
             }}
             notify={setToast}
+          />
+        </Modal>
+      )}
+      {communityOpen && (
+        <Modal
+          title="社区"
+          subtitle="大家分享的桌宠和插件：下载即用，不用重新制作"
+          onClose={() => setCommunityOpen(false)}
+          wide
+        >
+          <CommunityPanel
+            characterName={character.name}
+            catalogue={() => bridge.communityCatalogue()}
+            installedPlugins={plugins}
+            onInstallPet={async (id) => {
+              await importCharacter(await bridge.communityPet(id));
+              setCommunityOpen(false);
+            }}
+            onInstallPlugin={async (id) => setPlugins(await bridge.installCommunityPlugin(id))}
+            onRemovePlugin={async (id) => setPlugins(await bridge.removeCommunityPlugin(id))}
+            onShare={async () => {
+              const characterSkins = state.skins.filter((s) => s.characterId === character.id);
+              if (await bridge.exportCharacter({ character, skins: characterSkins })) await bridge.openCommunityShare();
+            }}
           />
         </Modal>
       )}

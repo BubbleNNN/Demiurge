@@ -1,0 +1,34 @@
+name: 分享桌宠 · Share a pet
+description: 把你做好的角色桌宠分享到社区目录 · Share a desktop pet with the community catalogue
+title: "[分享 Share] "
+labels: ["community"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        在 Demiurge 里「社区 → 分享我的桌宠」导出角色包，然后把 `.json` 文件拖到下面。
+        Export the pack in Demiurge (Community → Share my pet) and drop the `.json` file below.
+  - type: input
+    id: name
+    attributes:
+      label: 角色名 · Name
+    validations:
+      required: true
+  - type: input
+    id: work
+    attributes:
+      label: 作品（原创可留空）· Work (empty if original)
+  - type: textarea
+    id: license
+    attributes:
+      label: 授权 · Rights
+      description: 角色和素材是原创的吗？可以怎样使用？· Is the character and its art original? How may others use it?
+    validations:
+      required: true
+  - type: textarea
+    id: pack
+    attributes:
+      label: 角色包与预览 · Pack and preview
+      description: 拖入导出的 .json，可附一张预览图 · Drop the exported .json, and a preview image if you like
+    validations:
+      required: true
