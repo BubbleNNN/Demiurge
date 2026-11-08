@@ -105,6 +105,8 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, created) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   win.webContents.on('console-message', (_event, level, message) => {
@@ -139,10 +141,21 @@ app.on('browser-window-created', (_event, created) => {
       await click('角色工作室');
       await click('外观与动作');
       await click('自动制作多画风桌宠');
+      // These tests cover the standard flow; sharp quality (the default) has its own test.
+      await js(
+        `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
+      );
       await wait(`!!document.querySelector('[aria-label="桌宠画风：Q版"]')`);
-      assert.equal(await js(`document.querySelectorAll('[aria-label^="桌宠画风："]').length`), 4, 'four looks only');
+      assert.equal(
+        await js(`document.querySelectorAll('[aria-label^="桌宠画风："]').length`),
+        4,
+        'four looks only',
+      );
       // The chibi look is the default selection; a second look would add its own requests.
-      assert.equal(await js(`document.querySelector('[aria-label="桌宠画风：Q版"]').getAttribute('aria-pressed')`), 'true');
+      assert.equal(
+        await js(`document.querySelector('[aria-label="桌宠画风：Q版"]').getAttribute('aria-pressed')`),
+        'true',
+      );
       for (const motion of motions) {
         const pressed = await js(
           `document.querySelector('[aria-label=${JSON.stringify('制作动作：' + motion.name)}]').getAttribute('aria-pressed')==='true'`,
@@ -166,7 +179,11 @@ app.on('browser-window-created', (_event, created) => {
       assert.ok(job.results[0].warnings.some((w) => w.includes('补透明留白')));
       const [skin] = await js(`window.mori.petJobResults(${JSON.stringify(job.id)})`);
       assert.equal(skin.style, 'chibi-pet');
-      assert.deepEqual(wikiSearches.map((q) => /Q版|chibi/.test(q)), [true], 'one chibi search, before the first image request');
+      assert.deepEqual(
+        wikiSearches.map((q) => /Q版|chibi/.test(q)),
+        [true],
+        'one chibi search, before the first image request',
+      );
       assert.equal(skin.generation.chibiResearch.status, 'fallback');
       assert.match(skin.generation.chibiResearch.reason, /芙宁娜/);
       assert.equal(skin.review.status, 'pending');

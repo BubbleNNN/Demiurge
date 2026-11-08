@@ -101,6 +101,8 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, created) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   const js = (code) => win.webContents.executeJavaScript(code, true);
@@ -168,7 +170,12 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(skin.style, 'original');
       assert.equal(skin.sprite.pixelated, false);
       assert.equal(skin.generation, undefined);
-      const atlas = nativeImage.createFromBuffer(Buffer.from(skin.images.neutral.split(',')[1], 'base64'));
+      // Saved atlases live in digest-named files next to the state.
+      const stored = /^mori-asset:\/\/skins\/([0-9a-f]{64})\.png$/.exec(skin.images.neutral);
+      assert.ok(stored, 'the saved atlas is stored as a file');
+      const atlas = nativeImage.createFromBuffer(
+        fs.readFileSync(path.join(dir, 'skin-assets', stored[1] + '.png')),
+      );
       for (const [i, bitmap] of authored.entries()) {
         const [x, y, width, height] = skin.sprite.frames[i].rect;
         assert.deepEqual(

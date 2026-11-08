@@ -29,17 +29,39 @@ function object(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('动画数据格式无效。');
   return value;
 }
+// A large pack keeps its frames on several atlas pages. Page 0 is the skin's own image; the
+// rest are listed here, each an embedded PNG or a stored file named by its SHA-256.
+const PAGE_ASSET = /^mori-asset:\/\/skins\/[0-9a-f]{64}\.png$/;
+function validatePages(value) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || !value.length || value.length > 16) throw new Error('动画图集分页无效。');
+  return value.map((page) => {
+    const p = object(page);
+    const width = integer(p.width, 1, 8192, '分页宽度'),
+      height = integer(p.height, 1, 8192, '分页高度');
+    if (typeof p.src !== 'string') throw new Error('动画图集分页无效。');
+    if (p.src.startsWith('data:image/png;base64,')) {
+      const head = Buffer.from(p.src.slice(22, 22 + 44), 'base64');
+      if (head.length < 24 || head.readUInt32BE(16) !== width || head.readUInt32BE(20) !== height)
+        throw new Error('动画图集分页尺寸与图片不符。');
+    } else if (!PAGE_ASSET.test(p.src)) throw new Error('动画图集分页只能是本机 PNG。');
+    return { src: p.src, width, height };
+  });
+}
 function validateAnimation(value, bounds) {
   const a = object(value);
   const width = integer(a.width, 1, 2048, '宽度'),
     height = integer(a.height, 1, 2048, '高度');
   if (!Array.isArray(a.frames) || !a.frames.length || a.frames.length > 256)
     throw new Error('动画需要 1–256 帧。');
+  const pages = validatePages(a.pages);
   const frames = a.frames.map((value) => {
     const f = object(value);
     if (!Array.isArray(f.rect) || f.rect.length !== 4) throw new Error('动画帧坐标无效。');
     const rect = f.rect.map((v, i) => integer(v, i < 2 ? 0 : 1, 8192, '帧坐标'));
-    if (bounds && (rect[0] + rect[2] > bounds.width || rect[1] + rect[3] > bounds.height))
+    const page = f.page === undefined ? 0 : integer(f.page, 1, pages ? pages.length : 0, '分页');
+    const limit = page ? pages[page - 1] : bounds;
+    if (limit && (rect[0] + rect[2] > limit.width || rect[1] + rect[3] > limit.height))
       throw new Error('动画帧超出图片边界。');
     let offset;
     if (f.offset !== undefined) {
@@ -60,6 +82,7 @@ function validateAnimation(value, bounds) {
       duration: integer(f.duration, 16, 30000, '帧时长'),
       ...(offset ? { offset } : {}),
       ...(cell ? { cell } : {}),
+      ...(page ? { page } : {}),
     };
   });
   const clips = {};
@@ -114,6 +137,7 @@ function validateAnimation(value, bounds) {
     ...(a.pixelated !== undefined ? { pixelated: a.pixelated } : {}),
     ...(palette ? { palette } : {}),
     ...(mouthFrames ? { mouthFrames } : {}),
+    ...(pages ? { pages } : {}),
   };
 }
 function parseAseprite(input) {

@@ -22,6 +22,7 @@ import { AnimationPreview } from '../../components/AnimationPreview';
 import { ArtworkInspection } from '../../components/ArtworkInspection';
 import { FrameReview } from '../../components/FrameReview';
 import motions from '../../../shared/pet-motions.json';
+import motionStages from '../../../shared/pet-motion-stages.json';
 import candidateDirections from '../../../shared/pet-candidate-directions.json';
 import type {
   ArtStyle,
@@ -46,7 +47,15 @@ const stepName = (step: PetJob['steps'][number]) =>
     ? '角色图'
     : step.kind === 'pack'
       ? '整理动画'
-      : motions.find((m) => m.id === step.motion)?.name || '动作';
+      : `${motions.find((m) => m.id === step.motion)?.name || '动作'}${step.part !== undefined ? ` ${step.part + 1}` : ''}`;
+// Images one motion takes. Mirrors motionParts in electron/pet-recipes.cjs: sharp quality draws a
+// twelve-frame motion as three images of four poses and a four-frame motion as two of two.
+const motionImages = (id: string, quality: 'sharp' | 'standard') => {
+  if (quality !== 'sharp') return 1;
+  if (Object.hasOwn(motionStages, id)) return 3;
+  const motion = motions.find((m) => m.id === id) as { activity?: boolean; staged?: boolean } | undefined;
+  return motion && !motion.activity && !motion.staged ? 2 : 1;
+};
 const statusName = {
   queued: '等待',
   working: '制作中',
@@ -93,6 +102,8 @@ export function PetProductionStudio({
   const [candidateVariation, setCandidateVariation] =
     useState<NonNullable<PetProductionOptions['candidateVariation']>>('explore');
   const [temperament, setTemperament] = useState<NonNullable<PetProductionOptions['temperament']>>('natural');
+  // Quality first: new tasks draw fewer poses per image unless the user chooses fewer requests.
+  const [quality, setQuality] = useState<'sharp' | 'standard'>('sharp');
   const [artDirection, setArtDirection] = useState('');
   const [styleReference, setStyleReference] = useState<VisualReference | null>(null);
   const [taskStyleReference, setTaskStyleReference] = useState<VisualReference | null>(null);
@@ -143,7 +154,9 @@ export function PetProductionStudio({
       s.review?.status === 'approved' &&
       s.generation?.referenceIds.join(',') === character.visualReferences?.map((r) => r.id).join(','),
   );
-  const requests = selectedStyles.length * (selectedMotions.length + (sourceId ? 0 : candidateCount));
+  const requests =
+    selectedStyles.length *
+    (selectedMotions.reduce((n, id) => n + motionImages(id, quality), 0) + (sourceId ? 0 : candidateCount));
   const revisionRequests = revisionTarget === 'base' ? 1 + (job?.motions.length || 0) : 1;
   const styleReferenceNeedsStyle =
     !sourceId &&
@@ -364,6 +377,7 @@ export function PetProductionStudio({
     const created = await bridge.startPetJob({
       characterId: character.id,
       transitionVersion: 3,
+      quality,
       styles: selectedStyles,
       frameCount,
       candidateCount: sourceId ? 1 : candidateCount,
@@ -541,8 +555,8 @@ export function PetProductionStudio({
           </div>
           {selectedStyles.includes('chibi-pet') && (
             <p className="notice">
-              Q版先搜索并核对这个角色已有的 Q 版／表情包形象；找到后参考其设计制作。
-              未找到可用参考时，使用 Anime Codex 芙宁娜贴纸画风。网络或搜索失败会提示重试。
+              Q版先搜索并核对这个角色已有的 Q 版／表情包形象；找到后参考其设计制作。 未找到可用参考时，使用
+              Anime Codex 芙宁娜贴纸画风。网络或搜索失败会提示重试。
               搜索和图片核对可能产生模型用量，完成后会显示采用的来源。
             </p>
           )}
@@ -683,6 +697,18 @@ export function PetProductionStudio({
               </select>
             </label>
             <label className="production-master-select">
+              动作清晰度
+              <select
+                aria-label="动作清晰度"
+                value={quality}
+                disabled={busy}
+                onChange={(e) => setQuality(e.target.value as 'sharp' | 'standard')}
+              >
+                <option value="sharp">清晰优先 · 每张图少画几个姿势</option>
+                <option value="standard">节省请求 · 每张图画完一组动作</option>
+              </select>
+            </label>
+            <label className="production-master-select">
               动作气质
               <select
                 aria-label="动作气质"
@@ -698,6 +724,13 @@ export function PetProductionStudio({
               </select>
             </label>
           </div>
+          {quality === 'sharp' && (
+            <p className="notice">
+              清晰优先：生活、睡觉和跑步动作各分 3 张图绘制，短动作和表情各分 2
+              张图，每个姿势的高度约是节省模式的 1.8–2.5 倍。请求次数约为节省模式的 2.3
+              倍，制作时间相应变长。图集按页保存，桌宠只加载正在播放的动作。
+            </p>
+          )}
           {frameCount === 8 && (
             <p className="notice">
               八帧需要图像服务支持 1536×1024；每格
@@ -730,8 +763,11 @@ export function PetProductionStudio({
             </button>
           </div>
           <p className="muted">
-            新版动作流程：生活活动、四向跑动、倾听和睡眠各十二帧，进入、循环、退出各四帧， 每组一次 1024×1024
-            图像请求。默认已选完整动作包与新版 Q 版。其他动作沿用上方帧数。
+            新版动作流程：生活活动、四向跑动、倾听和睡眠各十二帧，进入、循环、退出各四帧，
+            {quality === 'sharp'
+              ? '清晰优先时每组分三张图绘制，每张四个姿势。'
+              : '每组一次 1024×1024 图像请求。'}
+            默认已选完整动作包与新版 Q 版。其他动作沿用上方帧数。
             原帧不自动降清晰度；图集超限会保留已生成素材并提示处理。
           </p>
           <div className="production-motion-grid">
@@ -766,7 +802,11 @@ export function PetProductionStudio({
             <strong>
               {selectedStyles.length} 种画风 · {selectedMotions.length} 组动作
             </strong>
-            <p>预计 {requests} 次图像请求；整理动画不调用模型。动作图未通过本机检查（裁切、重复帧等）时会自动重做，最多 3 次，每次都是一次图像请求；网络或服务错误不自动重试。</p>
+            <p>
+              预计 {requests}{' '}
+              次图像请求；整理动画不调用模型。动作图未通过本机检查（裁切、重复帧等）时会自动重做，最多 3
+              次，每次都是一次图像请求；网络或服务错误不自动重试。
+            </p>
           </div>
           <button
             className="button primary"
@@ -895,10 +935,21 @@ export function PetProductionStudio({
                             </strong>
                             {base.generation?.chibiResearch && (
                               <div aria-label="Q版形象来源">
-                                <span>{base.generation.chibiResearch.status === 'found' ? '已参考现成 Q 版形象' : '未找到可用参考 · 芙宁娜贴纸画风'}</span>
+                                <span>
+                                  {base.generation.chibiResearch.status === 'found'
+                                    ? '已参考现成 Q 版形象'
+                                    : '未找到可用参考 · 芙宁娜贴纸画风'}
+                                </span>
                                 <small>{base.generation.chibiResearch.reason}</small>
                                 {base.generation.chibiResearch.sources.map((source) => (
-                                  <button type="button" className="text-button" key={source.url} onClick={() => void bridge.openExternal(source.url)}>{source.title}</button>
+                                  <button
+                                    type="button"
+                                    className="text-button"
+                                    key={source.url}
+                                    onClick={() => void bridge.openExternal(source.url)}
+                                  >
+                                    {source.title}
+                                  </button>
                                 ))}
                               </div>
                             )}

@@ -697,8 +697,8 @@ test('a finished pack as large as the atlas cap is read back; smaller task recor
   const restarted = createPetPipeline(context.options);
   const [skin] = await restarted.results(job.id);
   assert.equal(skin.sprite.frames.length, 5);
-  saved.padding = 'x'.repeat(49 * 1024 * 1024);
-  await fs.writeFile(packFile, JSON.stringify(saved));
+  // Past the limit the file is refused by its size alone, before anything is read.
+  await fs.truncate(packFile, 193 * 1024 * 1024);
   await assert.rejects(createPetPipeline(context.options).results(job.id), /无效或过大/);
 });
 

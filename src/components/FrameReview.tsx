@@ -1,23 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { skinImage } from '../theme';
 import { prepareSpriteFrame } from '../animation/sprites';
+import { loadImage, pageSource } from '../animation/pages';
 import type { FrameReviewInput, Skin, SpriteAnimation } from '../types';
 
 function FrameCanvas({
-  source,
+  sources,
   animation,
   index,
   full = false,
 }: {
-  source: HTMLImageElement;
+  /** One loaded image per atlas page. */
+  sources: HTMLImageElement[];
   animation: SpriteAnimation;
   index: number;
   full?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const source = sources[animation.frames[index]?.page || 0];
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
+    if (!node || !source) return;
     const cell = prepareSpriteFrame(source, animation, index);
     const scale = full ? 1 : Math.min(1, 160 / cell.width, 220 / cell.height);
     node.width = Math.round(cell.width * scale);
@@ -47,7 +50,8 @@ export function FrameReview({
   disabled?: boolean;
   onChange: (review: FrameReviewInput | null) => void;
 }) {
-  const [source, setSource] = useState<HTMLImageElement | null>(null);
+  // Every page of the atlas: review covers all frames, wherever they are stored.
+  const [source, setSource] = useState<HTMLImageElement[] | null>(null);
   const [selected, setSelected] = useState(0);
   const [checked, setChecked] = useState<number[]>([]);
   const [checks, setChecks] = useState([false, false, false]);
@@ -60,13 +64,19 @@ export function FrameReview({
     setChecks([false, false, false]);
     setSelected(0);
     setFailed(false);
-    const element = new Image();
-    element.onload = () => setSource(element);
-    element.onerror = () => setFailed(true);
-    if (image) element.src = image;
+    let live = true;
+    if (image && animation)
+      void Promise.all(
+        [0, ...(animation.pages || []).map((_, i) => i + 1)].map((page) => loadImage(pageSource(image, animation, page)!)),
+      )
+        .then((images) => {
+          if (live) setSource(images);
+        })
+        .catch(() => {
+          if (live) setFailed(true);
+        });
     return () => {
-      element.onload = null;
-      element.onerror = null;
+      live = false;
     };
   }, [image, skin.id, skin.review?.animationDigest]);
   useEffect(() => {
@@ -134,7 +144,7 @@ export function FrameReview({
       {source && (
         <>
           <div className="frame-review-detail">
-            <FrameCanvas source={source} animation={animation} index={selected} full />
+            <FrameCanvas sources={source} animation={animation} index={selected} full />
             <span>
               第 {selected + 1} 帧 · {animation.frames[selected].cell?.[0] ?? animation.frames[selected].rect[2]} ×{' '}
               {animation.frames[selected].cell?.[1] ?? animation.frames[selected].rect[3]} 像素
@@ -149,7 +159,7 @@ export function FrameReview({
                   aria-pressed={selected === index}
                   onClick={() => setSelected(index)}
                 >
-                  <FrameCanvas source={source} animation={animation} index={index} />
+                  <FrameCanvas sources={source} animation={animation} index={index} />
                   <small>
                     帧 {index + 1} ·{' '}
                     {Object.entries(animation.clips)

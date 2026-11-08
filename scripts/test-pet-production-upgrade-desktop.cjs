@@ -91,7 +91,8 @@ global.fetch = async (url, init) => {
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
   // A chibi base carries the Furina sticker last, as a style guide only; sheets end with the original.
   const identity = Buffer.from(await images.at(-1).arrayBuffer());
-  if (!isSheet && identity.equals(furina)) assert.deepEqual(Buffer.from(await images[0].arrayBuffer()), originalBytes);
+  if (!isSheet && identity.equals(furina))
+    assert.deepEqual(Buffer.from(await images[0].arrayBuffer()), originalBytes);
   else assert.deepEqual(identity, originalBytes);
   const bytes = isSheet ? fixture.image(true, { frames: form.get('size') === '1536x1024' ? 8 : 4 }) : master;
   return new Response(JSON.stringify({ data: [{ b64_json: bytes.toString('base64') }] }), {
@@ -116,6 +117,8 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, created) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   const js = (code) => win.webContents.executeJavaScript(code, true);
@@ -135,6 +138,10 @@ app.on('browser-window-created', (_event, created) => {
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');
+    // These tests cover the standard flow; sharp quality (the default) has its own test.
+    await js(
+      `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
+    );
     await wait(`!!document.querySelector('[aria-label="动作帧数"]')`);
   };
   win.webContents.once('did-finish-load', async () => {
@@ -225,7 +232,7 @@ app.on('browser-window-created', (_event, created) => {
       await wait(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作')`);
       delayedMasterId = jobs[0].id;
       await js(
-        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('旧版 Q 版')).click()`,
+        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('Q版')).click()`,
       );
       for (let n = 0; n < 100 && !releaseMasterReply; n++) await new Promise((r) => setTimeout(r, 20));
       assert.ok(releaseMasterReply);

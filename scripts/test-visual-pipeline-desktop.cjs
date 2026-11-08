@@ -144,6 +144,8 @@ const finished = (error) => {
 };
 const timeout = setTimeout(() => finished(new Error('Native visual pipeline timed out')), 60000);
 app.on('browser-window-created', (_event, win) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  win.webContents.setBackgroundThrottling(false);
   if (mainWindow) return;
   mainWindow = win;
   const js = async (code) => {

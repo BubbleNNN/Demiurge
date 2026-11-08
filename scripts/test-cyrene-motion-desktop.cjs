@@ -38,6 +38,8 @@ function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_, win) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  win.webContents.setBackgroundThrottling(false);
   if (started) return;
   started = true;
   const js = (code) =>
@@ -76,7 +78,9 @@ app.on('browser-window-created', (_, win) => {
       await wait(`${canvas}?.dataset.motion==='active'`);
       assert.equal(await js(`document.querySelectorAll('.wardrobe-card').length`), 7);
       assert.deepEqual(
-        await js(`[...document.querySelectorAll('.action-list button')].filter(b=>b.disabled).map(b=>b.textContent.trim()).sort()`),
+        await js(
+          `[...document.querySelectorAll('.action-list button')].filter(b=>b.disabled).map(b=>b.textContent.trim()).sort()`,
+        ),
         ['小跳', '摇头', '读书', '玩掌机'].sort(),
         'Built-in art must not advertise unsupported gestures or newly added activities',
       );

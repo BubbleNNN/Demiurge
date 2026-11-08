@@ -136,6 +136,8 @@ export interface ModelAsset {
   boneMap?: { head?: string };
 }
 export interface Skin {
+  /** Size of the animation atlas when it is stored as a file rather than embedded. */
+  atlasSize?: { width: number; height: number };
   id: string;
   characterId: string;
   name: string;
@@ -190,6 +192,8 @@ export interface SpriteFrame {
   offset?: [number, number];
   /** Physical size of the frame's full canvas when the stored rect holds only the visible pixels. */
   cell?: [number, number];
+  /** Atlas page holding this frame: 0 (omitted) is the skin's image, n is `pages[n - 1]`. */
+  page?: number;
 }
 export interface SpriteClip {
   frames: number[];
@@ -209,6 +213,8 @@ export interface SpriteAnimation {
   > & { idle: SpriteClip };
   pixelated?: boolean;
   palette?: string[];
+  /** Extra atlas pages of a large pack, each an embedded PNG or a stored file. */
+  pages?: { src: string; width: number; height: number }[];
   // Explicit authored mouth poses, ordered by opening rather than clip timing.
   mouthFrames?: { closed: number; small: number; wide: number };
 }
@@ -367,6 +373,8 @@ export interface PetProductionOptions {
   frameCount?: 4 | 8;
   temperament?: 'natural' | 'gentle' | 'lively';
   artDirection?: string;
+  /** Sharp draws fewer poses per image (more requests, much sharper motion frames). */
+  quality?: 'sharp' | 'standard';
 }
 export interface PetJob extends PetProductionOptions {
   id: string;
@@ -405,6 +413,8 @@ export interface PetJob extends PetProductionOptions {
     motion?: PetMotion;
     status: 'queued' | 'working' | 'done' | 'failed' | 'unsaved' | 'uncertain';
     error?: string;
+    /** Which image of a motion drawn in several images (sharp quality), counted from 0. */
+    part?: number;
     /** Automatic regenerations already spent on this pose sheet after quality rejections. */
     attempts?: number;
     /** Guidance for the next request, derived from the last rejection. */

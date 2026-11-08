@@ -214,6 +214,8 @@ async function run() {
   safeStorage.isEncryptionAvailable = () => false;
   dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [fixture] });
   app.on('browser-window-created', (_event, created) => {
+    // Animation state is read from the page; a window behind other apps must keep its frames.
+    created.webContents.setBackgroundThrottling(false);
     window = created;
     created.webContents.on('console-message', (event) => {
       if (event.level === 'error' || event.level === 3) errors.push(event.message);

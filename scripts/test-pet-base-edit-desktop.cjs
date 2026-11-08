@@ -123,7 +123,10 @@ global.fetch = async (url, init) => {
       : 'base';
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
   // A chibi base carries the Furina sticker last, as a style guide only.
-  assert.deepEqual(Buffer.from(await images[kind === 'base' ? 0 : images.length - 1].arrayBuffer()), originalBytes);
+  assert.deepEqual(
+    Buffer.from(await images[kind === 'base' ? 0 : images.length - 1].arrayBuffer()),
+    originalBytes,
+  );
   assert.equal(images.length, 2);
   if (kind === 'base') assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina);
   if (kind === 'edit')
@@ -171,6 +174,8 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, created) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   const js = async (code) => {
@@ -200,6 +205,10 @@ app.on('browser-window-created', (_event, created) => {
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');
+    // These tests cover the standard flow; sharp quality (the default) has its own test.
+    await js(
+      `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
+    );
     await wait(`!!document.querySelector('[aria-label="角色候选数量"]')`);
   };
   const reload = async () => {
@@ -333,10 +342,7 @@ app.on('browser-window-created', (_event, created) => {
       await idle();
       assert.equal(calls.length, 4);
       assert.equal((await tasks())[0].status, 'ready');
-      assert.equal(
-        await js(`document.querySelectorAll('button[aria-label="修正Q版候选 1"]').length`),
-        0,
-      );
+      assert.equal(await js(`document.querySelectorAll('button[aria-label="修正Q版候选 1"]').length`), 0);
 
       await change('角色候选数量', '2');
       await onlyWaveAndTalk();
@@ -371,10 +377,7 @@ app.on('browser-window-created', (_event, created) => {
       await js(`window.mori.load().then(r=>window.mori.saveSettings(r.state.settings,{imageKey:''}))`);
       await wait(`document.querySelector('[aria-label="开始自动制作桌宠"]').disabled`);
       credentialsUnavailable = true;
-      assert.equal(
-        await js(`document.querySelector('[aria-label="恢复Q版候选修正保存"]').disabled`),
-        false,
-      );
+      assert.equal(await js(`document.querySelector('[aria-label="恢复Q版候选修正保存"]').disabled`), false);
       await click('恢复Q版候选修正保存');
       await wait(
         `document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===3`,

@@ -1,4 +1,5 @@
 'use strict';
+const { isAsset, imageDigest, assetUrl, ASSET } = require('./skin-assets.cjs');
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -48,6 +49,10 @@ function array(value, label, max, validate) {
   if (!Array.isArray(value) || value.length > max)
     invalid(label, `expected an array of at most ${max} items`);
   return value.map((item, i) => validate(item, `${label}[${i}]`));
+}
+function integerValue(value, label, min, max) {
+  if (!Number.isInteger(value) || value < min || value > max) invalid(label, `expected an integer from ${min} to ${max}`);
+  return value;
 }
 function boolean(value, label) {
   if (typeof value !== 'boolean') invalid(label, 'expected a boolean');
@@ -365,8 +370,13 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
   const s = record(value, label);
   const inputImages = record(s.images, `${label}.images`);
   const images = {};
+  // An animation atlas may be stored as a file next to the state (see skin-assets.cjs); its
+  // size is then recorded with the skin, since the image is not at hand here.
+  const storedAtlas = s.sprite !== undefined && isAsset(inputImages.neutral);
   for (const emotion of EMOTIONS) {
-    if (inputImages[emotion] !== undefined)
+    if (inputImages[emotion] === undefined) continue;
+    if (emotion === 'neutral' && storedAtlas) images.neutral = inputImages.neutral;
+    else
       images[emotion] = rasterImage(
         inputImages[emotion],
         `${label}.images.${emotion}`,
@@ -374,15 +384,24 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
         emotion === 'neutral' && s.sprite !== undefined ? MAX_ATLAS_BYTES : MAX_IMAGE_BYTES,
       );
   }
-  let sprite;
+  let sprite, atlasSize;
   if (s.sprite !== undefined) {
-    if (!images.neutral?.startsWith('data:image/png;') || (s.kind && s.kind !== 'image'))
+    if (!(storedAtlas || images.neutral?.startsWith('data:image/png;')) || (s.kind && s.kind !== 'image'))
       invalid(label, '逐帧动画需要自包含的 PNG 图集');
-    const bytes = Buffer.from(images.neutral.split(',')[1], 'base64');
-    sprite = require('./sprites.cjs').validateAnimation(s.sprite, {
-      width: bytes.readUInt32BE(16),
-      height: bytes.readUInt32BE(20),
-    });
+    if (storedAtlas) {
+      const size = record(s.atlasSize, `${label}.atlasSize`);
+      atlasSize = {
+        width: integerValue(size.width, `${label}.atlasSize.width`, 1, 8192),
+        height: integerValue(size.height, `${label}.atlasSize.height`, 1, 8192),
+      };
+    } else {
+      const bytes = Buffer.from(images.neutral.split(',')[1], 'base64');
+      atlasSize = { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+    }
+    sprite = require('./sprites.cjs').validateAnimation(s.sprite, atlasSize);
+    // Embedded extra pages count toward the workspace image budget like the main atlas.
+    for (const [i, page] of (sprite.pages || []).entries())
+      if (!isAsset(page.src)) rasterImage(page.src, `${label}.sprite.pages.${i}`, budget, MAX_ATLAS_BYTES);
   }
   let drawing;
   if (s.drawing !== undefined) {
@@ -393,14 +412,7 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
   if (review && sprite) {
     const currentDigest = require('./animation-quality.cjs').animationDigest(sprite);
     if (review.status === 'approved' && review.animationDigest !== undefined) {
-      if (
-        review.animationDigest !== currentDigest ||
-        review.imageDigest !==
-          require('node:crypto')
-            .createHash('sha256')
-            .update(Buffer.from(images.neutral.split(',')[1], 'base64'))
-            .digest('hex')
-      )
+      if (review.animationDigest !== currentDigest || review.imageDigest !== imageDigest(images.neutral))
         invalid(label, '动画图像或时序已经改变，请重新逐帧核对');
       require('./animation-quality.cjs').validateFrameReview(sprite, review.imageDigest, {
         ...review.animation,
@@ -410,6 +422,7 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
     } else if (review.status === 'pending') review = { ...review, animationDigest: currentDigest };
   }
   return {
+    ...(storedAtlas ? { atlasSize } : {}),
     id: id(s.id, `${label}.id`),
     characterId: id(s.characterId, `${label}.characterId`),
     name: string(s.name, `${label}.name`, 300, false),
@@ -851,12 +864,79 @@ function createStore({ dir, safeStorage }) {
       throw stateFault;
     }
   }
+  // Animation atlases are stored as files named by their digest, not inside state.json: a full
+  // motion pack is tens of megabytes, and the state is rewritten and sent to every window on
+  // each save. The file is written before the state that refers to it.
+  const assetDir = path.join(dir, 'skin-assets');
+  async function storeAsset(dataUrl) {
+    const bytes = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
+    const sha = imageDigest(dataUrl);
+    const file = path.join(assetDir, `${sha}.png`);
+    try {
+      const stat = await fs.lstat(file);
+      if (stat.isFile() && stat.size === bytes.length) return { url: assetUrl(sha), bytes };
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+    await fs.mkdir(assetDir, { recursive: true, mode: 0o700 });
+    const temp = `${file}.${randomUUID()}.tmp`;
+    try {
+      await fs.writeFile(temp, bytes, { mode: 0o600, flag: 'wx' });
+      await fs.rename(temp, file);
+    } finally {
+      await fs.unlink(temp).catch(() => {});
+    }
+    return { url: assetUrl(sha), bytes };
+  }
+  async function externalize(value) {
+    let changed = false;
+    const skins = [];
+    for (const skin of value.skins) {
+      let next = skin;
+      if (skin.sprite && skin.images.neutral?.startsWith('data:image/png;')) {
+        const { url, bytes } = await storeAsset(skin.images.neutral);
+        next = {
+          ...next,
+          images: { ...next.images, neutral: url },
+          atlasSize: { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) },
+        };
+        changed = true;
+      }
+      if (skin.sprite?.pages?.some((page) => !isAsset(page.src))) {
+        const pages = [];
+        for (const page of skin.sprite.pages)
+          pages.push(isAsset(page.src) ? page : { ...page, src: (await storeAsset(page.src)).url });
+        next = { ...next, sprite: { ...next.sprite, pages } };
+        changed = true;
+      }
+      skins.push(next);
+    }
+    return changed ? validateState({ ...value, skins }) : value;
+  }
   async function writeState(value) {
     // Only a successfully validated state can become the previous snapshot.
     // If either write fails, keep the in-memory state at its last committed value.
+    value = await externalize(value);
     if (state !== null) await atomicJson(previousStateFile, state);
     await atomicJson(stateFile, value);
     state = value;
+  }
+  const referenced = (value, into) => {
+    for (const skin of value?.skins || []) {
+      for (const source of [skin.images?.neutral, ...(skin.sprite?.pages || []).map((p) => p.src)]) {
+        const match = typeof source === 'string' && ASSET.exec(source);
+        if (match) into.add(`${match[1]}.png`);
+      }
+    }
+    return into;
+  };
+  async function readAsset(url) {
+    const match = ASSET.exec(url);
+    if (!match) throw new Error('无效的动画图集引用。');
+    const bytes = await fs.readFile(path.join(assetDir, `${match[1]}.png`));
+    if (imageDigest(`data:image/png;base64,${bytes.toString('base64')}`) !== match[1])
+      throw new Error('动画图集文件已损坏或被修改。');
+    return bytes;
   }
   async function preserveOriginal(file, name) {
     try {
@@ -911,6 +991,52 @@ function createStore({ dir, safeStorage }) {
     }
   }
   return {
+    assetDir,
+    readAsset,
+    /** Skins with stored atlases turned back into self-contained data URLs (for export). */
+    inlineAssets: async (skins) =>
+      Promise.all(
+        skins.map(async (skin) => {
+          if (!skin.sprite || !isAsset(skin.images?.neutral)) return skin;
+          const inline = async (url) => `data:image/png;base64,${(await readAsset(url)).toString('base64')}`;
+          const { atlasSize: _size, ...rest } = skin;
+          return {
+            ...rest,
+            images: { ...skin.images, neutral: await inline(skin.images.neutral) },
+            sprite: skin.sprite.pages
+              ? { ...skin.sprite, pages: await Promise.all(skin.sprite.pages.map(async (p) => ({ ...p, src: isAsset(p.src) ? await inline(p.src) : p.src }))) }
+              : skin.sprite,
+          };
+        }),
+      ),
+    /** Remove stored atlases nothing refers to any more (deleted or replaced looks). */
+    collectAssets: () =>
+      serial(async () => {
+        await ensureState();
+        const keep = referenced(state, new Set());
+        try {
+          referenced(await readJson(previousStateFile), keep);
+        } catch {
+          return 0; // An unreadable snapshot might still need its files.
+        }
+        let removed = 0;
+        let names = [];
+        try {
+          names = await fs.readdir(assetDir);
+        } catch (error) {
+          if (error.code === 'ENOENT') return 0;
+          throw error;
+        }
+        for (const name of names) {
+          if (keep.has(name) || !/^[0-9a-f]{64}\.png$/.test(name)) continue;
+          const stat = await fs.lstat(path.join(assetDir, name));
+          // Leave anything written in the last few minutes to a save that is still settling.
+          if (Date.now() - stat.mtimeMs < 10 * 60000) continue;
+          await fs.rm(path.join(assetDir, name), { force: true });
+          removed++;
+        }
+        return removed;
+      }),
     loadState: () =>
       serial(async () => {
         await ensureState();

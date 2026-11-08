@@ -2,6 +2,13 @@
 const { createHash } = require('node:crypto');
 function animationDigest(animation) {
   const validated = require('./sprites.cjs').validateAnimation(animation);
+  // Atlas pages count by their contents, whether embedded or stored as files.
+  if (validated.pages)
+    validated.pages = validated.pages.map(({ src, width, height }) => ({
+      sha256: require('./skin-assets.cjs').imageDigest(src),
+      width,
+      height,
+    }));
   validated.clips = Object.fromEntries(
     Object.entries(validated.clips).sort(([a], [b]) => a.localeCompare(b)),
   );

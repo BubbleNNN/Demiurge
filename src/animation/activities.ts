@@ -2,7 +2,12 @@ import type { Activity, PetAction, SpriteAnimation } from '../types';
 import * as activityData from '../../shared/activities.json';
 import { clipDuration, clipFrame } from './timeline';
 
-export const activities = activityData.activities as { id: Activity; name: string; doing: string; prop: string }[];
+export const activities = activityData.activities as {
+  id: Activity;
+  name: string;
+  doing: string;
+  prop: string;
+}[];
 export const isActivity = (action: PetAction | string): action is Activity =>
   activities.some((activity) => activity.id === action);
 export const activityDuration = 60000;
@@ -63,7 +68,10 @@ export function advanceActivityPlayback(
     }
   }
   const clip = state.current !== 'idle' ? animation.clips[state.current] : undefined;
-  return clip
-    ? { frame: clipFrame(animation, clip, paused ? 0 : time - state.since), clip: state.current }
-    : null;
+  if (!clip) return null;
+  const age = paused ? 0 : time - state.since;
+  // A one-shot gesture that has played through hands back to the ordinary timeline, so idle,
+  // blinking and talking resume instead of holding its last pose until the next action.
+  if (!clip.loop && age >= clipDuration(animation, clip)) return null;
+  return { frame: clipFrame(animation, clip, age), clip: state.current };
 }

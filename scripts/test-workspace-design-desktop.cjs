@@ -17,6 +17,8 @@ delete process.env.MORI_DEV_VIEW;
 let win;
 const deadline = setTimeout(() => app.exit(1), 60000);
 app.on('browser-window-created', (_, w) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  w.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = w;
   w.webContents.once('did-finish-load', async () => {
@@ -47,7 +49,10 @@ app.on('browser-window-created', (_, w) => {
       };
       for (const view of ['home', 'chat', 'wardrobe', 'characters', 'memories', 'settings']) {
         await go(view);
-        assert.equal(await js(`document.querySelector('main').dataset.feature`), view === 'chat' ? 'home' : view);
+        assert.equal(
+          await js(`document.querySelector('main').dataset.feature`),
+          view === 'chat' ? 'home' : view,
+        );
         if (view === 'home') {
           assert.ok(
             await js(

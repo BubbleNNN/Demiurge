@@ -92,6 +92,18 @@ function paint(image: HTMLImageElement, animation: SpriteAnimation, index: numbe
     ? { image: canvas, width: size.width, height: size.height, x: frame.offset?.[0] || 0, y: frame.offset?.[1] || 0 }
     : { image: canvas, width: canvas.width, height: canvas.height, x: 0, y: 0 };
 }
+/** Decode the frames that live on one atlas page, keyed by frame index. */
+export function prepareSpritePage(image: HTMLImageElement, animation: SpriteAnimation, page: number) {
+  const indices = animation.frames.map((frame, index) => ((frame.page || 0) === page ? index : -1)).filter((i) => i >= 0);
+  const pixels = indices.reduce((sum, index) => {
+    const frame = animation.frames[index];
+    if (frame.cell) return sum + frame.rect[2] * frame.rect[3];
+    const size = spriteCellSize(animation, frame);
+    return sum + size.width * size.height;
+  }, 0);
+  if (pixels > 32 * 1024 * 1024) throw new Error('动画解码超过内存预算，请拆分素材包');
+  return new Map(indices.map((index) => [index, paint(image, animation, index, true)] as const));
+}
 export function prepareSpriteFrames(image: HTMLImageElement, animation: SpriteAnimation): SpriteCell[] {
   // Budget what is actually decoded: a trimmed frame costs its stored pixels, not its canvas.
   const pixels = animation.frames.reduce((sum, frame) => {

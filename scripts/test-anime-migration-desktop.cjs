@@ -31,6 +31,8 @@ function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_e, win) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  win.webContents.setBackgroundThrottling(false);
   if (win.getTitle() === 'Mori 桌宠') return;
   win.webContents.once('did-finish-load', async () => {
     if (win.webContents.getURL().includes('pet=1')) return;

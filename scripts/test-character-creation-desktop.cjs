@@ -60,6 +60,8 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, window) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  window.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = window;
   const js = (code) =>

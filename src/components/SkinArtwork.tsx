@@ -20,6 +20,8 @@ export function SkinArtwork({
     if (!animation || !image || !canvas.current) return;
     const node = canvas.current,
       source = new Image();
+    // Stored atlases are another origin; CORS keeps the drawn canvas readable.
+    if (image.startsWith('mori-asset:')) source.crossOrigin = 'anonymous';
     let disposed = false;
     source.onload = () => {
       if (disposed) return;

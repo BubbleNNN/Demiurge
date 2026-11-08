@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import type { Emotion, PetAction, Skin } from '../types';
 import { spriteAnimation } from '../artwork';
 import { skinImage } from '../theme';
-import { drawSpriteFrame, prepareSpriteFrames, type SpriteCell } from '../animation/sprites';
+import { drawSpriteFrame, prepareSpritePage, type SpriteCell } from '../animation/sprites';
+import { figureFromFrames, loadImage, pageOf, pageSource } from '../animation/pages';
 import { selectSpriteFrame } from '../animation/timeline';
 import { advanceActivityPlayback, newActivityPlayback, isActivity } from '../animation/activities';
 import { measureSequenceBounds, type FigureBounds } from '../animation/framing';
@@ -43,13 +44,50 @@ export function AnimatedIllustration(props: Props) {
       time = 0,
       last = 0,
       inView = true;
-    let cells: SpriteCell[] | undefined;
+    // Frames are decoded per atlas page, when a clip on that page is first needed. A large pack
+    // keeps its idle and short clips on page 0 and each activity on a later page, so the player
+    // holds only what it plays; least-recently used pages are dropped past a memory budget.
+    let cells: (SpriteCell | undefined)[] | undefined;
     let figure: FigureBounds | undefined;
     let previous = '',
-      redraw = true;
+      redraw = true,
+      lastDrawn = -1;
+    const pages = new Map<number, { frames: number[]; pixels: number; used: number }>();
+    const loading = new Set<number>();
     const media = matchMedia('(prefers-reduced-motion: reduce)');
-    const source = new Image();
     const playback = newActivityPlayback();
+    const ensurePage = (page: number) => {
+      if (pages.has(page) || loading.has(page)) return;
+      const src = pageSource(imageUrl!, animation, page);
+      if (!src) return;
+      loading.add(page);
+      loadImage(src)
+        .then((image) => {
+          if (disposed || !cells) return;
+          const prepared = prepareSpritePage(image, animation, page);
+          let pixels = 0;
+          for (const [index, cell] of prepared) {
+            cells[index] = cell;
+            pixels += cell.image.width * cell.image.height;
+          }
+          pages.set(page, { frames: [...prepared.keys()], pixels, used: performance.now() });
+          let total = [...pages.values()].reduce((n, p) => n + p.pixels, 0);
+          while (total > 28 * 1024 * 1024) {
+            const oldest = [...pages.entries()]
+              .filter(([n]) => n !== 0 && n !== page)
+              .sort((a, b) => a[1].used - b[1].used)[0];
+            if (!oldest) break;
+            for (const index of oldest[1].frames) cells[index] = undefined;
+            pages.delete(oldest[0]);
+            total -= oldest[1].pixels;
+          }
+          update();
+        })
+        .catch(() => {
+          if (!disposed && page === 0) setFailed(true);
+        })
+        .finally(() => loading.delete(page));
+    };
     const tick = (stamp: number) => {
       raf = 0;
       if (disposed || !cells || !inView || document.hidden) return;
@@ -81,21 +119,26 @@ export function AnimatedIllustration(props: Props) {
           mouth: p.mouth.current,
           paused,
         });
-      const key = `${selected.frame}:${p.zoom}`;
-      if (redraw || key !== previous) {
-        const placement = drawSpriteFrame(
-          node,
-          cells[selected.frame],
-          Boolean(animation.pixelated),
-          p.zoom,
-          figure,
-        );
+      // A frame whose page is still loading keeps the last drawn frame on screen meanwhile.
+      let shown = selected.frame;
+      if (!cells[shown]) {
+        ensurePage(pageOf(animation, shown));
+        shown = cells[lastDrawn] ? lastDrawn : -1;
+      } else {
+        const entry = pages.get(pageOf(animation, shown));
+        if (entry) entry.used = stamp;
+      }
+      const key = `${shown}:${p.zoom}`;
+      if (shown >= 0 && (redraw || key !== previous)) {
+        const cell = cells[shown]!;
+        const placement = drawSpriteFrame(node, cell, Boolean(animation.pixelated), p.zoom, figure);
         setResolutionNote(
           !animation.pixelated && placement && placement.scale > 1.25
-            ? `动作帧 ${cells[selected.frame].width} × ${cells[selected.frame].height} · 当前放大 ${placement.scale.toFixed(1)} 倍`
+            ? `动作帧 ${cell.width} × ${cell.height} · 当前放大 ${placement.scale.toFixed(1)} 倍`
             : '',
         );
         previous = key;
+        lastDrawn = shown;
         redraw = false;
       }
       node.dataset.frame = String(selected.frame);
@@ -130,21 +173,28 @@ export function AnimatedIllustration(props: Props) {
     observer.observe(node);
     const resize = new ResizeObserver(update);
     resize.observe(node);
-    source.onload = () => {
-      if (disposed) return;
-      try {
-        cells = prepareSpriteFrames(source, animation);
-        figure = measureSequenceBounds(cells);
+    loadImage(imageUrl!)
+      .then((image) => {
+        if (disposed) return;
+        cells = new Array(animation.frames.length);
+        const prepared = prepareSpritePage(image, animation, 0);
+        let pixels = 0;
+        for (const [index, cell] of prepared) {
+          cells[index] = cell;
+          pixels += cell.image.width * cell.image.height;
+        }
+        pages.set(0, { frames: [...prepared.keys()], pixels, used: performance.now() });
+        // One crop for the whole animation: from metadata when frames are spread over pages,
+        // otherwise measured from the decoded frames as before.
+        figure =
+          (animation.pages?.length && figureFromFrames(animation)) ||
+          measureSequenceBounds(prepared.size ? [...prepared.values()] : []);
         setReady(true);
         resume();
-      } catch {
-        setFailed(true);
-      }
-    };
-    source.onerror = () => {
-      if (!disposed) setFailed(true);
-    };
-    source.src = imageUrl!;
+      })
+      .catch(() => {
+        if (!disposed) setFailed(true);
+      });
     node.addEventListener('mori:render', update);
     document.addEventListener('visibilitychange', visibility);
     media.addEventListener('change', update);
@@ -154,8 +204,6 @@ export function AnimatedIllustration(props: Props) {
       cancelAnimationFrame(raf);
       observer.disconnect();
       resize.disconnect();
-      source.onload = null;
-      source.onerror = null;
       node.removeEventListener('mori:render', update);
       document.removeEventListener('visibilitychange', visibility);
       media.removeEventListener('change', update);

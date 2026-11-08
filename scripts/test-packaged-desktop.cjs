@@ -204,11 +204,14 @@ async function connect(url) {
       () => petClient.evaluate(`Boolean(document.querySelector('canvas, .pet-window, .pet-avatar'))`),
       'desktop pet artwork',
     );
-    const scene=await petClient.evaluate('window.mori.desktopScene(true)');
-    assert.equal(scene.supported,true,scene.reason);
+    const scene = await petClient.evaluate('window.mori.desktopScene(true)');
+    assert.equal(scene.supported, true, scene.reason);
     assert.ok(Array.isArray(scene.icons));
     await petClient.evaluate("document.querySelector('[aria-label=一起玩]').click()");
-    await waitFor(()=>petClient.evaluate("Boolean(document.querySelector('.pet-moment'))"),'packaged game');
+    await waitFor(
+      () => petClient.evaluate("Boolean(document.querySelector('.pet-moment'))"),
+      'packaged game',
+    );
     const screenshot = await petClient.send('Page.captureScreenshot', { format: 'png' });
     fs.writeFileSync(path.join(output, 'packaged-pet.png'), Buffer.from(screenshot.data, 'base64'));
     assert.deepEqual(petClient.exceptions, []);
@@ -219,10 +222,7 @@ async function connect(url) {
   fs.writeFileSync(path.join(output, 'packaged-workshop.png'), Buffer.from(screenshot.data, 'base64'));
   await client.evaluate('window.mori.closePet()');
   await client.send('Page.reload', { ignoreCache: true });
-  await waitFor(
-    () => client.evaluate(`Boolean(document.querySelector('.room-rail'))`),
-    'reloaded workshop',
-  );
+  await waitFor(() => client.evaluate(`Boolean(document.querySelector('.room-rail'))`), 'reloaded workshop');
   const persisted = await client.evaluate('window.mori.load()');
   assert.equal(persisted.state.settings.chatMode, 'local');
   assert.equal(persisted.state.messages[persisted.state.activeCharacterId][0].id, 'packaged-smoke');
@@ -241,8 +241,8 @@ async function connect(url) {
     localChat: true,
     bundledLive2DLoaded: true,
     desktopPet: true,
-    nativeDesktopScene:true,
-    desktopInteraction:true,
+    nativeDesktopScene: true,
+    desktopInteraction: true,
     reloadPersistence: true,
     userCredentialsBundled: false,
     paidRequests: 0,

@@ -117,7 +117,11 @@ global.fetch = async (url, init) => {
       : 'base';
   assert.equal(kind, expectedKind);
   const style =
-    kind === 'edit' ? 'chibi-pet' : [...require('../shared/creation-styles.json'), ...Object.keys(artStyles)].find((id) => prompt.includes(artStyles[id].prompt));
+    kind === 'edit'
+      ? 'chibi-pet'
+      : [...require('../shared/creation-styles.json'), ...Object.keys(artStyles)].find((id) =>
+          prompt.includes(artStyles[id].prompt),
+        );
   assert.ok(style);
   const items = init.body.getAll('image[]').length ? init.body.getAll('image[]') : [init.body.get('image')];
   const images = await Promise.all(items.map(async (image) => Buffer.from(await image.arrayBuffer())));
@@ -166,6 +170,8 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, created) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   const js = (code) => win.webContents.executeJavaScript(code, true);
@@ -198,6 +204,10 @@ app.on('browser-window-created', (_event, created) => {
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');
+    // These tests cover the standard flow; sharp quality (the default) has its own test.
+    await js(
+      `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
+    );
     await wait(`!!document.querySelector('[aria-label="角色候选数量"]')`);
   };
   const countBases = (count) =>

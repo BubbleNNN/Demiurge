@@ -16,7 +16,7 @@ const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
 const MAX_ARCHIVE_BYTES = MAX_TOTAL_BYTES + 32 * 1024 * 1024;
 const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
 const MAX_FILES = 10000;
-const DIRECTORIES = ['models', 'pet-jobs', 'model-jobs'];
+const DIRECTORIES = ['models', 'pet-jobs', 'model-jobs', 'skin-assets'];
 const TARGETS = ['state.json', ...DIRECTORIES, 'state.previous.json'];
 const JOURNAL = '.workspace-import-journal.json';
 const RECOVERY_MANIFEST = '.mori-recovery.json';
@@ -242,6 +242,12 @@ function validateManifest(value, { recovery = false } = {}) {
 
 function checkModelEntries(state, records) {
   for (const skin of state.skins) {
+    // Stored animation atlases must travel with the state that refers to them.
+    for (const source of [skin.images?.neutral, ...(skin.sprite?.pages || []).map((p) => p.src)]) {
+      const stored = typeof source === 'string' && require('./skin-assets.cjs').ASSET.exec(source);
+      if (stored && !records.has(`skin-assets/${stored[1]}.png`))
+        throw fault(`备份缺少动画图集：${skin.name}。`);
+    }
     if (!skin.model) continue;
     const name = safePath(`models/${skin.model.id}/${skin.model.entry}`);
     if (!records.has(name)) throw fault(`备份缺少角色模型入口：${skin.name}。`);

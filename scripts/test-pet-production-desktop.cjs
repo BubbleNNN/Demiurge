@@ -91,7 +91,9 @@ global.fetch = async (url, init) => {
   assert.equal(init.headers.Authorization, 'Bearer isolated-test-key');
   const form = init.body,
     prompt = String(form.get('prompt'));
-  const style = [...require('../shared/creation-styles.json'), ...Object.keys(styles)].find((s) => prompt.includes(styles[s].prompt));
+  const style = [...require('../shared/creation-styles.json'), ...Object.keys(styles)].find((s) =>
+    prompt.includes(styles[s].prompt),
+  );
   assert.ok(style, 'A request must explicitly describe its rendering medium');
   const isSheet = prompt.includes('regular 2-by-2 grid');
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
@@ -144,6 +146,8 @@ async function finish(error) {
   app.exit(error ? 1 : 0);
 }
 app.on('browser-window-created', (_event, created) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   win.webContents.on('console-message', (_event, details) => {
@@ -177,6 +181,10 @@ app.on('browser-window-created', (_event, created) => {
     await click('角色工作室');
     await click('外观与动作');
     await click('自动制作多画风桌宠');
+    // These tests cover the standard flow; sharp quality (the default) has its own test.
+    await js(
+      `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
+    );
     await wait(`document.querySelectorAll('.production-style-grid button').length===4`);
   };
   const capture = async (file) => {
@@ -332,7 +340,7 @@ app.on('browser-window-created', (_event, created) => {
       await js(
         `[...document.querySelectorAll('.production-output-tabs button')].find(b=>b.querySelector('strong').textContent==='Q版').click()`,
       );
-      await click('放到桌面');
+      await click('来到桌面');
       let pet;
       for (let n = 0; n < 150; n++) {
         pet = BrowserWindow.getAllWindows().find((w) => w !== win);
@@ -348,19 +356,25 @@ app.on('browser-window-created', (_event, created) => {
       await click('摸摸角色的头');
       await wait(`document.querySelector('.scene-artwork canvas').dataset.clip==='nod'`);
       await pet.webContents.executeJavaScript(`document.querySelector('[aria-label="让角色休息"]').click()`);
-      let sleepObserved = false;
+      // This pack has no sleep motion (twelve-frame motions have their own test): resting keeps
+      // the idle loop and blinking instead of a gesture or a missing clip.
+      let restObserved = false;
       for (let n = 0; n < 60; n++) {
         if (
           await pet.webContents.executeJavaScript(
-            `document.querySelector('canvas[data-clip]').dataset.clip==='sleep'`,
+            `!!document.querySelector('[aria-label="唤醒角色"]')&&['idle','blink'].includes(document.querySelector('canvas[data-clip]').dataset.clip)`,
           )
         ) {
-          sleepObserved = true;
+          restObserved = true;
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      assert.equal(sleepObserved, true, 'The real pet plays the generated sleep frames');
+      assert.equal(
+        restObserved,
+        true,
+        'The real pet rests on its idle loop when the pack has no sleep motion',
+      );
       await pet.webContents.executeJavaScript(`document.querySelector('[aria-label="唤醒角色"]').click()`);
       let waveObserved = false;
       for (let n = 0; n < 30; n++) {

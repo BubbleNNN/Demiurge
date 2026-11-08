@@ -25,6 +25,8 @@ const timeout = setTimeout(() => {
   app.exit(1);
 }, 60000);
 app.on('browser-window-created', (_, win) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  win.webContents.setBackgroundThrottling(false);
   if (started) return;
   started = true;
   const js = (code) => win.webContents.executeJavaScript(code, true);

@@ -365,7 +365,10 @@ app.whenReady().then(async () => {
   });
   protocol.handle('mori-asset', async (request) => {
     try {
-      const response = await net.fetch(pathToFileURL(resolveAsset(modelsDir, request.url)).href);
+      // Stored animation atlases (content-addressed) or installed model files.
+      const stored = require('./skin-assets.cjs').ASSET.exec(request.url);
+      const file = stored ? path.join(store.assetDir, `${stored[1]}.png`) : resolveAsset(modelsDir, request.url);
+      const response = await net.fetch(pathToFileURL(file).href);
       const headers = new Headers(response.headers);
       headers.set('Access-Control-Allow-Origin', '*');
       return new Response(response.body, { status: response.status, headers });
@@ -658,7 +661,13 @@ app.whenReady().then(async () => {
     if (typeof characterId !== 'string' || characterId.length > 128) throw new Error('角色标识无效。');
     return petPipeline.list(characterId);
   });
-  handle('pet-job-results', async (_event, jobId) => petPipeline.results(jobId));
+  // Installed results come from the workspace, where their atlases are stored files; only results
+  // not installed yet are sent with their embedded images.
+  handle('pet-job-results', async (_event, jobId) => {
+    const results = await petPipeline.results(jobId);
+    const state = await store.loadState();
+    return results.map((skin) => state?.skins.find((saved) => saved.id === skin.id) || skin);
+  });
   handle('pet-job-masters', async (_event, jobId) => petPipeline.masters(jobId));
   handle('pet-job-style-reference', async (_event, jobId) => petPipeline.styleReference(jobId));
   handle('retry-pet-step', (event, input) =>
@@ -1135,9 +1144,10 @@ app.whenReady().then(async () => {
   });
   handle('export-character', async (event, input) => {
     bound(input, MAX_FILE_BYTES);
+    // A character pack is self-contained: stored atlases go back in as embedded images.
     const bundle = await require('./character-packs.cjs').portableBundle(
       input.character,
-      input.skins,
+      await store.inlineAssets(Array.isArray(input.skins) ? input.skins : []),
       path.resolve(__dirname, '../public/art'),
     );
     const selected = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
@@ -1195,6 +1205,8 @@ app.whenReady().then(async () => {
     if (isTrusted(event) && pet && event.sender === pet.webContents && typeof enabled === 'boolean')
       pet.setIgnoreMouseEvents(enabled, { forward: true });
   });
+  // Atlases of deleted or replaced looks are removed a little after startup.
+  setTimeout(() => void store.collectAssets().catch(() => {}), 60000);
   createWorkshop();
   screen.on('display-metrics-changed', () => {
     void store

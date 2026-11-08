@@ -5,16 +5,23 @@ const { randomUUID, createHash } = require('node:crypto');
 const { referencePack, imageDigest, styleReferencePack } = require('./references.cjs');
 const { validateSkin, validateStyleReference } = require('./store.cjs');
 const { inspectMaster, inspectSheet, packFrames } = require('./pet-frames.cjs');
-const { productionOptions } = require('./pet-recipes.cjs');
+const { productionOptions, motionParts } = require('./pet-recipes.cjs');
 const styles = Object.keys(require('../shared/art-styles.json'));
 // New tasks offer four looks only; earlier looks keep resuming and revising from their saved files.
 const creationStyles = require('../shared/creation-styles.json');
 // Old task files remain readable; retired styles cannot start or resume generation.
 const recognizedStyles = [...styles, 'realistic', 'watercolor', 'plush', 'figurine'];
+// One step per image a motion needs: sharp motions are drawn as several images (see motionParts).
+function sheetSteps(style, motion, options) {
+  const parts = motionParts(motion, options);
+  return parts > 1
+    ? Array.from({ length: parts }, (_, part) => ({ kind: 'sheet', style, motion, part, status: 'queued' }))
+    : [{ kind: 'sheet', style, motion, status: 'queued' }];
+}
 // Pose sheets that fail the local quality check are regenerated this many times before stopping.
 const AUTO_RETRIES = 3;
-// A saved frame artifact holds a base64 PNG: a 32 MiB atlas needs about 44 MiB plus its record.
-const ARTIFACT_LIMIT = 48 * 1024 * 1024;
+// A saved frame artifact holds base64 PNGs: a packed result can carry several 32 MiB atlas pages.
+const ARTIFACT_LIMIT = 192 * 1024 * 1024;
 // What the next request is told about the rejected one; written for the image model.
 function retryHint(message) {
   if (/裁切|边缘/.test(message))
@@ -205,7 +212,9 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         (step.attempts !== undefined && !(Number.isInteger(step.attempts) && step.attempts >= 0 && step.attempts <= 9)) ||
         (step.hint !== undefined && (typeof step.hint !== 'string' || step.hint.length > 600)) ||
         (step.replaces !== undefined &&
-          (step.kind !== 'pack' || typeof step.replaces !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(step.replaces)))
+          (step.kind !== 'pack' || typeof step.replaces !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(step.replaces))) ||
+        (step.part !== undefined &&
+          (step.kind !== 'sheet' || !Number.isInteger(step.part) || step.part < 0 || step.part >= motionParts(step.motion, job)))
       )
         throw new Error('桌宠任务阶段无效。');
     }
@@ -316,7 +325,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       results: [],
       steps: selectedStyles.flatMap((style) => [
         ...Array.from({ length: options.candidateCount }, () => ({ kind: 'base', style, status: 'queued' })),
-        ...selectedMotions.map((motion) => ({ kind: 'sheet', style, motion, status: 'queued' })),
+        ...selectedMotions.flatMap((motion) => sheetSteps(style, motion, options)),
         { kind: 'pack', style, status: 'queued' },
       ]),
     };
@@ -584,12 +593,15 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       },
       steps: [
         { kind: 'base', style: input.style, status: input.motion ? 'done' : 'queued' },
-        ...source.motions.map((motion) => ({
-          kind: 'sheet',
-          style: input.style,
-          motion,
-          status: input.motion && motion !== input.motion ? 'done' : 'queued',
-        })),
+        ...source.steps
+          .filter((s) => s.kind === 'sheet' && s.style === input.style)
+          .map((s) => ({
+            kind: 'sheet',
+            style: input.style,
+            motion: s.motion,
+            ...(s.part !== undefined ? { part: s.part } : {}),
+            status: input.motion && s.motion !== input.motion ? 'done' : 'queued',
+          })),
         { kind: 'pack', style: input.style, status: 'queued' },
       ],
     };
@@ -602,7 +614,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       for (let i = 1; i < job.steps.length - 1; i++)
         if (job.steps[i].status === 'done') {
           const original = source.steps.findIndex(
-            (s) => s.style === input.style && s.kind === 'sheet' && s.motion === job.steps[i].motion,
+            (s) => s.style === input.style && s.kind === 'sheet' && s.motion === job.steps[i].motion && s.part === job.steps[i].part,
           );
           const data = await pixels(source, original);
           if (!data?.image) throw new Error('原动作素材缺失，无法复用。');
@@ -705,7 +717,17 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
             // Persisted sheets only, same style and chosen master. Retrying a failed
             // step uses the same preceding artifacts; no extra image-model calls.
             const continuityReferences = [];
-            if (job.transitionVersion === 3) {
+            if (step.part > 0) {
+              // A later part continues the earlier parts of the same motion: same size and props.
+              for (let i = 0; i < index; i++) {
+                const previous = job.steps[i];
+                if (previous.kind === 'sheet' && previous.style === step.style && previous.motion === step.motion && previous.status === 'done') {
+                  const asset = await pixels(job, i);
+                  if (asset?.image) continuityReferences.push({ motion: step.motion, part: previous.part, image: asset.image });
+                }
+              }
+              continuityReferences.splice(0, Math.max(0, continuityReferences.length - 2));
+            } else if (job.transitionVersion === 3) {
               for (let i = 0; i < index && continuityReferences.length < 2; i++) {
                 const previous = job.steps[i];
                 if (
@@ -725,6 +747,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
                 character,
                 skin: master,
                 motion: step.motion,
+                ...(step.part !== undefined ? { part: step.part } : {}),
                 continuityReferences,
                 referenceDigest: job.referenceDigest,
                 ...productionOptions(job),
@@ -748,7 +771,9 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
               if (job.steps[i].style === step.style && job.steps[i].kind === 'sheet') {
                 const result = await pixels(job, i);
                 if (!result?.image) throw new Error('动作素材缺失，无法整理图集。');
-                sheets[job.steps[i].motion] = result.image;
+                const { motion, part } = job.steps[i];
+                if (part === undefined) sheets[motion] = result.image;
+                else (sheets[motion] ||= [])[part] = result.image;
               }
             const packed = packFrames(master.images.neutral, sheets, step.style, codec, job);
             returned = {
@@ -779,7 +804,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       await writeJson(artifact(id, index), returned);
       phase = 'checking';
       if (step.kind === 'base') inspectMaster(validateSkin(returned.skin).images.neutral, codec);
-      if (step.kind === 'sheet') inspectSheet(returned.image, codec, step.motion, job);
+      if (step.kind === 'sheet')
+        inspectSheet(returned.image, codec, step.motion, step.part === undefined ? job : { ...job, part: step.part });
       if (step.kind === 'pack') {
         const skin = validateSkin(returned.skin);
         phase = 'installing';

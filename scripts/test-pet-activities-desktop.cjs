@@ -90,8 +90,21 @@ async function finish(error) {
   clearTimeout(deadline);
   if (error && win && !win.isDestroyed())
     fs.writeFileSync(path.join(dir, 'failure.png'), (await win.webContents.capturePage()).toPNG());
-  const diagnostics = error && win && !win.isDestroyed() ? await win.webContents.executeJavaScript(`({hidden:document.hidden,canvases:[...document.querySelectorAll('canvas[data-clip]')].map(c=>({...c.dataset}))})`) : undefined;
-  const report = { diagnostics, passed: !error, calls, paidRequests: 0, exceptions, error: error?.stack, artifacts: dir };
+  const diagnostics =
+    error && win && !win.isDestroyed()
+      ? await win.webContents.executeJavaScript(
+          `({hidden:document.hidden,canvases:[...document.querySelectorAll('canvas[data-clip]')].map(c=>({...c.dataset}))})`,
+        )
+      : undefined;
+  const report = {
+    diagnostics,
+    passed: !error,
+    calls,
+    paidRequests: 0,
+    exceptions,
+    error: error?.stack,
+    artifacts: dir,
+  };
   fs.writeFileSync(path.join(dir, 'checks.json'), JSON.stringify(report, null, 2));
   console[error ? 'error' : 'log'](JSON.stringify(report, null, 2));
   app.exit(error ? 1 : 0);
@@ -133,11 +146,27 @@ app.on('browser-window-created', (_event, created) => {
       await click('角色工作室');
       await click('外观与动作');
       await click('自动制作多画风桌宠');
+      // These tests cover the standard flow; sharp quality (the default) has its own test.
+      await js(
+        `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
+      );
       await wait(`!!document.querySelector('[aria-label="桌宠画风：Q版"]')`);
-      assert.equal(await js(`document.querySelector('[aria-label="桌宠画风：Q版"]').getAttribute('aria-pressed')`), 'true');
-      assert.equal(await js(`document.querySelectorAll('[aria-label^="桌宠画风："]').length`), 4, 'four looks only');
-      for (const direction of ['向右跑','向左跑','向后跑','向前跑'])
-        assert.equal(await js(`document.querySelector('[aria-label="制作动作：${direction}"]').getAttribute('aria-pressed')`), 'true');
+      assert.equal(
+        await js(`document.querySelector('[aria-label="桌宠画风：Q版"]').getAttribute('aria-pressed')`),
+        'true',
+      );
+      assert.equal(
+        await js(`document.querySelectorAll('[aria-label^="桌宠画风："]').length`),
+        4,
+        'four looks only',
+      );
+      for (const direction of ['向右跑', '向左跑', '向后跑', '向前跑'])
+        assert.equal(
+          await js(
+            `document.querySelector('[aria-label="制作动作：${direction}"]').getAttribute('aria-pressed')`,
+          ),
+          'true',
+        );
       for (const motion of motions) {
         const pressed = await js(
           `document.querySelector('[aria-label=${JSON.stringify('制作动作：' + motion.name)}]').getAttribute('aria-pressed')==='true'`,
@@ -163,7 +192,11 @@ app.on('browser-window-created', (_event, created) => {
       assert.deepEqual(job.motions, ['read', 'gaming']);
       const [skin] = await js(`window.mori.petJobResults(${JSON.stringify(job.id)})`);
       assert.equal(skin.style, 'chibi-pet');
-      assert.deepEqual(wikiSearches.map((q) => /Q版|chibi/.test(q)), [true], 'one chibi search, before the first image request');
+      assert.deepEqual(
+        wikiSearches.map((q) => /Q版|chibi/.test(q)),
+        [true],
+        'one chibi search, before the first image request',
+      );
       assert.equal(skin.generation.chibiResearch.status, 'fallback');
       assert.match(skin.generation.chibiResearch.reason, /芙宁娜/);
       assert.equal(skin.review.status, 'pending');
@@ -226,9 +259,16 @@ app.on('browser-window-created', (_event, created) => {
       pet.show();
       pet.focus();
       await petJS(`document.querySelector('[aria-label="桌宠读书"]').focus()`);
-      await new Promise(r => setTimeout(r, 250));
-      assert.equal(await petJS(`[...document.querySelectorAll('.pet-toolbar button')].every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&b.scrollWidth<=b.clientWidth+1})`), true);
-      const rendering = await petJS(`(()=>{const c=document.querySelector('canvas[data-clip]'),r=c.getBoundingClientRect(),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let visible=0;for(let i=3;i<d.length;i+=4)if(d[i]>40)visible++;return {visible,clip:c.dataset.clip,rect:{top:r.top,bottom:r.bottom,left:r.left,right:r.right},viewport:{width:innerWidth,height:innerHeight},scroll:scrollY}})()`);
+      await new Promise((r) => setTimeout(r, 250));
+      assert.equal(
+        await petJS(
+          `[...document.querySelectorAll('.pet-toolbar button')].every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&b.scrollWidth<=b.clientWidth+1})`,
+        ),
+        true,
+      );
+      const rendering = await petJS(
+        `(()=>{const c=document.querySelector('canvas[data-clip]'),r=c.getBoundingClientRect(),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let visible=0;for(let i=3;i<d.length;i+=4)if(d[i]>40)visible++;return {visible,clip:c.dataset.clip,rect:{top:r.top,bottom:r.bottom,left:r.left,right:r.right},viewport:{width:innerWidth,height:innerHeight},scroll:scrollY}})()`,
+      );
       fs.writeFileSync(path.join(dir, 'rendering.json'), JSON.stringify(rendering, null, 2));
       assert.ok(rendering.visible > 100);
       assert.ok(rendering.rect.bottom > 0 && rendering.rect.top < rendering.viewport.height);
@@ -237,7 +277,9 @@ app.on('browser-window-created', (_event, created) => {
       await petWait(`!!document.querySelector('canvas[data-clip="exit_read"]')`);
       await petWait(`!!document.querySelector('canvas[data-clip="idle"]')`);
       // Accelerate only the 60-second activity deadline, leaving animation timing intact.
-      await petJS(`window.activityTestTimeout=window.setTimeout; window.setTimeout=(fn,ms,...args)=>window.activityTestTimeout(fn,ms>=59000&&ms<=60000?100:ms,...args); true`);
+      await petJS(
+        `window.activityTestTimeout=window.setTimeout; window.setTimeout=(fn,ms,...args)=>window.activityTestTimeout(fn,ms>=59000&&ms<=60000?100:ms,...args); true`,
+      );
       await petJS(`document.querySelector('[aria-label="桌宠玩掌机"]').click()`);
       await petWait(`!document.querySelector('[aria-label="停止桌宠活动"]')`);
       await petWait(`!!document.querySelector('canvas[data-clip="idle"]')`);

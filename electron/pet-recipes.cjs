@@ -31,6 +31,11 @@ function productionOptions(input = {}) {
   if (!Object.hasOwn(temperaments, temperament)) throw new Error('动作气质无效。');
   if (typeof artDirection !== 'string' || artDirection.length > 600)
     throw new Error('外观要求需为不超过 600 字的文字。');
+  // Sharp motion draws fewer poses per image so each pose keeps far more pixels; it needs the
+  // shape-based registration of twelve-frame tasks. Tasks saved without it are standard.
+  const quality = input.quality ?? 'standard';
+  if (!['sharp', 'standard'].includes(quality)) throw new Error('动作清晰度选项无效。');
+  if (quality === 'sharp' && input.transitionVersion !== 3) throw new Error('清晰动作需要新版动作流程。');
   return {
     candidateCount,
     candidateVariation,
@@ -38,7 +43,22 @@ function productionOptions(input = {}) {
     temperament,
     artDirection: artDirection.trim(),
     ...(input.transitionVersion !== undefined ? { transitionVersion: input.transitionVersion } : {}),
+    ...(quality === 'sharp' ? { quality } : {}),
   };
+}
+
+/**
+ * How many image requests one motion takes. Standard: one sheet holding every pose. Sharp: a
+ * twelve-frame motion is drawn as its three four-pose segments (entrance, loop, exit), and a
+ * four-frame motion as two images of two poses, so each pose gets roughly 1.8 to 2.5 times the
+ * height in pixels.
+ */
+function motionParts(id, input = {}) {
+  const options = productionOptions(input);
+  if (options.quality !== 'sharp') return 1;
+  const full = motionRecipe(id, options);
+  if (full.aligned) return 3;
+  return full.count === 4 ? 2 : 1;
 }
 
 function candidateRecipe(style, index, input = {}) {
@@ -53,6 +73,7 @@ function motionRecipe(id, input = {}) {
   const options = productionOptions(input);
   const motion = motions.find((m) => m.id === id);
   if (!motion) throw new Error('桌宠动作无效。');
+  if (input.part !== undefined) return partRecipe(id, input, options);
   // Expressions are four independent portraits, never padded into eight frames.
   const staged = !!motion.staged && (id !== 'sleep' || options.transitionVersion >= 2);
   const aligned = options.transitionVersion === 3 && !!stages[id];
@@ -74,6 +95,30 @@ function motionRecipe(id, input = {}) {
         : motion.poses,
     direction: temperaments[options.temperament].prompt,
     tempo: temperaments[options.temperament].scale,
+  };
+}
+
+// The recipe for one image of a sharp motion: the same motion, a smaller grid, its share of the
+// poses. Standing and walking poses get tall portrait cells; lying-down sleep and the two-pose
+// images get wide ones.
+function partRecipe(id, input, options) {
+  const { part: _part, ...rest } = input;
+  const full = motionRecipe(id, rest);
+  const parts = motionParts(id, rest);
+  const part = input.part;
+  if (!Number.isInteger(part) || part < 0 || part >= parts || parts < 2) throw new Error('动作分段无效。');
+  const per = full.count / parts;
+  return {
+    ...full,
+    part,
+    parts,
+    count: per,
+    columns: 2,
+    rows: per / 2,
+    size: per === 2 ? '1536x1024' : id === 'sleep' ? '1024x1024' : '1024x1536',
+    poses: full.poses.slice(part * per, part * per + per),
+    // Frame numbers of this image within the whole motion, counted from 1.
+    firstFrame: part * per + 1,
   };
 }
 
@@ -136,4 +181,11 @@ function activityTransitions(name, indices, input = {}) {
     return { [`enter_${name}`]: clip([0, 1, 2, 3]), [`exit_${name}`]: clip([8, 9, 10, 11]) };
   return { [`enter_${name}`]: clip([0, 1, 2, 3]), [`exit_${name}`]: clip([5, 6, 7, 0]) };
 }
-module.exports = { productionOptions, candidateRecipe, motionRecipe, motionClip, activityTransitions };
+module.exports = {
+  productionOptions,
+  candidateRecipe,
+  motionRecipe,
+  motionParts,
+  motionClip,
+  activityTransitions,
+};

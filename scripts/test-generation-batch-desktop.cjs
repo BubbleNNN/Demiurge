@@ -89,9 +89,14 @@ global.fetch = async (url, init) => {
   const style = [...styleIds, ...Object.keys(tokens)].find((style) => prompt.includes(tokens[style]));
   assert.ok(style, 'Each request has a distinct supported rendering medium');
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
-  assert.equal(images.length, style === 'chibi-pet' ? 2 : 1, 'Unreviewed outputs cannot become the next style reference');
+  assert.equal(
+    images.length,
+    style === 'chibi-pet' ? 2 : 1,
+    'Unreviewed outputs cannot become the next style reference',
+  );
   assert.deepEqual(Buffer.from(await images[0].arrayBuffer()), png);
-  if (style === 'chibi-pet') assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina, 'Furina style guide only');
+  if (style === 'chibi-pet')
+    assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina, 'Furina style guide only');
   calls.push(style);
   maximum = Math.max(maximum, ++active);
   try {
@@ -134,6 +139,8 @@ const finish = async (error) => {
   app.exit(error ? 1 : 0);
 };
 app.on('browser-window-created', (_event, created) => {
+  // Animation state is read from the page; a window behind other apps must keep its frames.
+  created.webContents.setBackgroundThrottling(false);
   if (win) return;
   win = created;
   const js = (code) => win.webContents.executeJavaScript(code, true);
@@ -209,7 +216,9 @@ app.on('browser-window-created', (_event, created) => {
       await idle();
       assert.deepEqual(calls, ['original', '8bit', '3d', '8bit']);
       await click('核对原作候选');
-      const anime = (await js(`window.mori.load().then(r=>r.state.skins)`)).find((s) => s.style === 'original');
+      const anime = (await js(`window.mori.load().then(r=>r.state.skins)`)).find(
+        (s) => s.style === 'original',
+      );
       assert.equal(await js(`document.querySelector('[aria-label="选择基准候选"]').value`), anime.id);
       await select(['原作', '8bit']);
       failNextSave = true;
@@ -253,7 +262,9 @@ app.on('browser-window-created', (_event, created) => {
       assert.deepEqual(calls.slice(-styleIds.length), styleIds);
       assert.equal(maximum, 1);
       assert.equal(wikiSearches.length, 1, 'only the chibi look searched, once');
-      const chibi = (await js(`window.mori.load().then(r=>r.state.skins)`)).find((s) => s.style === 'chibi-pet');
+      const chibi = (await js(`window.mori.load().then(r=>r.state.skins)`)).find(
+        (s) => s.style === 'chibi-pet',
+      );
       assert.equal(chibi.generation.chibiResearch.status, 'fallback');
       state = await js(`window.mori.load().then(r=>r.state)`);
       assert.equal(state.skins.length, 8 + styleIds.length);

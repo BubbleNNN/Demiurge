@@ -3,7 +3,7 @@ const { createHash } = require('node:crypto');
 const { imageBytes } = require('./references.cjs');
 const { validateAnimation } = require('./sprites.cjs');
 const { layoutFramesFlexible, assertAtlasBytes } = require('./atlas-layout.cjs');
-const { motionRecipe, motionClip, activityTransitions, productionOptions } = require('./pet-recipes.cjs');
+const { motionRecipe, motionParts, motionClip, activityTransitions, productionOptions } = require('./pet-recipes.cjs');
 
 function decodePng(dataUrl, codec) {
   if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,'))
@@ -229,7 +229,9 @@ function registeredFrames(sheet, recipe, width, height, edgeContacts) {
   // and snaps back each cycle reads as vibration. Each loop phase is laid over the first one by
   // its upper body (head and shoulders stay put while legs, arms and props move), searching only
   // a small sideways range so a deliberate lean survives.
-  if (recipe.aligned && count >= 8) {
+  // The loop is frames 5-8 of a whole sheet, or all four frames of a sharp loop segment.
+  const loop = !recipe.aligned ? [] : recipe.part === undefined ? (count >= 8 ? [4, 5, 6, 7] : []) : recipe.part === 1 ? [0, 1, 2, 3] : [];
+  if (loop.length) {
     const upper = (figure) => {
       const list = [],
         limit = figure.top + Math.floor((figure.bottom - figure.top) * 0.6);
@@ -239,13 +241,13 @@ function registeredFrames(sheet, recipe, width, height, edgeContacts) {
             list.push(x, y);
       return list;
     };
-    const reference = main[4],
-      [rox, roy] = offsets[4];
+    const reference = main[loop[0]],
+      [rox, roy] = offsets[loop[0]];
     const ref = new Set();
     const refPoints = upper(reference);
     for (let i = 0; i < refPoints.length; i += 2) ref.add((refPoints[i] + rox) * 65536 + refPoints[i + 1] + roy);
     const radius = Math.round(cellW * 0.05);
-    for (const index of [5, 6, 7]) {
+    for (const index of loop.slice(1)) {
       const list = upper(main[index]),
         [ox, oy] = offsets[index];
       let best = -1,
@@ -282,7 +284,7 @@ function registeredFrames(sheet, recipe, width, height, edgeContacts) {
   const padX = Math.max(padLeft, padRight),
     canvasW = width + 2 * padX,
     canvasH = height + padTop + padBottom;
-  return offsets.map(([ox, oy], index) => {
+  const frames = offsets.map(([ox, oy], index) => {
     const bitmap = Buffer.alloc(canvasW * canvasH * 4);
     const col = index % columns,
       row = Math.floor(index / columns);
@@ -312,52 +314,74 @@ function registeredFrames(sheet, recipe, width, height, edgeContacts) {
             if ((x < x0 || x >= x1 || y < y0 || y >= y1) && labels[y * sheet.width + x] === figure.id) put(x, y);
     return { width: canvasW, height: canvasH, bitmap };
   });
+  // The vertical centre line and the floor (or grip) line every pose was registered to, and each
+  // pose's own height, so separately drawn images of one motion can be joined and matched.
+  return {
+    frames,
+    centerX: width / 2 + padX,
+    floorY: floorY + padTop,
+    heights: main.map((figure) => figure.bottom - figure.top + 1),
+  };
 }
 // Adapted from Anime Codex pet-artifacts.cjs; see docs/THIRD_PARTY.md.
 // Only small aspect deviations are repairable: never reinterpret a 4-frame sheet
 // as 8 frames. Inspect the ORIGINAL cell before padding so clipping stays an error.
-function splitSheet(dataUrl, codec, motion, options = {}) {
+// `image` is one sheet, or for a sharp motion the list of its separately drawn images; with
+// `options.part` a single image is checked as that part.
+function splitSheet(image, codec, motion, options = {}) {
+  if (Array.isArray(image)) return joinParts(image, codec, motion, options);
+  return splitOne(image, codec, motion, options);
+}
+function splitOne(dataUrl, codec, motion, options) {
   const sheet = decodePng(dataUrl, codec);
   const recipe = motionRecipe(motion, options);
-  const targetAspect = recipe.count === 8 ? 1.5 : 1;
-  if (Math.abs(sheet.width / sheet.height / targetAspect - 1) > 0.2)
-    throw new Error(
-      recipe.count === 4
-        ? '四帧动作需要接近正方形的 2×2 等分画布，长宽比偏差不能超过 20%。'
-        : recipe.count === 12
-          ? '十二帧动作需要接近正方形的 4×3 等分画布，长宽比偏差不能超过 20%。'
-          : '八帧动作需要接近 3:2 的 4×2 等分画布，长宽比偏差不能超过 20%。',
-    );
+  if (recipe.part !== undefined) {
+    // A part is placed by the shapes it contains, so any reasonable canvas shape works.
+    const aspect = sheet.width / sheet.height;
+    if (aspect < 0.5 || aspect > 2.2) throw new Error('动作分段图片的长宽比异常，请重新生成这一段。');
+  } else {
+    const targetAspect = recipe.count === 8 ? 1.5 : 1;
+    if (Math.abs(sheet.width / sheet.height / targetAspect - 1) > 0.2)
+      throw new Error(
+        recipe.count === 4
+          ? '四帧动作需要接近正方形的 2×2 等分画布，长宽比偏差不能超过 20%。'
+          : recipe.count === 12
+            ? '十二帧动作需要接近正方形的 4×3 等分画布，长宽比偏差不能超过 20%。'
+            : '八帧动作需要接近 3:2 的 4×2 等分画布，长宽比偏差不能超过 20%。',
+      );
+  }
   const cw = Math.ceil(sheet.width / recipe.columns),
     ch = Math.ceil(sheet.height / recipe.rows);
   const unit = recipe.count === 8 ? Math.ceil(Math.max(cw / 3, ch / 4)) : Math.max(cw, ch);
   const width = recipe.count === 8 ? unit * 3 : unit;
   const height = recipe.count === 8 ? unit * 4 : unit;
   const edgeContacts = [];
-  const frames = recipe.aligned || options.transitionVersion === 3
-    ? registeredFrames(sheet, recipe, width, height, edgeContacts)
+  const registered = recipe.aligned || options.transitionVersion === 3;
+  let layout;
+  const frames = registered
+    ? (layout = registeredFrames(sheet, recipe, width, height, edgeContacts)).frames
     : Array.from({ length: recipe.count }, (_, index) => {
-    const col = index % recipe.columns,
-      row = Math.floor(index / recipe.columns);
-    const x0 = Math.floor((col * sheet.width) / recipe.columns);
-    const y0 = Math.floor((row * sheet.height) / recipe.rows);
-    const w = Math.floor(((col + 1) * sheet.width) / recipe.columns) - x0;
-    const h = Math.floor(((row + 1) * sheet.height) / recipe.rows) - y0;
-    const source = { width: w, height: h, bitmap: Buffer.alloc(w * h * 4) };
-    for (let y = 0; y < h; y++) {
-      const offset = ((y0 + y) * sheet.width + x0) * 4;
-      sheet.bitmap.copy(source.bitmap, y * w * 4, offset, offset + w * 4);
-    }
-    for (const contact of bounds(source).contacts) edgeContacts.push({ frame: index + 1, ...contact });
-    const bitmap = Buffer.alloc(width * height * 4);
-    const dx = Math.floor((width - w) / 2),
-      dy = height - h;
-    for (let y = 0; y < h; y++)
-      source.bitmap.copy(bitmap, ((y + dy) * width + dx) * 4, y * w * 4, (y + 1) * w * 4);
-    return { width, height, bitmap };
-  });
+        const col = index % recipe.columns,
+          row = Math.floor(index / recipe.columns);
+        const x0 = Math.floor((col * sheet.width) / recipe.columns);
+        const y0 = Math.floor((row * sheet.height) / recipe.rows);
+        const w = Math.floor(((col + 1) * sheet.width) / recipe.columns) - x0;
+        const h = Math.floor(((row + 1) * sheet.height) / recipe.rows) - y0;
+        const source = { width: w, height: h, bitmap: Buffer.alloc(w * h * 4) };
+        for (let y = 0; y < h; y++) {
+          const offset = ((y0 + y) * sheet.width + x0) * 4;
+          sheet.bitmap.copy(source.bitmap, y * w * 4, offset, offset + w * 4);
+        }
+        for (const contact of bounds(source).contacts) edgeContacts.push({ frame: index + 1, ...contact });
+        const bitmap = Buffer.alloc(width * height * 4);
+        const dx = Math.floor((width - w) / 2),
+          dy = height - h;
+        for (let y = 0; y < h; y++)
+          source.bitmap.copy(bitmap, ((y + dy) * width + dx) * 4, y * w * 4, (y + 1) * w * 4);
+        return { width, height, bitmap };
+      });
   // Registered frames still need real content on a transparent background.
-  if (recipe.aligned || options.transitionVersion === 3) frames.forEach((frame) => bounds(frame));
+  if (registered) frames.forEach((frame) => bounds(frame));
   const unique = new Set(frames.map((f) => createHash('sha256').update(f.bitmap).digest('hex')));
   if (unique.size < 2) throw new Error('所有帧完全相同，没有实际动作或表情变化，请重新生成这个动作。');
   if (recipe.count === 8 && unique.size < 6)
@@ -374,11 +398,12 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
   if (recipe.aligned) {
     // Check each segment, not just the sheet: an animated entrance cannot hide
     // a frozen loop. Require all four gait phases so one half-stride is not lost.
-    for (const [label, start] of [
+    const segments = [
       ['进入', 0],
       ['循环', 4],
       ['退出', 8],
-    ]) {
+    ];
+    for (const [label, start] of recipe.part === undefined ? segments : [[segments[recipe.part][0], 0]]) {
       const distinct = [];
       for (const frame of frames.slice(start, start + 4))
         if (!distinct.some((other) => !visiblyDifferent(frame, other))) distinct.push(frame);
@@ -389,6 +414,11 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
   }
   return {
     frames,
+    layout: layout || {
+      centerX: width / 2,
+      floorY: height,
+      heights: frames.map((frame) => bounds(frame).height),
+    },
     report: {
       sourceWidth: sheet.width,
       sourceHeight: sheet.height,
@@ -400,7 +430,65 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
     },
   };
 }
-
+// The separately drawn images of one sharp motion become one motion: every pose shares one
+// centre line and one floor line, and each image gets a size factor from poses the prompt
+// promises to match across images, because the model rarely draws two images at exactly the
+// same scale. Pixels are only copied; the factor is applied as display density when packing.
+function joinParts(images, codec, motion, options) {
+  const parts = motionParts(motion, options);
+  if (images.length !== parts) throw new Error(`动作 ${motion} 需要 ${parts} 段图片，目前只有 ${images.length} 段。`);
+  const split = images.map((image, part) => splitOne(image, codec, motion, { ...options, part }));
+  const full = motionRecipe(motion, options);
+  const per = full.count / parts;
+  const height = (part, frame) => split[part].layout.heights[frame];
+  // Pairs of matching poses: [part, frame in part] of this image against an earlier one.
+  const pairs = full.aligned
+    ? [null, [[1, 0], [0, 3]], [[2, 3], [0, 0]]] // loop start = entrance end; exit end = entrance start
+    : motion === 'bounce'
+      ? [null, [[1, 1], [0, 1]]] // landing crouch = anticipation crouch
+      : motion === 'drag'
+        ? [null, [[1, 0], [0, 0]]]
+        : [];
+  const scales = split.map((_, part) => {
+    const pair = pairs[part];
+    if (!pair) return 1;
+    const [[p, f], [q, g]] = pair;
+    const ratio = height(q, g) / height(p, f);
+    // A very different height means the poses do not match after all: keep the drawn size.
+    return ratio >= 0.8 && ratio <= 1.25 ? ratio : 1;
+  });
+  const left = Math.max(...split.map((s) => Math.max(s.layout.centerX, s.frames[0].width - s.layout.centerX)));
+  const above = Math.max(...split.map((s) => s.layout.floorY)),
+    below = Math.max(...split.map((s) => s.frames[0].height - s.layout.floorY));
+  const width = Math.ceil(left * 2),
+    canvasHeight = Math.ceil(above + below);
+  const frames = split.flatMap((s) =>
+    s.frames.map((frame) => {
+      const bitmap = Buffer.alloc(width * canvasHeight * 4);
+      const dx = Math.round(width / 2 - s.layout.centerX),
+        dy = Math.round(above - s.layout.floorY);
+      for (let y = 0; y < frame.height; y++)
+        frame.bitmap.copy(bitmap, ((y + dy) * width + dx) * 4, y * frame.width * 4, (y + 1) * frame.width * 4);
+      return { width, height: canvasHeight, bitmap };
+    }),
+  );
+  return {
+    frames,
+    layout: { centerX: width / 2, floorY: above, heights: split.flatMap((s) => s.layout.heights) },
+    report: {
+      sourceWidth: split[0].report.sourceWidth,
+      sourceHeight: split[0].report.sourceHeight,
+      cellWidth: width,
+      cellHeight: canvasHeight,
+      padded: false,
+      distinctFrames: split.reduce((n, s) => n + s.report.distinctFrames, 0),
+      edgeContacts: split.flatMap((s, part) => s.report.edgeContacts.map((c) => ({ ...c, frame: c.frame + part * per }))),
+      parts,
+      // Per frame: how much larger this image's poses must be shown to match the first image.
+      scales: split.flatMap((s, part) => s.frames.map(() => scales[part])),
+    },
+  };
+}
 function visiblyDifferent(a, b) {
   let visible = 0,
     changed = 0;
@@ -431,28 +519,34 @@ function inspectSheet(dataUrl, codec, motion, options = {}) {
   return splitSheet(dataUrl, codec, motion, options).report;
 }
 
+// Stored pixels per atlas page before a pack is split into pages; well under the per-page limits.
+const PAGE_PIXELS = 12 * 1024 * 1024;
 // Clips that redraw the idle pose with a small change (eyes, mouth, head, one arm, a face).
 const OVER_IDLE = new Set(['blink', 'talk', 'nod', 'shake', 'wave', 'emotions']);
 // Where a frame sits over the idle frame: the translation that overlaps their opaque shapes most,
 // found coarse to fine. Scale is the clip's own (the model draws a sheet at one size). Returns
 // the frame point that lands on the idle frame's foot anchor.
-function alignToIdle(master, masterBox, masterAnchor, frame, scale, start) {
+function alignToIdle(master, masterBox, masterAnchor, frame, scale, start, searchScale = false) {
   const levels = [64, 256, 768].map((h) => Math.min(1, h / masterBox.height));
   const masks = levels.map((k) => {
     const w = Math.ceil(master.width * k),
       h = Math.ceil(master.height * k),
       mask = new Uint8Array(w * h);
+    let count = 0;
     for (let v = 0; v < h; v++)
       for (let u = 0; u < w; u++) {
         const x = Math.min(master.width - 1, Math.floor(u / k)),
           y = Math.min(master.height - 1, Math.floor(v / k));
-        mask[v * w + u] = master.bitmap[(y * master.width + x) * 4 + 3] >= 128 ? 1 : 0;
+        if (master.bitmap[(y * master.width + x) * 4 + 3] >= 128) {
+          mask[v * w + u] = 1;
+          count++;
+        }
       }
-    return { w, h, mask };
+    return { w, h, mask, count };
   });
   const box = bounds(frame);
-  const points = (k) => {
-    const f = scale * k,
+  const points = (k, s) => {
+    const f = s * k,
       list = [];
     for (let v = Math.floor(box.top * f); v <= Math.ceil(box.bottom * f); v++)
       for (let u = Math.floor(box.left * f); u <= Math.ceil(box.right * f); u++) {
@@ -462,13 +556,12 @@ function alignToIdle(master, masterBox, masterAnchor, frame, scale, start) {
       }
     return list;
   };
-  // Translation in idle pixels that maps the frame's foot anchor onto the idle frame's.
-  let tx = masterAnchor.x - start.x * scale,
-    ty = masterAnchor.y - start.y * scale;
-  levels.forEach((k, level) => {
-    const { w, h, mask } = masks[level],
-      list = points(k),
-      radius = level === 0 ? 10 : 4;
+  // Best translation (in idle pixels) at one level for one scale, scored by overlap / union so
+  // that different scales compare fairly. Ties keep the smallest correction.
+  const fit = (level, s, tx, ty, radius) => {
+    const { w, h, mask, count } = masks[level],
+      k = levels[level],
+      list = points(k, s);
     const cx = Math.round(tx * k),
       cy = Math.round(ty * k);
     let best = -1,
@@ -482,17 +575,39 @@ function alignToIdle(master, masterBox, masterAnchor, frame, scale, start) {
             v = list[i + 1] + cy + dy;
           if (u >= 0 && v >= 0 && u < w && v < h && mask[v * w + u]) hits++;
         }
-        // Prefer the smallest correction among equally good fits.
-        if (hits > best || (hits === best && Math.abs(dx) + Math.abs(dy) < Math.abs(bx - cx) + Math.abs(by - cy))) {
-          best = hits;
+        const score = hits / (list.length / 2 + count - hits || 1);
+        if (score > best || (score === best && Math.abs(dx) + Math.abs(dy) < Math.abs(bx - cx) + Math.abs(by - cy))) {
+          best = score;
           bx = cx + dx;
           by = cy + dy;
         }
       }
-    tx = bx / k;
-    ty = by / k;
-  });
-  return { x: (masterAnchor.x - tx) / scale, y: (masterAnchor.y - ty) / scale };
+    return { score: best, tx: bx / k, ty: by / k, s };
+  };
+  // Translation that maps the frame's foot anchor onto the idle frame's, at a given scale.
+  const fromFeet = (s) => ({ tx: masterAnchor.x - start.x * s, ty: masterAnchor.y - start.y * s });
+  let result;
+  if (searchScale) {
+    // A separately drawn image may be a few percent larger or smaller than the idle frame.
+    let top = null;
+    for (const f of [0.88, 0.91, 0.94, 0.97, 1, 1.03, 1.06, 1.09, 1.12]) {
+      const s = scale * f,
+        { tx, ty } = fromFeet(s),
+        r = fit(0, s, tx, ty, 10);
+      if (!top || r.score > top.score) top = r;
+    }
+    let refined = null;
+    for (const f of [0.985, 1, 1.015]) {
+      const r = fit(1, top.s * f, top.tx, top.ty, 4);
+      if (!refined || r.score > refined.score) refined = r;
+    }
+    result = fit(2, refined.s, refined.tx, refined.ty, 4);
+  } else {
+    let { tx, ty } = fromFeet(scale);
+    for (let level = 0; level < levels.length; level++) ({ tx, ty } = fit(level, scale, tx, ty, level === 0 ? 10 : 4));
+    result = { tx, ty, s: scale };
+  }
+  return { x: (masterAnchor.x - result.tx) / result.s, y: (masterAnchor.y - result.ty) / result.s, scale: result.s };
 }
 function packFrames(masterImage, sheets, style, codec, options = {}) {
   productionOptions(options);
@@ -518,16 +633,16 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     if (style === 'sticker' || style === 'pastel' || style === 'chibi-pet') frames.forEach(cleanStickerAlpha);
     const first = bounds(frames[0]);
     const sourceScale = masterBox.height / first.height;
+    // A sharp motion joins separately drawn images; each frame's size factor relative to the first.
+    const relative = report.scales || frames.map(() => 1);
     // One fixed transform for the whole clip: do not individually ground a jumping frame
     // or scale away a nod. The model authors the poses; this only aligns the clip's rest pose.
     if (
       motion !== 'emotions' &&
-      frames.some((f) => {
-        const b = bounds(f);
-        return (
-          b.height < first.height * (aligned ? 0.18 : 0.55) ||
-          b.height > first.height * (aligned ? 1.8 : 1.45)
-        );
+      frames.some((f, i) => {
+        const b = bounds(f),
+          h = b.height * relative[i];
+        return h < first.height * (aligned ? 0.18 : 0.55) || h > first.height * (aligned ? 1.8 : 1.45);
       })
     )
       throw new Error(`动作 ${motion} 的人物比例变化过大，请重新生成此动作。`);
@@ -540,16 +655,21 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     const fixedAnchor = footAnchor(frames[0], first);
     const footX = frames.map((frame) => (aligned ? fixedAnchor.x : footAnchor(frame, bounds(frame)).x));
     let footY;
+    const sourceScales = relative.map((r) => sourceScale * r);
     // Blinks, mouths, nods, waves and expressions redraw the idle pose. Each such frame is laid
-    // exactly over the idle frame, so nothing but the authored change moves between them.
+    // exactly over the idle frame, so nothing but the authored change moves between them. When
+    // the motion was drawn as several images, each frame's size is matched to the idle frame too.
     if (aligned && OVER_IDLE.has(motion)) {
       const anchors = frames.map((frame) =>
-        alignToIdle(master, masterBox, masterAnchor, frame, sourceScale, footAnchor(frame, bounds(frame))),
+        alignToIdle(master, masterBox, masterAnchor, frame, sourceScale, footAnchor(frame, bounds(frame)), Boolean(report.parts)),
       );
-      anchors.forEach((a, i) => (footX[i] = a.x));
+      anchors.forEach((a, i) => {
+        footX[i] = a.x;
+        sourceScales[i] = a.scale;
+      });
       footY = anchors.map((a) => a.y);
     }
-    groups.push({ name: motion, frames, anchor: footAnchor(frames[0], first), footX, footY, sourceScale });
+    groups.push({ name: motion, frames, anchor: footAnchor(frames[0], first), footX, footY, sourceScale, sourceScales });
   }
   const pixelated = style === 'pixel' || style === '8bit';
   if (style === 'sticker' || style === 'pastel' || style === 'chibi-pet')
@@ -564,6 +684,7 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
         box: bounds(f),
         anchorX: g.footX[i],
         anchorY: g.footY ? g.footY[i] : g.anchor.y,
+        sourceScale: g.sourceScales ? g.sourceScales[i] : g.sourceScale,
       })),
     );
     let left = 0,
@@ -571,7 +692,7 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
       top = 0,
       bottom = 0;
     for (const f of records) {
-      const { sourceScale } = f.group;
+      const { sourceScale } = f;
       left = Math.min(left, (f.box.left - f.anchorX) * sourceScale);
       right = Math.max(right, (f.box.right - f.anchorX + 1) * sourceScale);
       top = Math.min(top, (f.box.top - f.anchorY) * sourceScale);
@@ -587,11 +708,11 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
       const g = f.group;
       // Keep each clip at its own native sampling density. The logical canvas
       // is identical, so changing resolution does not change pose scale.
-      const density = pixelated ? 1 : quality / (scale * g.sourceScale);
+      const density = pixelated ? 1 : quality / (scale * f.sourceScale);
       const cw = Math.ceil(width * density),
         ch = Math.ceil(height * density);
       const canvas = Buffer.alloc(cw * ch * 4);
-      const s = scale * g.sourceScale * density;
+      const s = scale * f.sourceScale * density;
       if (aligned && !pixelated) {
         // Preserve authored RGBA samples exactly. Frame canvas dimensions encode
         // the clip's display scale; alignment only translates by whole pixels.
@@ -655,25 +776,69 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
       for (let y = 0; y < ph; y++) canvas.copy(piece, y * pw * 4, ((bt + y) * cw + bl) * 4, ((bt + y) * cw + bl + pw) * 4);
       return { width: pw, height: ph, bitmap: piece, cell: [cw, ch], offset: [bl, bt] };
     });
-    const layout = layoutFramesFlexible(
-        pieces.map((piece) => ({ width: piece.width, height: piece.height })),
+    // Which atlas page each frame goes on. A pack that fits comfortably stays one image. A large
+    // one (sharp motion) is split: page 0 holds the idle frame and the short clips shown next to
+    // it, and every later page holds whole activities, so a player only decodes what it plays.
+    const total = pieces.reduce((n, piece) => n + piece.width * piece.height, 0);
+    const pageOf = records.map(() => 0);
+    // `pagePixels` lets tests exercise paging without building huge images.
+    const pageLimit = options.pagePixels ?? PAGE_PIXELS;
+    if (aligned && total > pageLimit) {
+      const firstPage = new Set(['idle', ...OVER_IDLE, 'bounce', 'drag']);
+      let page = 0,
+        used = 0,
+        at = 0;
+      for (const g of groups) {
+        const span = g.frames.length,
+          area = pieces.slice(at, at + span).reduce((n, piece) => n + piece.width * piece.height, 0);
+        let target = 0;
+        if (!firstPage.has(g.name)) {
+          if (page === 0 || (used > 0 && used + area > pageLimit)) {
+            page++;
+            used = 0;
+          }
+          target = page;
+          used += area;
+        }
+        for (let i = at; i < at + span; i++) pageOf[i] = target;
+        at += span;
+      }
+    }
+    const pageCount = Math.max(...pageOf) + 1;
+    const layouts = Array.from({ length: pageCount }, (_, page) => {
+      const members = pieces.map((piece, i) => ({ piece, i })).filter(({ i }) => pageOf[i] === page);
+      const layout = layoutFramesFlexible(
+        members.map(({ piece }) => ({ width: piece.width, height: piece.height })),
         (aligned ? 32 : 16) * 1024 * 1024,
-      ),
-      atlasWidth = layout.width,
-      atlasHeight = layout.height;
-    const bitmap = Buffer.alloc(atlasWidth * atlasHeight * 4),
-      frames = [],
+      );
+      const bitmap = Buffer.alloc(layout.width * layout.height * 4);
+      const rects = new Map();
+      members.forEach(({ piece, i }, n) => {
+        const rect = layout.rects[n];
+        rects.set(i, rect);
+        for (let y = 0; y < piece.height; y++)
+          piece.bitmap.copy(bitmap, ((rect[1] + y) * layout.width + rect[0]) * 4, y * piece.width * 4, (y + 1) * piece.width * 4);
+      });
+      return { width: layout.width, height: layout.height, bitmap, rects };
+    });
+    const atlasWidth = layouts[0].width,
+      atlasHeight = layouts[0].height;
+    const frames = [],
       clips = {};
     let mouthFrames;
     let index = 0;
     for (const g of groups) {
       const indices = [];
       for (let frameIndex = 0; frameIndex < g.frames.length; frameIndex++) {
-        const rect = layout.rects[index],
-          piece = pieces[index];
-        for (let y = 0; y < piece.height; y++)
-          piece.bitmap.copy(bitmap, ((rect[1] + y) * atlasWidth + rect[0]) * 4, y * piece.width * 4, (y + 1) * piece.width * 4);
-        frames.push({ rect, duration: 140, cell: piece.cell, offset: piece.offset });
+        const piece = pieces[index],
+          page = pageOf[index];
+        frames.push({
+          rect: layouts[page].rects.get(index),
+          duration: 140,
+          cell: piece.cell,
+          offset: piece.offset,
+          ...(page ? { page } : {}),
+        });
         indices.push(index++);
       }
       if (g.name === 'idle') {
@@ -691,10 +856,25 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
           mouthFrames = { closed: 0, small: indices[1], wide: indices[indices.length === 8 ? 3 : 2] };
       }
     }
+    const encoded = layouts.map((layout) => codec.encode(layout.bitmap, layout.width, layout.height));
+    const pages = layouts.slice(1).map((layout, i) => ({
+      src: `data:image/png;base64,${encoded[i + 1].toString('base64')}`,
+      width: layout.width,
+      height: layout.height,
+    }));
     return {
-      bytes: codec.encode(bitmap, atlasWidth, atlasHeight),
+      bytes: encoded[0],
+      pageBytes: encoded.slice(1),
       sprite: validateAnimation(
-        { width, height, frames, clips, pixelated, ...(mouthFrames ? { mouthFrames } : {}) },
+        {
+          width,
+          height,
+          frames,
+          clips,
+          pixelated,
+          ...(mouthFrames ? { mouthFrames } : {}),
+          ...(pages.length ? { pages } : {}),
+        },
         { width: atlasWidth, height: atlasHeight },
       ),
     };
@@ -707,6 +887,7 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     try {
       const built = build(384, 512, step);
       assertAtlasBytes(built.bytes);
+      built.pageBytes.forEach(assertAtlasBytes);
       result = built;
       quality = step;
       break;

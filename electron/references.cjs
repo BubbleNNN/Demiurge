@@ -7,10 +7,8 @@ function imageBytes(dataUrl) {
   const [header, encoded] = dataUrl.split(',');
   return { mime: header.slice(5, -7), bytes: Buffer.from(encoded, 'base64') };
 }
-function imageDigest(dataUrl) {
-  const { bytes } = imageBytes(dataUrl);
-  return createHash('sha256').update(bytes).digest('hex');
-}
+// Embedded data URLs and stored atlas files (named by their digest) give the same value.
+const imageDigest = require('./skin-assets.cjs').imageDigest;
 function referencePack(character) {
   const references = validateReferences(character?.visualReferences || []);
   if (!references.length) throw new Error('请先添加角色参考原图。外貌文字和网页链接不能替代图片输入。');

@@ -41,7 +41,10 @@ let surfaces = [];
 // Only the first window (the workshop) drives the test; the pet and fixture windows do not.
 let started = false;
 require('../electron/desktop-icons.cjs').desktopIcons = async () => ({ supported: true, icons: [] });
-require('../electron/desktop-surfaces.cjs').desktopSurfaces = async () => ({ supported: true, surfaces: surfaces() });
+require('../electron/desktop-surfaces.cjs').desktopSurfaces = async () => ({
+  supported: true,
+  surfaces: surfaces(),
+});
 surfaces = () => [];
 app.on('browser-window-created', (_e, win) => {
   // Keep animation frames running in windows that are not focused.
@@ -88,7 +91,14 @@ app.on('browser-window-created', (_e, win) => {
       };
       const input = (type, x, y, extra = {}) => {
         const w = pet.getBounds();
-        pet.webContents.sendInputEvent({ type, x: Math.round(x), y: Math.round(y), globalX: Math.round(w.x + x), globalY: Math.round(w.y + y), ...extra });
+        pet.webContents.sendInputEvent({
+          type,
+          x: Math.round(x),
+          y: Math.round(y),
+          globalX: Math.round(w.x + x),
+          globalY: Math.round(w.y + y),
+          ...extra,
+        });
       };
       // Grab her by the body, carry her sideways, and let go.
       async function carry(dx, dy, check) {
@@ -99,7 +109,15 @@ app.on('browser-window-created', (_e, win) => {
           await sleep(30);
           // The window follows the pointer, so the pointer stays at the same spot inside it.
           const w = pet.getBounds();
-          pet.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(b.cx), y: Math.round(b.cy), globalX: Math.round(w.x + b.cx + dx / 8), globalY: Math.round(w.y + b.cy + dy / 8), button: 'left', modifiers: ['leftButtonDown'] });
+          pet.webContents.sendInputEvent({
+            type: 'mouseMove',
+            x: Math.round(b.cx),
+            y: Math.round(b.cy),
+            globalX: Math.round(w.x + b.cx + dx / 8),
+            globalY: Math.round(w.y + b.cy + dy / 8),
+            button: 'left',
+            modifiers: ['leftButtonDown'],
+          });
         }
         if (check) await check();
         input('mouseUp', b.cx, b.cy, { button: 'left', clickCount: 1 });
@@ -113,8 +131,15 @@ app.on('browser-window-created', (_e, win) => {
         await sleep(40);
       }
       await wait(() => pet.getBounds().height !== before.height, 'resize by scrolling');
-      await wait(() => js('window.mori.load().then(r=>r.state.settings.petScale)').then((v) => Number.isFinite(v)), 'scale saved');
-      report.resize = { before: before.height, after: pet.getBounds().height, saved: await js('window.mori.load().then(r=>r.state.settings.petScale)') };
+      await wait(
+        () => js('window.mori.load().then(r=>r.state.settings.petScale)').then((v) => Number.isFinite(v)),
+        'scale saved',
+      );
+      report.resize = {
+        before: before.height,
+        after: pet.getBounds().height,
+        saved: await js('window.mori.load().then(r=>r.state.settings.petScale)'),
+      };
       await sleep(1700);
       // Scrolling the other way shrinks her again.
       const grown = pet.getBounds().height;
@@ -132,31 +157,62 @@ app.on('browser-window-created', (_e, win) => {
       await sleep(200);
       let swung = '';
       await carry(160, 0, async () => {
-        await wait(() => pj('document.querySelector(".pet-body").classList.contains("lifted")'), 'lifted', 40);
-        await wait(async () => {
-          swung = await pj('document.querySelector(".pet-body").style.transform');
-          return /rotate/.test(swung);
-        }, 'swing', 40);
+        await wait(
+          () => pj('document.querySelector(".pet-body").classList.contains("lifted")'),
+          'lifted',
+          40,
+        );
+        await wait(
+          async () => {
+            swung = await pj('document.querySelector(".pet-body").style.transform');
+            return /rotate/.test(swung);
+          },
+          'swing',
+          40,
+        );
       });
       assert.match(swung, /rotate\(-?[0-9.]+deg\)/, 'she swings while carried');
       const floorY = area.y + area.height - (pet.getBounds().height - (await body()).footY);
       const trace = [];
       try {
-        await wait(async () => {
-          const f = await feet();
-          trace.push([Math.round(f.y), pet.getBounds().y, await pj('document.querySelector(".pet-name-tag")?.title||""')]);
-          return Math.abs(f.y - floorY) <= 3;
-        }, 'fell to the floor', 120);
+        await wait(
+          async () => {
+            const f = await feet();
+            trace.push([
+              Math.round(f.y),
+              pet.getBounds().y,
+              await pj('document.querySelector(".pet-name-tag")?.title||""'),
+            ]);
+            return Math.abs(f.y - floorY) <= 3;
+          },
+          'fell to the floor',
+          120,
+        );
       } catch (e) {
-        report.trace = { floorY, area, bounds: pet.getBounds(), samples: trace.filter((_, i) => i % 10 === 0) };
+        report.trace = {
+          floorY,
+          area,
+          bounds: pet.getBounds(),
+          samples: trace.filter((_, i) => i % 10 === 0),
+        };
         throw e;
       }
-      await wait(() => pj('document.querySelector(".pet-landing").classList.contains("landing")'), 'landing squash');
+      await wait(
+        () => pj('document.querySelector(".pet-landing").classList.contains("landing")'),
+        'landing squash',
+      );
       report.drop = { floorY, feet: await feet() };
 
       // 3. Drop her above a window: she lands on its top edge.
       await sleep(800);
-      const fixture = new BrowserWindow({ x: area.x + 120, y: area.y + area.height - 330, width: 700, height: 260, show: true, title: 'fixture' });
+      const fixture = new BrowserWindow({
+        x: area.x + 120,
+        y: area.y + area.height - 330,
+        width: 700,
+        height: 260,
+        show: true,
+        title: 'fixture',
+      });
       await fixture.loadURL('data:text/html,<p>Desktop body fixture window</p>');
       surfaces = () => (fixture.isDestroyed() ? [] : [{ ...fixture.getBounds(), id: 'fixture' }]);
       const top = fixture.getBounds();
@@ -170,16 +226,24 @@ app.on('browser-window-created', (_e, win) => {
       // 4. Move the window: she rides along.
       const start = await feet();
       fixture.setPosition(top.x + 120, top.y + 60);
-      await wait(async () => {
-        const f = await feet();
-        return Math.abs(f.y - (top.y + 60)) <= 3 && Math.abs(f.x - (start.x + 120)) <= 3;
-      }, 'rode the window', 120);
+      await wait(
+        async () => {
+          const f = await feet();
+          return Math.abs(f.y - (top.y + 60)) <= 3 && Math.abs(f.x - (start.x + 120)) <= 3;
+        },
+        'rode the window',
+        120,
+      );
       report.ride = { from: start, to: await feet() };
 
       // 5. Close the window: she falls to the floor.
       fixture.destroy();
       const floorAfter = area.y + area.height - (pet.getBounds().height - (await body()).footY);
-      await wait(async () => Math.abs((await feet()).y - floorAfter) <= 3, 'fell when the window closed', 160);
+      await wait(
+        async () => Math.abs((await feet()).y - floorAfter) <= 3,
+        'fell when the window closed',
+        160,
+      );
       report.fall = { floorY: floorAfter, feet: await feet() };
       fs.writeFileSync(path.join(dir, 'pet.png'), (await pet.webContents.capturePage()).toPNG());
       assert.equal(networkCalls, 0);

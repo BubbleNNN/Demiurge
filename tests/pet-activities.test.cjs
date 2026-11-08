@@ -59,6 +59,28 @@ test('enter then sustained loop then exit returns to neutral without replaying e
   assert.equal(play(s, 'idle', 16361), null);
   assert.equal(s.current, 'idle');
 });
+test('a finished one-shot gesture hands back to the timeline instead of holding its last pose', () => {
+  const gesture = {
+    frames: [{}, {}, {}],
+    clips: {
+      idle: { frames: [0], loop: true },
+      wave: { frames: [0, 1, 2, 0], durations: [100, 180, 220, 160], loop: false },
+      drag: { frames: [1, 2], durations: [320, 320], loop: true },
+    },
+  };
+  const s = newActivityPlayback();
+  assert.deepEqual(advanceActivityPlayback(s, gesture, 'wave', 0, 1), { frame: 0, clip: 'wave' });
+  assert.deepEqual(advanceActivityPlayback(s, gesture, 'wave', 200, 1), { frame: 1, clip: 'wave' });
+  // The wave lasts 660 ms; afterwards the ordinary timeline (idle, blink, talk) takes over.
+  assert.equal(advanceActivityPlayback(s, gesture, 'wave', 660, 1), null);
+  assert.equal(advanceActivityPlayback(s, gesture, 'wave', 5000, 1), null);
+  // Replaying the same gesture starts it again.
+  assert.equal(advanceActivityPlayback(s, gesture, 'wave', 6000, 2).clip, 'wave');
+  // Looping clips keep playing for as long as they are requested.
+  const d = newActivityPlayback();
+  assert.equal(advanceActivityPlayback(d, gesture, 'drag', 0, 1).clip, 'drag');
+  assert.equal(advanceActivityPlayback(d, gesture, 'drag', 9000, 1).clip, 'drag');
+});
 test('rapid switches finish current authored segment and keep only the latest requested activity', () => {
   const s = newActivityPlayback();
   const first = play(s, 'read', 0);
