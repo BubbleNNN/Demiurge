@@ -13,6 +13,8 @@ const creationStyles = require('../shared/creation-styles.json');
 const recognizedStyles = [...styles, 'realistic', 'watercolor', 'plush', 'figurine'];
 // Pose sheets that fail the local quality check are regenerated this many times before stopping.
 const AUTO_RETRIES = 3;
+// A saved frame artifact holds a base64 PNG: a 32 MiB atlas needs about 44 MiB plus its record.
+const ARTIFACT_LIMIT = 48 * 1024 * 1024;
 // What the next request is told about the rejected one; written for the image model.
 function retryHint(message) {
   if (/裁切|边缘/.test(message))
@@ -92,7 +94,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     const key = `${job.id}:${index}`;
     if (pendingPixels.has(key)) return pendingPixels.get(key);
     try {
-      return await readJson(artifact(job.id, index), 12 * 1024 * 1024);
+      return await readJson(artifact(job.id, index), ARTIFACT_LIMIT);
     } catch (error) {
       if (error.code === 'ENOENT') return null;
       throw error;
@@ -102,7 +104,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     const key = `${job.id}:${edit.id}`;
     if (pendingEdits.has(key)) return pendingEdits.get(key);
     try {
-      return await readJson(editFile(job.id, edit.id, 'asset'), 12 * 1024 * 1024);
+      return await readJson(editFile(job.id, edit.id, 'asset'), ARTIFACT_LIMIT);
     } catch (error) {
       if (error.code === 'ENOENT') return null;
       throw error;

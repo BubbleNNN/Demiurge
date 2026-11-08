@@ -684,3 +684,20 @@ test('a hair tip or shoe grazing a cell edge is kept and reported; a body crossi
   const packed = packFrames(image, { wave: graze(2, 40, Math.floor(cell * 0.06)) }, 'original', fixture.codec);
   assert.ok(packed.warnings.some((w) => /第 1 帧.*贴到分格边缘/.test(w)));
 });
+
+test('a finished pack as large as the atlas cap is read back; smaller task records keep their own limits', async (t) => {
+  const context = await setup(t);
+  let job = await context.pipeline.start(character, { styles: ['3d'], motions: ['wave'] }, settings, {});
+  while (job.status !== 'ready') job = await context.pipeline.advance(job.id, character, settings, {});
+  const packFile = path.join(context.root, `${job.id}-2.asset.json`);
+  const saved = JSON.parse(await fs.readFile(packFile, 'utf8'));
+  // Pad the record to the size a 32 MiB atlas produces; the pixels themselves are unchanged.
+  saved.padding = 'x'.repeat(40 * 1024 * 1024);
+  await fs.writeFile(packFile, JSON.stringify(saved));
+  const restarted = createPetPipeline(context.options);
+  const [skin] = await restarted.results(job.id);
+  assert.equal(skin.sprite.frames.length, 5);
+  saved.padding = 'x'.repeat(49 * 1024 * 1024);
+  await fs.writeFile(packFile, JSON.stringify(saved));
+  await assert.rejects(createPetPipeline(context.options).results(job.id), /无效或过大/);
+});
