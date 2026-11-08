@@ -438,4 +438,4 @@ function createResearch({
   }
   return { researchCharacter, testSearchConnection, searchChibiSources: (input, settings, credentials) => retrieve({name:input.name,work:input.work,purpose:'chibi'},settings,credentials) };
 }
-module.exports = { createResearch, searchProvider };
+module.exports = { createResearch, searchProvider, characterAliases, matchText };

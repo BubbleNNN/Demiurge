@@ -348,6 +348,8 @@ function characterContext(character) {
   };
 }
 
+const BROWSER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 function createServices(fetchImpl = globalThis.fetch, options = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('fetch is required');
   const timeoutMs = options.timeoutMs ?? 60000;
@@ -532,7 +534,14 @@ function createServices(fetchImpl = globalThis.fetch, options = {}) {
 
   async function publicResource(
     address,
-    { label = '公开资源读取', limit = 1024 * 1024, accept = '*/*', httpsOnly = false, timeout = 12000 } = {},
+    {
+      label = '公开资源读取',
+      limit = 1024 * 1024,
+      accept = '*/*',
+      httpsOnly = false,
+      timeout = 12000,
+      headers = {},
+    } = {},
   ) {
     const { sourceUrl } = require('./sources.cjs');
     let url = sourceUrl(address);
@@ -546,7 +555,13 @@ function createServices(fetchImpl = globalThis.fetch, options = {}) {
         throw new Error('资源只允许来自公开网络，不能访问本机或内网地址。');
       const response = await request(
         url,
-        { method: 'GET', credentials: 'omit', redirect: 'manual', headers: { Accept: accept } },
+        {
+          method: 'GET',
+          credentials: 'omit',
+          redirect: 'manual',
+          // Many public pages serve an empty shell or refuse non-browser agents outright.
+          headers: { Accept: accept, 'User-Agent': BROWSER_AGENT, 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8', ...headers },
+        },
         {},
         label,
         limit,
