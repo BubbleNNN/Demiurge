@@ -369,7 +369,18 @@ export default function App() {
         setKeys(result.keys);
         setSharedChatStatus(result.chatStatus || { busy: false });
         setReady(true);
-        if (loaded !== result.state) applyState(await bridge.save(loaded, result.state));
+        if (loaded !== result.state) {
+          // Tidying an older workspace must never lock the user out of it: if the tidied copy
+          // cannot be saved, carry on with the workspace exactly as it is on disk.
+          try {
+            applyState(await bridge.save(loaded, result.state));
+          } catch (error) {
+            if (!result.state) throw error;
+            stateRef.current = result.state;
+            setState(result.state);
+            setToast(`启动时整理工作区未能保存，已按原样打开：${errorText(error)}`);
+          }
+        }
       })
       .catch((e) => {
         if (mounted) setLoadError(errorText(e));

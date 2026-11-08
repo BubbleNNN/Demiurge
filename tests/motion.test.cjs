@@ -192,8 +192,8 @@ test('explicit authored mouth poses follow audio opening, close on silence and k
   assert.equal(selectSpriteFrame(animation, { ...input, talking: true, time: 130 }).frame, 2);
 });
 
-test('packs that rested on the separately drawn still move their rest onto the blink sheet pose', () => {
-  const { restOnMotionSheet } = load('src/initial.ts');
+test('packs that rested on the separately drawn still play on the blink sheet pose; the saved pack is untouched', () => {
+  const { restOnMotionSheet, playbackAnimation } = load('src/animation/rest.ts');
   const frame = (cell, page) => ({
     rect: [0, 0, 10, 10],
     duration: 140,
@@ -240,10 +240,17 @@ test('packs that rested on the separately drawn still move their rest onto the b
     { ...pack, frames: pack.frames.map((f, i) => (i === 1 ? frame([400, 534], 1) : f)) },
   ])
     assert.equal(restOnMotionSheet(other), other);
-  // Saved workspaces are moved once when loaded.
+  // Only playback changes. An approved pack's review records a digest of its clips, so loading a
+  // workspace must never rewrite them (0.3.23 did, and the workspace could not be read).
+  assert.equal(playbackAnimation(pack), playbackAnimation(pack), 'one result per pack object');
+  assert.deepEqual(playbackAnimation(pack).clips.idle.frames, [1]);
   const state = initialState();
   const skin = { ...state.skins[0], id: 'generated-rest', sprite: pack };
-  const migrated = migrateState({ ...state, skins: [...state.skins, skin] });
-  assert.deepEqual(migrated.skins.find((s) => s.id === 'generated-rest').sprite.clips.idle.frames, [1]);
-  assert.equal(migrateState(migrated), migrated);
+  const saved = { ...state, skins: [...state.skins, skin] };
+  const loaded = migrateState(saved);
+  assert.equal(
+    loaded.skins.find((s) => s.id === 'generated-rest'),
+    skin,
+  );
+  assert.deepEqual(pack.clips.idle.frames, [0]);
 });

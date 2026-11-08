@@ -5,6 +5,7 @@ import { skinImage } from '../theme';
 import { drawSpriteFrame, prepareSpritePage, type SpriteCell } from '../animation/sprites';
 import { figureFromFrames, loadImage, pageOf, pageSource } from '../animation/pages';
 import { selectSpriteFrame } from '../animation/timeline';
+import { playbackAnimation } from '../animation/rest';
 import { advanceActivityPlayback, newActivityPlayback, isActivity } from '../animation/activities';
 import { measureSequenceBounds, type FigureBounds } from '../animation/framing';
 import { SkinArtwork } from './SkinArtwork';
@@ -21,7 +22,9 @@ interface Props {
   enabled: boolean;
 }
 export function AnimatedIllustration(props: Props) {
-  const animation = spriteAnimation(props.skin);
+  // Older generated packs play on a rest pose drawn like their motions (see animation/rest.ts).
+  const source = spriteAnimation(props.skin);
+  const animation = source && playbackAnimation(source);
   const imageUrl = skinImage(props.skin);
   const canvas = useRef<HTMLCanvasElement>(null);
   const current = useRef(props);
