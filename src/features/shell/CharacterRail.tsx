@@ -35,7 +35,15 @@ export function CharacterRail({
         title={`Demiurge v${packageInfo.version}`}
         onClick={onHome}
       >
-        <img src="./favicon.svg" alt="" draggable={false} />
+        <img
+          src="./app-icon.png"
+          alt=""
+          draggable={false}
+          onError={(event) => {
+            // No icon of your own in this build: the bundled one.
+            if (!event.currentTarget.src.endsWith('favicon.svg')) event.currentTarget.src = './favicon.svg';
+          }}
+        />
       </button>
       <div className="rail-characters">
         {characters.map((character) => (

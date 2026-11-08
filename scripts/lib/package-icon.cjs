@@ -12,6 +12,10 @@ app
   .whenReady()
   .then(async () => {
     const [source, target] = process.argv.slice(2);
+    // A picture of the user's own (PNG) sits on a rounded light tile; the bundled icon is an SVG.
+    const picture = /\.png$/i.test(source)
+      ? `data:image/png;base64,${fs.readFileSync(source).toString('base64')}`
+      : '';
     const win = new BrowserWindow({
       width: 1024,
       height: 1024,
@@ -20,9 +24,11 @@ app
       useContentSize: true,
       webPreferences: { offscreen: true, sandbox: true, contextIsolation: true, backgroundThrottling: false },
     });
-    const svg = fs.readFileSync(source, 'utf8').replace('<svg ', '<svg width="1024" height="1024" ');
+    const art = picture
+      ? `<div style="position:absolute;left:100px;top:100px;width:824px;height:824px;border-radius:186px;overflow:hidden;background:#ffffff;box-shadow:inset 0 0 0 3px rgba(140,118,214,0.3)"><img src="${picture}" style="position:absolute;inset:34px;width:756px;height:756px;object-fit:contain;mix-blend-mode:multiply"></div>`
+      : fs.readFileSync(source, 'utf8').replace('<svg ', '<svg width="1024" height="1024" ');
     await win.loadURL(
-      `data:text/html;charset=utf-8,${encodeURIComponent(`<html><body style="margin:0;background:transparent">${svg}</body></html>`)}`,
+      `data:text/html;charset=utf-8,${encodeURIComponent(`<html><body style="margin:0;background:transparent;position:relative;width:1024px;height:1024px">${art}</body></html>`)}`,
     );
     await new Promise((resolve) => setTimeout(resolve, 150));
     const capture = await win.webContents.capturePage();

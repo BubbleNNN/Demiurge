@@ -69,6 +69,7 @@ function allowedPayloadPath(relative) {
       'LICENSE',
       'dist/index.html',
       'dist/favicon.svg',
+      'dist/app-icon.png',
       'electron/native/desktop-bounds',
       'dist/vendor/live2dcubismcore.min.js',
     ].includes(normalized) ||
@@ -312,11 +313,14 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
         2,
       ) + '\n',
     );
-    run(process.execPath,[path.join(root,'scripts/build-desktop-helper.cjs')]);
+    run(process.execPath, [path.join(root, 'scripts/build-desktop-helper.cjs')]);
     copyDirectory(
       path.join(root, 'electron'),
       path.join(payload, 'electron'),
-      (file) => fs.statSync(file).isDirectory() || file.endsWith('.cjs') || file===path.join(root,'electron/native/desktop-bounds'),
+      (file) =>
+        fs.statSync(file).isDirectory() ||
+        file.endsWith('.cjs') ||
+        file === path.join(root, 'electron/native/desktop-bounds'),
     );
     copyDirectory(
       path.join(root, 'shared'),
@@ -345,7 +349,10 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
       if (fs.existsSync(original))
         fs.copyFileSync(original, path.join(payload, 'licenses', `Electron-${file}`));
     }
-    fs.copyFileSync(path.join(root,'docs/licenses/anime-codex-MIT.txt'),path.join(payload,'licenses/anime-codex-MIT.txt'));
+    fs.copyFileSync(
+      path.join(root, 'docs/licenses/anime-codex-MIT.txt'),
+      path.join(payload, 'licenses/anime-codex-MIT.txt'),
+    );
     // Kept from the Mori days: macOS permissions (Finder automation) stay granted after the rename.
     const bundleId = 'com.mori.companion';
     editPlist(
@@ -360,7 +367,8 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
         CFBundleVersion: info.version,
         CFBundleIconFile: 'demiurge.icns',
         LSApplicationCategoryType: 'public.app-category.lifestyle',
-        NSHumanReadableCopyright: 'Demiurge (formerly Mori) contributors. Third-party code and artwork retain their own rights.',
+        NSHumanReadableCopyright:
+          'Demiurge (formerly Mori) contributors. Third-party code and artwork retain their own rights.',
       },
       ['ElectronAsarIntegrity'],
     );
@@ -383,11 +391,20 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
     delete env.MORI_DEV_URL;
+    // Your own picture in private/app-icon.png (git-ignored) wins over the bundled icon.
+    const customIcon = path.join(root, 'private/app-icon.png');
     run(
       electronExecutable,
-      [path.join(root, 'scripts/lib/package-icon.cjs'), path.join(root, 'public/favicon.svg'), iconDir],
+      [
+        path.join(root, 'scripts/lib/package-icon.cjs'),
+        fs.existsSync(customIcon) ? customIcon : path.join(root, 'public/favicon.svg'),
+        iconDir,
+      ],
       { env },
     );
+    // The same icon in the app's sidebar (it falls back to favicon.svg without one).
+    if (fs.existsSync(customIcon))
+      fs.copyFileSync(path.join(iconDir, 'icon_256x256@2x.png'), path.join(payload, 'dist/app-icon.png'));
     run('/usr/bin/iconutil', ['-c', 'icns', iconDir, '-o', path.join(resources, 'demiurge.icns')], {
       stdio: 'pipe',
     });

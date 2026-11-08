@@ -14,6 +14,8 @@ test-results/
 *.log
 *.tsbuildinfo
 .DS_Store
+# Your own app icon image (private/app-icon.png): used by local builds, never published.
+private/
 *.pem
 *.key
 credentials*.json
