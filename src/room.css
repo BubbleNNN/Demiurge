@@ -42,18 +42,22 @@
   box-shadow: var(--shadow-soft);
   z-index: 20;
 }
+/* The app icon, the same width as the character avatars below and centred in the rail. Its tile
+   has the usual transparent margin (a tenth on each side), so it is drawn a little larger. */
 .rail-brand {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 6px;
-  border-radius: 12px;
-}
-/* The app icon itself; its tile has the usual transparent margin. */
-.rail-brand > img {
   width: 52px;
   height: 52px;
+  flex: 0 0 52px;
+  padding: 0;
+  display: block;
+  margin-bottom: 6px;
+  border-radius: 14px;
+}
+.rail-brand > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.12);
   pointer-events: none;
 }
 .rail-characters {
