@@ -55,6 +55,14 @@ function communityPost(url) {
   if(host==='miyoushe.com'||host==='bbs.mihoyo.com')return {api:`https://bbs-api.miyoushe.com/post/wapi/getPostFull?post_id=${id}`,referer:'https://www.miyoushe.com/'};
   return null;
 }
+// MediaWiki thumbnail routes re-encode on request; `format=original` returns the uploaded file.
+function originalImageUrl(imageUrl) {
+  try {
+    const url=new URL(imageUrl);
+    if(/\/revision\/(?:latest|\d+)/.test(url.pathname)&&!url.searchParams.has('format'))url.searchParams.set('format','original');
+    return url.href;
+  } catch { return imageUrl; }
+}
 function wikiLangNames(data) {
   const names=[];
   for(const page of data?.query?.pages||[]) {
@@ -189,15 +197,18 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
       .sort((a,b)=>b.score-a.score)
       .slice(0,8);
     if(unique.length)onProgress({stage:'Q版参考核对',detail:`找到 ${unique.length} 张候选图片，按角色名与 Q 版线索排序后逐张核对…`});
+    const downloadFailures=[];
     for(const candidate of unique) {
       let image;
       try {
-        const response=await publicResource(candidate.imageUrl,{label:'Q版参考图下载',limit:8*1024*1024,timeout:20000,accept:'image/png,image/jpeg,image/webp',httpsOnly:true,headers:{Referer:candidate.url}});
+        // Ask image hosts for the stored file: the Fandom CDN otherwise negotiates WebP, which
+        // the desktop decoder cannot read, and it refuses downloads without a page referer.
+        const response=await publicResource(originalImageUrl(candidate.imageUrl),{label:'Q版参考图下载',limit:8*1024*1024,timeout:20000,accept:'image/png,image/jpeg;q=0.9,image/webp;q=0.5',httpsOnly:true,headers:{Referer:candidate.url}});
         const decoded=await inspectImage(response.bytes);
         if(decoded.width<96||decoded.height<96||decoded.width>4096||decoded.height>4096)continue;
         image=`data:${decoded.mime};base64,${response.bytes.toString('base64')}`;
         downloads++;
-      }catch{downloadErrors++;continue;}
+      }catch(error){downloadErrors++;downloadFailures.push(`${candidate.name||candidate.imageUrl.split('/').pop().slice(0,60)}：${String(error.message).slice(0,120)}`);continue;}
       onProgress({stage:'Q版参考核对',detail:`正在核对「${candidate.name||candidate.title||'候选图片'}」的角色身份、Q版比例与可用性…`});
       // Model errors are not evidence of absence. Abort before any image generation.
       const verdict=await verify(character,pack.references.map(r=>r.image),image,settings,credentials);
@@ -205,7 +216,8 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
       const summary=validateChibiResearch({status:'found',checkedAt:new Date().toISOString(),reason:`已下载并通过模型核对的同角色 Q 版参考${candidate.name?`「${candidate.name.slice(0,60)}」`:''}；网页来源不等于官方认证，请在基准审核时核对。`,sources:[{title:candidate.title||'图片来源',url:candidate.url,imageUrl:candidate.imageUrl}],warnings:warnings.slice(0,8)});
       return {referenceDigest:pack.digest,summary,image,imageDigest:imageDigest(image)};
     }
-    if(unique.length && !downloads && downloadErrors)throw Error('发现了候选 Q 版图片，但未能下载并核对。请重试，不会直接回退成没有参考。');
+    if(unique.length && !downloads && downloadErrors)throw Error(`发现了候选 Q 版图片，但未能下载并核对（${downloadFailures.slice(0,2).join('；')}）。请重试，不会直接回退成没有参考。`);
+    warnings.push(...downloadFailures.slice(0,2).map(failure=>`候选图片未能使用：${failure}`));
     const image=fallbackImage?await fallbackImage():`data:image/png;base64,${(await fs.readFile(path.join(__dirname,'../public/art/chibi-fallback-furina.png'))).toString('base64')}`;
     const summary=validateChibiResearch({status:'fallback',checkedAt:new Date().toISOString(),reason:`本次检索${unique.length?`核对了 ${Math.min(downloads,unique.length)} 张候选但没有通过`:'未取得候选图片'}，采用 Anime Codex 芙宁娜贴纸画风；这不表示网上一定不存在。`,sources:sources.slice(0,6).map(s=>({title:s.title,url:s.url})),warnings:warnings.slice(0,8)});
     onProgress({stage:'Q版画风选择',detail:summary.reason});
@@ -213,4 +225,4 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
   }
   return {discover};
 }
-module.exports={createChibiReferences,pageChibiImages,validateChibiResearch,mediaWikiPage,communityPost,wikiCandidates,postCandidates,wikiLangNames,rank};
+module.exports={createChibiReferences,pageChibiImages,validateChibiResearch,mediaWikiPage,communityPost,wikiCandidates,postCandidates,wikiLangNames,originalImageUrl,rank};

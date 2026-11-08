@@ -309,6 +309,21 @@ function imageMime(bytes) {
   throw new Error('图像接口未返回有效 PNG、JPEG 或 WebP 文件。');
 }
 
+// Width and height from a WebP container header: VP8X (extended), VP8L (lossless) or VP8 (lossy).
+function webpSize(bytes) {
+  if (bytes.length < 30) return null;
+  const chunk = bytes.toString('ascii', 12, 16);
+  if (chunk === 'VP8X')
+    return { width: 1 + bytes.readUIntLE(24, 3), height: 1 + bytes.readUIntLE(27, 3) };
+  if (chunk === 'VP8L') {
+    const bits = bytes.readUInt32LE(21);
+    return { width: 1 + (bits & 0x3fff), height: 1 + ((bits >>> 14) & 0x3fff) };
+  }
+  if (chunk === 'VP8 ')
+    return { width: bytes.readUInt16LE(26) & 0x3fff, height: bytes.readUInt16LE(28) & 0x3fff };
+  return null;
+}
+
 function publicAddress(address) {
   if (isIP(address) === 4) {
     const [a, b] = address.split('.').map(Number);
@@ -597,11 +612,18 @@ function createServices(fetchImpl = globalThis.fetch, options = {}) {
 
   async function inspectReferenceImage(bytes) {
       const mime = imageMime(bytes);
-      const size = options.inspectImage
-        ? await options.inspectImage(bytes)
-        : mime === 'image/png' && bytes.length >= 24
-          ? { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
-          : null;
+      let size = null;
+      try {
+        size = options.inspectImage
+          ? await options.inspectImage(bytes)
+          : mime === 'image/png' && bytes.length >= 24
+            ? { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
+            : null;
+      } catch (error) {
+        // The desktop decoder has no WebP support; the header still states the size.
+        if (mime !== 'image/webp') throw error;
+      }
+      if (!size && mime === 'image/webp') size = webpSize(bytes);
       if (
         !size ||
         !Number.isInteger(size.width) ||
@@ -1572,6 +1594,8 @@ ${prompt}`,
     discoverReferences,
     discoverChibiReferences,
     searchChibiSources,
+    publicResource,
+    inspectReferenceImage,
     modelConfiguration,
     createModelTask,
     createRigTask,

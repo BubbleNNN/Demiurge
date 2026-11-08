@@ -262,3 +262,32 @@ test('category pages list their files, Wikipedia-style wikis retry under /w/, an
   const searched = requests.filter((url) => url.includes('generator=search')).map((url) => new URL(url).searchParams.get('gsrsearch'));
   assert.ok(searched.includes('フリーナ'), `wikipedia interlanguage names feed the file search: ${searched}`);
 });
+
+test('wiki thumbnails are requested as the stored file and download failures are reported, not hidden', async () => {
+  const { originalImageUrl } = require('../electron/chibi-references.cjs');
+  assert.equal(
+    originalImageUrl('https://static.wikia.nocookie.net/x/images/1/16/A.png/revision/latest?cb=1&path-prefix=zh'),
+    'https://static.wikia.nocookie.net/x/images/1/16/A.png/revision/latest?cb=1&path-prefix=zh&format=original',
+  );
+  assert.equal(originalImageUrl('https://upload-os-bbs.hoyolab.com/upload/a.png'), 'https://upload-os-bbs.hoyolab.com/upload/a.png');
+  const { references } = harness({
+    publicResource: async (url) => {
+      if (url.endsWith('/chibi')) return { url, contentType: 'text/html', bytes: page([{ src: '/img/a.png' }]) };
+      throw new Error('图片无法解码或尺寸超出限制。');
+    },
+  });
+  await assert.rejects(references.discover(character, settings, credentials), /未能下载并核对（a\.png：图片无法解码/);
+});
+
+test('WebP candidates are measured from their header when the desktop decoder cannot read them', async () => {
+  const { createServices } = require('../electron/services.cjs');
+  const services = createServices(async () => { throw new Error('offline'); }, {
+    inspectImage: () => { throw new Error('参考图无法解码。'); },
+  });
+  const vp8x = Buffer.concat([
+    Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8X'), Buffer.alloc(4),
+    Buffer.alloc(4), Buffer.from([0x3f, 0x01, 0x00]), Buffer.from([0x47, 0x01, 0x00]), Buffer.alloc(8),
+  ]);
+  assert.deepEqual(await services.inspectReferenceImage(vp8x), { width: 320, height: 328, mime: 'image/webp' });
+  await assert.rejects(services.inspectReferenceImage(Buffer.from('not an image at all, really')), /有效 PNG/);
+});

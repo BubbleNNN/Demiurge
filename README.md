@@ -2,7 +2,7 @@
 
 一个本地优先的角色陪伴与桌宠应用。无需 API 即可使用预制外观、动作和已编写的日常台词；按需接入自己的模型获得自由聊天、资料整理或生成能力。**角色建档和聊天不强制使用 Tavily。**
 
-**当前代码版本：0.3.13。** 本仓库提供 Mori 的源代码、自动测试和 AI 生成的示例角色素材。源代码使用 [MIT 许可证](LICENSE)；角色素材、字体及第三方运行库的权利说明见 [THIRD_PARTY.md](docs/THIRD_PARTY.md) 和 [素材说明](public/art/README.md)。
+**当前代码版本：0.3.14。** 本仓库提供 Mori 的源代码、自动测试和 AI 生成的示例角色素材。源代码使用 [MIT 许可证](LICENSE)；角色素材、字体及第三方运行库的权利说明见 [THIRD_PARTY.md](docs/THIRD_PARTY.md) 和 [素材说明](public/art/README.md)。
 
 这是源码发布，仓库中不包含 macOS 应用包。克隆后可按下方步骤运行，也可参考 [macOS 打包说明](docs/MACOS_RELEASE.md) 自行构建 Apple Silicon 应用。现有本机验收包尚未签名、公证；历史文档中的 `release/`、`artifacts/` 与 `.local/` 是本地生成路径，不表示仓库附带这些文件。首次使用见 [Mori 使用指南](docs/MORI_USER_GUIDE.md)。
 
