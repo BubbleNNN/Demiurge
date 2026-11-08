@@ -2,8 +2,10 @@
 // screen. Let go just above a window top, an icon or the bottom of the screen, she steps onto it;
 // on such a ledge she walks and climbs according to her temperament and rides a window when it
 // moves. When what she stands on goes away she simply stays where she is: there is no gravity.
-// Adapted in part from Anime Codex (MIT): visible places, bounded travel and revalidation before
-// every stay.
+// While the user works in an app she goes to stand beside its window, out of its way, watches
+// and glances at it, and stays quiet (see userContext.ts); when they stop she returns to her own
+// life. Adapted in part from Anime Codex (MIT): visible places, bounded travel and revalidation
+// before every stay.
 import { useEffect, useRef, useState } from 'react';
 import { bridge } from '../../bridge';
 import { choosePlace, placeVisible, type Place } from '../../desktopLife';
@@ -22,6 +24,7 @@ import {
   type Temperament,
 } from '../../desktopBehavior';
 import type { DesktopRect, DesktopScene, PetAction } from '../../types';
+import { companySpot, coverage, userContext, type Spot, type UserContext } from '../../userContext';
 
 interface Options {
   petMode: boolean;
@@ -33,6 +36,9 @@ interface Options {
   tired: boolean;
   /** An activity is playing in place (reading, gaming…): she does not wander off mid-activity. */
   occupied: boolean;
+  /** Something the user just asked for is playing (an activity from the toolbar, a touch…):
+   *  keeping company waits until it is over. */
+  held?: () => boolean;
   onAction: (a: PetAction) => void;
   /** A line caused by the user (a drop, a failed search): always shown. */
   onLine: (line: string) => void;
@@ -43,8 +49,25 @@ interface Options {
   onLand: (height: number) => void;
   /** She arrived on a window top to carry on her activity there. */
   onPerch: () => void;
+  /** What the user is doing changed (front app, typing, away…); null without that information. */
+  onContext: (context: UserContext | null) => void;
+  /** She arrived beside the user's window to keep them company. */
+  onCompany: () => void;
 }
-type Phase = 'idle' | 'finding' | 'inviting' | 'moving' | 'staying';
+type Phase = 'idle' | 'finding' | 'inviting' | 'moving' | 'staying' | 'company';
+const sameContext = (a: UserContext | null, b: UserContext | null) =>
+  a === b ||
+  Boolean(
+    a &&
+      b &&
+      a.mode === b.mode &&
+      a.kind === b.kind &&
+      a.app === b.app &&
+      a.company === b.company &&
+      a.quiet === b.quiet &&
+      a.companion === b.companion &&
+      a.focus?.id === b.focus?.id,
+  );
 // Let go this close above a ledge (in points), she steps down onto it.
 const SNAP = 36;
 // After the user puts her somewhere she stays there a while before setting off on her own.
@@ -94,6 +117,9 @@ export function useDesktopLife(options: Options) {
   const [status, setStatus] = useState('会在桌面上走动、爬上窗口、偶尔偷看你。');
   const [mask, setMask] = useState<DesktopRect | null>(null);
   const [airborne, setAirborne] = useState(false);
+  // A short look toward the user's window while keeping them company.
+  const [glance, setGlance] = useState<{ side: 'left' | 'right'; key: number } | null>(null);
+  const [context, setContext] = useState<UserContext | null>(null);
   const generation = useRef(0),
     phaseRef = useRef<Phase>('idle'),
     place = useRef<Place | null>(null),
@@ -110,7 +136,9 @@ export function useDesktopLife(options: Options) {
     }),
     nextDecision = useRef(Date.now() + 15000),
     nextHide = useRef(Date.now() + 30000),
-    placedAt = useRef(0);
+    placedAt = useRef(0),
+    contextRef = useRef<UserContext | null>(null),
+    company = useRef<{ focus: DesktopRect & { id: string }; spot: Spot } | null>(null);
   phaseRef.current = phase;
   const go = (value: Phase) => {
     phaseRef.current = value;
@@ -131,7 +159,8 @@ export function useDesktopLife(options: Options) {
       if (icons.current.denied) icons.current.at = Date.now() + 30 * 60000;
     }
     bounds.current = value.bounds;
-    const front = value.surfaces[0]?.id || '';
+    // The app the user is in, when known; otherwise the front window.
+    const front = value.activity?.app?.bundle || value.activity?.app?.name || value.surfaces[0]?.id || '';
     if (front && lastFront.current && front !== lastFront.current) focusChanged.current = true;
     lastFront.current = front;
     return { ...value, icons: value.icons.length ? value.icons : icons.current.list };
@@ -217,10 +246,39 @@ export function useDesktopLife(options: Options) {
     if (landing) ref.current.onLand(Math.max(0, height));
   }
 
+  // Walk, then jump if the target is higher or lower, to any point on the screen.
+  async function travelTo(to: Point, token: number) {
+    const body = measureBody();
+    if (!body || !bounds.current) return false;
+    const feet = feetOf(body, bounds.current);
+    if (Math.abs(to.y - feet.y) > 6) {
+      const lead = { x: to.x + Math.sign(feet.x - to.x) * Math.min(160, Math.abs(feet.x - to.x)), y: feet.y };
+      if (!(await walkTo(lead, token))) return false;
+      if (!(await hopTo(to, token))) return false;
+    } else if (!(await walkTo(to, token))) return false;
+    return alive(token);
+  }
+  function arrive(focus: DesktopRect & { id: string }, spot: Spot) {
+    company.current = { focus, spot };
+    support.current = null;
+    go('company');
+    setStatus(spot.over ? '在你窗口的角落陪着你' : '在你窗口旁边陪着你');
+    if (!ref.current.occupied) ref.current.onAction('listen');
+    ref.current.onCompany();
+  }
+  function leaveCompany() {
+    company.current = null;
+    go('idle');
+    setStatus('在桌面上自己待着');
+    if (!ref.current.occupied) ref.current.onAction('idle');
+    nextDecision.current = Date.now() + restBetween(ref.current.temperament) * 1000;
+  }
+
   function stop(found = false) {
     generation.current++;
     const wasHide = place.current?.kind === 'hide' && phaseRef.current === 'staying';
     place.current = null;
+    company.current = null;
     go('idle');
     setMask(null);
     setAirborne(false);
@@ -531,7 +589,105 @@ export function useDesktopLife(options: Options) {
       } finally {
         busy = false;
       }
-    }, 1200);
+    }, 300);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [options.petMode]);
+  // Keeping the user company. Every moment she looks at what the user is doing; while they work
+  // in an app she goes to stand beside its window (never over it if there is room), watches it,
+  // glances at it while they type, and moves along when it moves. When they stop working or the
+  // user picks her up, she goes back to her own life. A window that is in front only for a moment
+  // (a quick switch) does not send her anywhere.
+  useEffect(() => {
+    if (!options.petMode) return;
+    let live = true,
+      busy = false,
+      stableKey = '',
+      stableSince = 0,
+      nextGlance = 0;
+    const timer = setInterval(async () => {
+      if (!live || busy) return;
+      busy = true;
+      try {
+        const value = await scene();
+        if (!live) return;
+        const ctx = userContext(value.activity);
+        if (!sameContext(contextRef.current, ctx)) {
+          contextRef.current = ctx;
+          setContext(ctx);
+          ref.current.onContext(ctx);
+        }
+        const key = ctx ? `${ctx.app}|${ctx.focus?.id || ''}|${ctx.company}` : '';
+        if (key !== stableKey) {
+          stableKey = key;
+          stableSince = Date.now();
+        }
+        const o = ref.current;
+        const steady = Date.now() - stableSince >= 4000;
+        const area = value.area,
+          f = ctx?.focus;
+        // A window on another display is out of her reach: she stays on her own screen.
+        const reachable =
+          f &&
+          f.x < area.x + area.width &&
+          f.x + f.width > area.x &&
+          f.y < area.y + area.height &&
+          f.y + f.height > area.y;
+        if (!ctx?.company || !ctx.focus || !reachable || !o.enabled) {
+          if (phaseRef.current === 'company' && (steady || !ctx || ctx.mode === 'away')) leaveCompany();
+          return;
+        }
+        if (o.blocked || o.held?.() || lifted.current || Date.now() - placedAt.current < PLACED_STAY) return;
+        if (!['idle', 'company'].includes(phaseRef.current) || !steady) return;
+        const body = measureBody();
+        if (!body) return;
+        const focus = ctx.focus;
+        const feet = feetOf(body, value.bounds);
+        const held = company.current;
+        const shifted =
+          !held ||
+          held.focus.id !== focus.id ||
+          Math.abs(held.focus.x - focus.x) +
+            Math.abs(held.focus.y - focus.y) +
+            Math.abs(held.focus.width - focus.width) +
+            Math.abs(held.focus.height - focus.height) >
+            60;
+        if (phaseRef.current === 'company' && held && !shifted) {
+          // Now and then she looks over at what the user is typing.
+          if (!o.occupied && ctx.mode === 'typing' && Date.now() >= nextGlance) {
+            nextGlance = Date.now() + 6000 + Math.random() * 7000;
+            setGlance({ side: held.spot.side === 'left' ? 'right' : 'left', key: Date.now() });
+          }
+          return;
+        }
+        const spot = companySpot(value.area, body, focus, feet);
+        if (
+          Math.hypot(spot.to.x - feet.x, spot.to.y - feet.y) < 40 ||
+          (!spot.over &&
+            coverage(feet, body, focus) === 0 &&
+            Math.abs(spot.to.y - feet.y) < 40 &&
+            Math.abs(spot.to.x - feet.x) < body.width)
+        ) {
+          arrive(focus, spot);
+          return;
+        }
+        const token = ++generation.current;
+        place.current = null;
+        setMask(null);
+        go('moving');
+        setStatus('走到你的窗口旁边');
+        const reached = await travelTo(spot.to, token);
+        if (!live || !alive(token)) return;
+        if (reached) arrive(focus, spot);
+        else go('idle');
+      } catch {
+        /* Look again next time. */
+      } finally {
+        busy = false;
+      }
+    }, 1500);
     return () => {
       live = false;
       clearInterval(timer);
@@ -560,14 +716,19 @@ export function useDesktopLife(options: Options) {
     status,
     mask,
     airborne,
+    glance,
+    context,
     explore,
     start,
     decline,
     stop,
-    active: phase !== 'idle',
+    /** Busy with something of her own on the desktop (keeping company is not that). */
+    active: phase !== 'idle' && phase !== 'company',
+    company: phase === 'company',
     /** The user picked her up: everything she was doing stops. */
     lift() {
       lifted.current = true;
+      company.current = null;
       generation.current++;
       place.current = null;
       setMask(null);

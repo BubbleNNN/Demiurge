@@ -209,7 +209,7 @@ async function connect(url) {
     assert.ok(Array.isArray(scene.icons));
     await petClient.evaluate("document.querySelector('[aria-label=一起玩]').click()");
     await waitFor(
-      () => petClient.evaluate("Boolean(document.querySelector('.pet-moment'))"),
+      () => petClient.evaluate("Boolean(document.querySelector('.pet-moment-bubble .moment-card'))"),
       'packaged game',
     );
     const screenshot = await petClient.send('Page.captureScreenshot', { format: 'png' });

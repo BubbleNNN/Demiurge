@@ -9,13 +9,19 @@ export interface MomentResult {
   emotion: Emotion;
   action: PetAction;
 }
+/** She acts the moment out: hides the star, cheers a catch, reads from her book. */
+export type MomentAct = (action: PetAction, emotion?: Emotion) => void;
 interface Props {
   id: MomentId;
   name: string;
   reducedMotion: boolean;
   onDone: (result: MomentResult) => void;
   onClose: () => void;
+  onAct?: MomentAct;
+  /** On the desktop pet: a small bubble above her, stars falling around her instead of a card. */
+  compact?: boolean;
 }
+const still: MomentAct = () => {};
 
 const desserts = [
   { name: '草莓蛋糕', line: '草莓蛋糕！最上面那颗草莓……就让给你吧♪' },
@@ -33,24 +39,31 @@ const passages = [
 ];
 const pick = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
 
-export function Moment({ id, name, reducedMotion, onDone, onClose }: Props) {
+export function Moment({ id, name, reducedMotion, onDone, onClose, onAct = still, compact = false }: Props) {
   return (
-    <section className="moment-card" role="dialog" aria-label={momentOffers[id].title}>
+    <section
+      className={`moment-card ${compact ? 'compact' : ''}`}
+      role="dialog"
+      aria-label={momentOffers[id].title}
+    >
       <header>
         <strong>{momentOffers[id].title}</strong>
         <button className="moment-close" aria-label="结束这个小活动" onClick={onClose}>
-          <X size={16} />
+          <X size={compact ? 13 : 16} />
         </button>
       </header>
-      {id === 'snack' && <Snack name={name} onDone={onDone} />}
-      {id === 'guess' && <Guess name={name} onDone={onDone} />}
-      {id === 'stars' && <Stars name={name} reducedMotion={reducedMotion} onDone={onDone} />}
-      {id === 'read' && <ReadTogether name={name} onDone={onDone} />}
+      {id === 'snack' && <Snack name={name} onDone={onDone} onAct={onAct} />}
+      {id === 'guess' && <Guess name={name} onDone={onDone} onAct={onAct} />}
+      {id === 'stars' && <Stars name={name} reducedMotion={reducedMotion} onDone={onDone} onAct={onAct} />}
+      {id === 'read' && <ReadTogether name={name} onDone={onDone} onAct={onAct} />}
     </section>
   );
 }
+type Part = { name: string; onDone: Props['onDone']; onAct: MomentAct };
 
-function Snack({ name, onDone }: { name: string; onDone: Props['onDone'] }) {
+function Snack({ name, onDone, onAct }: Part) {
+  // She considers the plates while you choose.
+  useEffect(() => onAct('idle', 'thinking'), [onAct]);
   return (
     <>
       <p>{name}拿出了三样点心，你想分享哪一样？</p>
@@ -75,18 +88,37 @@ function Snack({ name, onDone }: { name: string; onDone: Props['onDone'] }) {
   );
 }
 
-function Guess({ name, onDone }: { name: string; onDone: Props['onDone'] }) {
+function Guess({ name, onDone, onAct }: Part) {
   const rounds = 3;
   const [round, setRound] = useState(0);
   const [hits, setHits] = useState(0);
   const [result, setResult] = useState('');
+  // Between a guess and the next round she shows the hand; no guessing meanwhile.
+  const [revealing, setRevealing] = useState(false);
   const hand = useRef<'left' | 'right'>(Math.random() < 0.5 ? 'left' : 'right');
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Hands together, the star hidden in one of them.
+  useEffect(() => {
+    onAct('listen', 'neutral');
+    return () => clearTimeout(timer.current);
+  }, [onAct]);
   function guess(choice: 'left' | 'right') {
+    if (revealing) return;
     const hit = choice === hand.current;
     const total = hits + (hit ? 1 : 0);
     setHits(total);
     setResult(hit ? '猜中啦！星星就在这只手里。' : `是另一只手哦～`);
+    // A little jump for a right guess, a playful head shake for a wrong one.
+    onAct(hit ? 'bounce' : 'shake', hit ? 'happy' : 'surprised');
     hand.current = Math.random() < 0.5 ? 'left' : 'right';
+    if (round + 1 < rounds) {
+      setRevealing(true);
+      timer.current = setTimeout(() => {
+        setRevealing(false);
+        setResult('');
+        onAct('listen', 'neutral');
+      }, 1500);
+    }
     if (round + 1 >= rounds)
       setTimeout(
         () =>
@@ -108,35 +140,27 @@ function Guess({ name, onDone }: { name: string; onDone: Props['onDone'] }) {
   return (
     <>
       <p>
-        {round < rounds
-          ? `${name}把双手藏到身后——第 ${round + 1} / ${rounds} 局，星星在哪只手里？`
-          : '数一数结果……'}
+        {result ||
+          (round < rounds
+            ? `${name}双手合起来藏好了星星——第 ${round + 1} / ${rounds} 局，在哪只手里？`
+            : '数一数结果……')}
+        <span className="moment-meta">已猜中 {hits} 次</span>
       </p>
-      {result && <p className="moment-result">{result}</p>}
       {round < rounds && (
         <div className="moment-choices">
-          <button onClick={() => guess('left')}>
+          <button disabled={revealing} onClick={() => guess('left')}>
             <Hand size={16} /> 左手
           </button>
-          <button onClick={() => guess('right')}>
+          <button disabled={revealing} onClick={() => guess('right')}>
             <Hand size={16} style={{ transform: 'scaleX(-1)' }} /> 右手
           </button>
         </div>
       )}
-      <small className="moment-meta">已猜中 {hits} 次</small>
     </>
   );
 }
 
-function Stars({
-  name,
-  reducedMotion,
-  onDone,
-}: {
-  name: string;
-  reducedMotion: boolean;
-  onDone: Props['onDone'];
-}) {
+function Stars({ name, reducedMotion, onDone, onAct }: Part & { reducedMotion: boolean }) {
   const length = 20;
   const [left, setLeft] = useState(length);
   const [score, setScore] = useState(0);
@@ -144,6 +168,14 @@ function Stars({
   const next = useRef(0);
   const scoreRef = useRef(0);
   const finished = useRef(false);
+  // She watches the sky with you, and cheers every fifth star.
+  useEffect(() => onAct('listen', 'happy'), [onAct]);
+  useEffect(() => {
+    if (!score || score % 5) return;
+    onAct('bounce', 'happy');
+    const back = setTimeout(() => onAct('listen', 'happy'), 1300);
+    return () => clearTimeout(back);
+  }, [score, onAct]);
   useEffect(() => {
     const spawn = setInterval(() => {
       setStars((items) => [...items.slice(-14), { id: next.current++, x: 6 + Math.random() * 88, delay: 0 }]);
@@ -199,11 +231,13 @@ function Stars({
   );
 }
 
-function ReadTogether({ name, onDone }: { name: string; onDone: Props['onDone'] }) {
+function ReadTogether({ name, onDone, onAct }: Part) {
   const [passage, setPassage] = useState(() => pick(passages));
+  // She reads from her book while the passage is shown.
+  useEffect(() => onAct('read', 'neutral'), [onAct]);
   return (
     <>
-      <p>{name}清了清嗓子，轻声念道：</p>
+      <p className="moment-intro">{name}清了清嗓子，轻声念道：</p>
       <blockquote className="moment-passage">{passage}</blockquote>
       <div className="moment-choices">
         <button

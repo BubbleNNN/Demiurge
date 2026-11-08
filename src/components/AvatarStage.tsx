@@ -20,6 +20,8 @@ interface Props {
   tracking?: boolean;
   zoom?: number;
   compact?: boolean;
+  /** A short look to one side (frame animation only). */
+  glance?: { side: 'left' | 'right'; key: number } | null;
 }
 let coreLoading: Promise<void> | null = null;
 function loadCore() {
@@ -50,6 +52,7 @@ export function AvatarStage({
   tracking = true,
   zoom = 1,
   compact = false,
+  glance = null,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const runtime = useRef<any>(null);
@@ -326,6 +329,7 @@ export function AvatarStage({
             tracking={tracking}
             zoom={zoom}
             enabled={motionEnabled}
+            glance={glance}
           />
         ) : image ? (
           <div

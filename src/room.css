@@ -144,7 +144,8 @@
 
 /* ── Room scene (home) ────────────────────────────── */
 .room-scene {
-  --figure-x: 40%;
+  /* She stands in the middle of the stage at every window width; her speech sits beside her head. */
+  --figure-x: 50%;
   position: relative;
   height: 100%;
   min-height: 620px;
@@ -861,11 +862,8 @@
   }
 }
 
-/* Narrower windows: move the character left and let the bubble take the room. */
+/* Narrower windows: she stays centred and the bubble beside her narrows. */
 @media (max-width: 1180px) {
-  .room-scene {
-    --figure-x: 33%;
-  }
   .room-dialogue {
     left: calc(var(--figure-x) + 130px);
     width: calc(100% - var(--figure-x) - 130px - 110px);

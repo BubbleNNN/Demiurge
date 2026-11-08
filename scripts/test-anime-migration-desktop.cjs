@@ -35,7 +35,9 @@ app.on('browser-window-created', (_e, win) => {
   win.webContents.setBackgroundThrottling(false);
   if (win.getTitle() === 'Mori 桌宠') return;
   win.webContents.once('did-finish-load', async () => {
-    if (win.webContents.getURL().includes('pet=1')) return;
+    // Only the workshop drives the test: not the pet, and not the fixture window made below.
+    const url = win.webContents.getURL();
+    if (url.includes('pet=1') || url.startsWith('data:')) return;
     try {
       const js = (s) => win.webContents.executeJavaScript(s, true);
       await wait(() => js('!!document.querySelector(".room-rail")'), 'home');
@@ -86,7 +88,7 @@ app.on('browser-window-created', (_e, win) => {
       );
       await pj('document.querySelector("[aria-label=结束桌面活动]").click()');
       await pj('document.querySelector("[aria-label=一起玩]").click()');
-      await wait(() => pj('!!document.querySelector(".pet-moment .moment-card")'), 'game');
+      await wait(() => pj('!!document.querySelector(".pet-moment-bubble .moment-card")'), 'game');
       fs.writeFileSync(path.join(dir, 'pet-interaction.png'), (await pet.webContents.capturePage()).toPNG());
       assert.equal(networkCalls, 0);
       fixture.destroy();

@@ -1,7 +1,8 @@
 import { useDesktopLife } from './features/desktop/useDesktopLife';
+import type { UserContext } from './userContext';
 import { isActivity, activityDuration, activities } from './animation/activities';
 import { activityIcons } from './features/companion/activityIcons';
-import { Moment, type MomentResult } from './features/companion/Moments';
+import { Moment, type MomentAct, type MomentResult } from './features/companion/Moments';
 import {
   advanceLife,
   createLife,
@@ -229,6 +230,10 @@ export default function App() {
   const [, setLifeVersion] = useState(0);
   const [invitation, setInvitation] = useState<MomentId | null>(null);
   const [moment, setMoment] = useState<MomentId | null>(null);
+  // Games and shared moments act themselves out through her motions; one stable callback, so a
+  // game's effects do not run again on every render.
+  const momentActRef = useRef<MomentAct>(() => {});
+  const actInMoment = useRef<MomentAct>((value, face) => momentActRef.current(value, face)).current;
   const activityEnd = useRef(0);
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [chatBusy, setChatBusy] = useState(false);
@@ -269,6 +274,8 @@ export default function App() {
   const [packsOpen, setPacksOpen] = useState(false);
   const [setupCharacterId, setSetupCharacterId] = useState('');
   const behavior = useRef(freshBehavior());
+  // Until when something the user asked for (a toolbar activity, a touch) keeps her where she is.
+  const userHeld = useRef(0);
   const interactionCounts = useRef<Record<string, number>>({});
   const [interactionLine, setInteractionLine] = useState('');
   const [resting, setResting] = useState(false);
@@ -336,7 +343,15 @@ export default function App() {
     JSON.stringify(memoryBase.current?.memories.find((memory) => memory.id === editingMemory.id)) !==
       JSON.stringify(latestEditingMemory);
   useEffect(() => {
-    if (action === 'idle' || action === 'sleep' || action.startsWith('walk_') || action === 'drag') return;
+    // Held until something else replaces them: walking, being carried, sleeping, listening.
+    if (
+      action === 'idle' ||
+      action === 'sleep' ||
+      action.startsWith('walk_') ||
+      action === 'drag' ||
+      action === 'listen'
+    )
+      return;
     const animation = spriteAnimation(skin),
       clip = animation?.clips[action];
     const duration = isActivity(action)
@@ -573,6 +588,8 @@ export default function App() {
     activityEnd.current = 0;
     setLifeVersion((v) => v + 1);
   }, [character.id]);
+  // What the user is doing, from the desktop pet's view of the desktop (see userContext.ts).
+  const contextRef = useRef<UserContext | null>(null);
   const desktop = useDesktopLife({
     petMode,
     characterId: character.id,
@@ -581,6 +598,7 @@ export default function App() {
     temperament: character.behavior,
     tired: lifeRef.current.activity === 'sleep' || lifeRef.current.energy < 18,
     occupied: isActivity(action),
+    held: () => userHeld.current > performance.now(),
     onAction: (a) =>
       setAction(
         supportsAction(skin, a) ? a : a === 'bounce' && supportsAction(skin, 'drag') ? 'drag' : 'idle',
@@ -590,7 +608,9 @@ export default function App() {
       setBubbleHidden(false);
     },
     onRemark: (line) => {
-      // Her own remarks share the attention budget with the routine's chatter.
+      // Her own remarks share the attention budget with the routine's chatter, and wait while
+      // the user is typing or in a meeting.
+      if (contextRef.current?.quiet) return;
       if (!mayRemark(attentionRef.current, Date.now(), userIdleRef.current)) return;
       recordRemark(attentionRef.current, Date.now());
       persistAttention();
@@ -609,6 +629,14 @@ export default function App() {
       const doing = lifeRef.current.activity;
       if (isActivity(doing) && supportsAction(skin, doing)) move(doing, 'neutral', true);
       else setAction(supportsAction(skin, 'read') ? 'read' : 'idle');
+    },
+    onContext: (context) => {
+      contextRef.current = context;
+    },
+    // Beside the user's window: carry on with what her routine has her doing.
+    onCompany: () => {
+      const doing = lifeRef.current.activity;
+      if (motionEnabled && isActivity(doing) && supportsAction(skin, doing)) move(doing, 'neutral', true);
     },
     onResult: (found) => {
       settleInvite(lifeRef.current, found ? 'accept' : 'ignored');
@@ -656,12 +684,26 @@ export default function App() {
       );
       setBubbleHidden(false);
     }
+    const context = contextRef.current;
     const step = advanceLife(life, {
       available: activities.map((item) => item.id),
       temperament: character.behavior,
       proactive: state.settings.proactiveEnabled !== false,
-      canInvite: mayInvite(attention, now, userIdleRef.current, character.behavior),
-      canRemark: mayRemark(attention, now, userIdleRef.current),
+      canInvite: !context?.quiet && mayInvite(attention, now, userIdleRef.current, character.behavior),
+      canRemark: !context?.quiet && mayRemark(attention, now, userIdleRef.current),
+      // What the user is doing shapes what she does: alongside them while they work, her own
+      // things while they are away.
+      ...(context
+        ? {
+            context: {
+              mode: context.mode,
+              key: context.app,
+              companion:
+                context.companion && supportsAction(skin, context.companion) ? context.companion : null,
+              idleMinutes: context.idleMinutes,
+            },
+          }
+        : {}),
       blocked:
         interactionBusy ||
         talking ||
@@ -680,6 +722,7 @@ export default function App() {
       !desktop.active &&
       !step.invite &&
       !life.pending &&
+      !context?.company &&
       ['read', 'diary', 'office'].includes(step.activity)
     )
       void desktop.explore('read', true);
@@ -729,6 +772,17 @@ export default function App() {
     setInteractionLine('');
     setMoment(id);
     persistLife();
+  }
+  momentActRef.current = (value, face = 'neutral') => {
+    if (!motionEnabled) {
+      setEmotion(supportsEmotion(skin, face) ? face : 'neutral');
+      return;
+    }
+    move(supportsAction(skin, value) ? value : 'idle', face, true);
+  };
+  function closeMoment() {
+    setMoment(null);
+    move('idle', 'neutral', true);
   }
   function declineInvitation() {
     settleInvite(lifeRef.current, 'decline');
@@ -822,7 +876,7 @@ export default function App() {
       const controls =
         e.target instanceof Element &&
         e.target.closest(
-          '.pet-toolbar-zone,.pet-composer-area,.pet-chat-panel,.pet-speech,.pet-invite,.pet-moment,.pet-toast',
+          '.pet-toolbar-zone,.pet-composer-area,.pet-chat-panel,.pet-speech,.pet-invite,.pet-moment-bubble,.star-field .falling-star,.pet-toast',
         );
       const figure = document.querySelector('.pet-draggable');
       const onFigure = Boolean(figure && hitCharacter(figure, e.clientX, e.clientY));
@@ -961,6 +1015,7 @@ export default function App() {
     if (!automatic) {
       if (desktop.active) desktop.stop();
       activityEnd.current = isActivity(value) ? Date.now() + activityDuration : 0;
+      userHeld.current = performance.now() + actionDuration(value);
     }
     behavior.current = {
       ...freshBehavior(),
@@ -1015,6 +1070,7 @@ export default function App() {
       wake: event === 'wake',
     });
     if (!admitted) return false;
+    if (!automatic) userHeld.current = Math.max(userHeld.current, admitted.until);
     behavior.current = admitted;
     interactionCounts.current[event] = (interactionCounts.current[event] || 0) + 1;
     setResting(admitted.resting);
@@ -1562,6 +1618,7 @@ export default function App() {
       tracking={tracking}
       zoom={view === 'desktop' || view === 'home' ? 1 : zoom}
       compact={petMode}
+      glance={petMode ? desktop.glance : null}
     />
   );
   const assetThumb = (item?: Skin) =>
@@ -1698,48 +1755,56 @@ export default function App() {
     const controlsAbove = petRoom.below < 64 && petRoom.above > petRoom.below;
     const speechText = interactionLine || lastReply?.content || '';
     // Near a screen edge her speech and the controls can share one band.
-    const speech =
-      desktop.phase === 'inviting' ? (
-        <div className="pet-invite" role="status">
-          <p>{desktop.status}</p>
-          <button onClick={desktop.start}>好呀，去藏吧</button>
-          <button onClick={desktop.decline}>等会儿</button>
-        </div>
-      ) : invitation && !moment && !petChat ? (
-        <div className="pet-invite" role="status">
-          <p>{momentOffers[invitation].invite}</p>
-          <button onClick={() => openMoment(invitation)}>好呀，一起</button>
-          <button onClick={declineInvitation}>等会儿</button>
-        </div>
-      ) : toast ? (
-        <div className="pet-toast" role="status">
-          {toast}
-        </div>
-      ) : !petChat && !moment && interactionBusy ? (
-        <div className="pet-speech thinking" role="status" aria-label={`${character.name}正在想怎么回应你`}>
-          <i />
-          <i />
-          <i />
-        </div>
-      ) : !petChat && !moment && !bubbleHidden && speechText ? (
-        <div
-          className="pet-speech"
-          role="status"
-          title="点一下回复"
-          onClick={(event) => {
-            if (!(event.target instanceof Element && event.target.closest('button'))) openPetComposer();
-          }}
-        >
-          <p>{speechText}</p>
-          <button
-            className="pet-speech-close"
-            aria-label="收起回复气泡"
-            onClick={() => setBubbleHidden(true)}
-          >
-            <X size={12} />
-          </button>
-        </div>
-      ) : null;
+    const speech = moment ? (
+      // A shared moment is a small bubble above her; she acts it out below it.
+      <div className="pet-moment-bubble">
+        <Moment
+          id={moment}
+          name={character.name}
+          reducedMotion={!motionEnabled}
+          onDone={finishMoment}
+          onClose={closeMoment}
+          onAct={actInMoment}
+          compact
+        />
+      </div>
+    ) : desktop.phase === 'inviting' ? (
+      <div className="pet-invite" role="status">
+        <p>{desktop.status}</p>
+        <button onClick={desktop.start}>好呀，去藏吧</button>
+        <button onClick={desktop.decline}>等会儿</button>
+      </div>
+    ) : invitation && !moment && !petChat ? (
+      <div className="pet-invite" role="status">
+        <p>{momentOffers[invitation].invite}</p>
+        <button onClick={() => openMoment(invitation)}>好呀，一起</button>
+        <button onClick={declineInvitation}>等会儿</button>
+      </div>
+    ) : toast ? (
+      <div className="pet-toast" role="status">
+        {toast}
+      </div>
+    ) : !petChat && !moment && interactionBusy ? (
+      <div className="pet-speech thinking" role="status" aria-label={`${character.name}正在想怎么回应你`}>
+        <i />
+        <i />
+        <i />
+      </div>
+    ) : !petChat && !moment && !bubbleHidden && speechText ? (
+      <div
+        className="pet-speech"
+        role="status"
+        title="点一下回复"
+        onClick={(event) => {
+          if (!(event.target instanceof Element && event.target.closest('button'))) openPetComposer();
+        }}
+      >
+        <p>{speechText}</p>
+        <button className="pet-speech-close" aria-label="收起回复气泡" onClick={() => setBubbleHidden(true)}>
+          <X size={12} />
+        </button>
+      </div>
+    ) : null;
     const controls = petChat ? null : petComposer ? (
       <div className="pet-composer-area">
         <div className="pet-composer" role="group" aria-label={`和${character.name}说话`}>
@@ -1905,17 +1970,6 @@ export default function App() {
           {speechBelow && speech}
           {!controlsAbove && controls}
         </div>
-        {moment && (
-          <div className="pet-moment">
-            <Moment
-              id={moment}
-              name={character.name}
-              reducedMotion={!motionEnabled}
-              onDone={finishMoment}
-              onClose={() => setMoment(null)}
-            />
-          </div>
-        )}
         {petChat && <div className="pet-chat-panel">{conversationPanel('pet')}</div>}
         <div
           className="pet-draggable"
@@ -2137,7 +2191,8 @@ export default function App() {
                   name={character.name}
                   reducedMotion={!motionEnabled || matchMedia('(prefers-reduced-motion: reduce)').matches}
                   onDone={finishMoment}
-                  onClose={() => setMoment(null)}
+                  onClose={closeMoment}
+                  onAct={actInMoment}
                 />
               ) : undefined
             }

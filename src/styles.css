@@ -3335,9 +3335,8 @@ select:focus {
   font-size: 11px;
   line-height: 1.5;
 }
-/* The full conversation and shared moments cover her and the on-screen parts of both bands. */
-.pet-chat-panel,
-.pet-moment {
+/* The full conversation covers her and the on-screen parts of both bands. */
+.pet-chat-panel {
   position: absolute;
   top: calc(var(--band-top) - var(--room-above) + 4px);
   bottom: calc(var(--band-bottom) - var(--room-below) + 4px);
@@ -3354,13 +3353,75 @@ select:focus {
   flex-direction: column;
   overflow: hidden;
 }
-.pet-moment {
-  overflow: auto;
+/* A shared moment on the desktop: a small bubble above her (she acts the game out below it). */
+.pet-moment-bubble {
+  display: flex;
+  min-height: 0;
+  max-width: 100%;
 }
-.pet-moment .moment-card {
-  margin: 0;
-  min-width: 0;
-  padding: 12px;
+.moment-card.compact {
+  position: relative;
+  gap: 6px;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 8px 28px 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 4px 14px #49334214;
+  /* No entrance transform: the star field inside is positioned against the window. */
+  animation: none;
+}
+.moment-card.compact > header {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+.moment-card.compact > header strong,
+.moment-card.compact .moment-intro {
+  display: none;
+}
+.moment-card.compact .moment-close {
+  width: 22px;
+  height: 22px;
+}
+.moment-card.compact p {
+  font-size: 12px;
+  line-height: 1.55;
+}
+.moment-card.compact .moment-meta {
+  font-size: 11px;
+}
+.moment-card.compact .moment-choices {
+  gap: 6px;
+}
+.moment-card.compact .moment-choices button {
+  height: 28px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+.moment-card.compact .moment-passage {
+  padding: 6px 9px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+/* Stars fall around her on the desktop, over a transparent sky; only the stars take clicks. */
+.moment-card.compact .star-field {
+  position: fixed;
+  top: var(--band-top);
+  bottom: var(--band-bottom);
+  left: 0;
+  right: 0;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  pointer-events: none;
+  z-index: 9;
+}
+.moment-card.compact .falling-star {
+  pointer-events: auto;
 }
 .pet-chat-panel .chat-header {
   min-height: 64px;

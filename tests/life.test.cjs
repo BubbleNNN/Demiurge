@@ -120,3 +120,74 @@ test('reopening within half an hour continues the same activity; later only the 
   assert.equal(later.hunger, 44);
   assert.equal(life.restoreLife({ version: 9 }, now).activity, 'idle');
 });
+
+test('what the user is doing shapes her routine: alongside their work, her own fun while they are away', () => {
+  const all = ['read', 'gaming', 'snack', 'music', 'diary', 'office'];
+  const temperament = { energy: 50, affection: 50, curiosity: 50 };
+  const coding = { mode: 'typing', key: 'com.microsoft.VSCode', companion: 'office', idleMinutes: 0 };
+  // The user opens their editor while she is playing: she wraps up and works beside them.
+  let s = life.createLife(0);
+  s.activity = 'gaming';
+  s.until = 10 * 60000;
+  let seed = 3;
+  const random = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const step = life.advanceLife(s, {
+    now: 5000,
+    hour: 15,
+    available: all,
+    temperament,
+    context: coding,
+    random: () => 0.1,
+  });
+  assert.equal(step.activity, 'office');
+  assert.equal(step.changed, true);
+  // Once per change of app: the next ticks do not restart it.
+  const until = s.until;
+  life.advanceLife(s, { now: 10000, hour: 15, available: all, temperament, context: coding, random });
+  assert.equal(s.until, until);
+  // Without that activity in her pack, nothing is forced.
+  s = life.createLife(0);
+  s.activity = 'gaming';
+  s.until = 10 * 60000;
+  assert.equal(
+    life.advanceLife(s, {
+      now: 5000,
+      hour: 15,
+      available: all,
+      temperament,
+      context: { ...coding, companion: null },
+      random,
+    }).changed,
+    false,
+  );
+  // Away a long while: she naps; away a little: she plays more than she works.
+  s = life.createLife(0);
+  s.energy = 60;
+  s.until = 0;
+  const away = { mode: 'away', key: '', companion: null, idleMinutes: 30 };
+  assert.equal(
+    life.advanceLife(s, { now: 1000, hour: 15, available: all, temperament, context: away, random }).activity,
+    'sleep',
+  );
+  const kinds = { alone: {}, working: {} };
+  for (let i = 0; i < 400; i++) {
+    for (const [name, context] of [
+      ['alone', { mode: 'away', key: '', companion: null, idleMinutes: 8 }],
+      ['working', { mode: 'idle', key: '', companion: null, idleMinutes: 2 }],
+    ]) {
+      const t = life.createLife(0);
+      t.until = 0;
+      const picked = life.advanceLife(t, {
+        now: 1000,
+        hour: 15,
+        available: all,
+        temperament,
+        context,
+        random,
+      }).activity;
+      kinds[name][picked] = (kinds[name][picked] || 0) + 1;
+    }
+  }
+  assert.ok((kinds.alone.gaming || 0) > (kinds.working.gaming || 0), JSON.stringify(kinds));
+  assert.ok((kinds.alone.office || 0) < (kinds.working.office || 0), JSON.stringify(kinds));
+});

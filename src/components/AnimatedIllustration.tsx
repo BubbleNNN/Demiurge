@@ -20,7 +20,12 @@ interface Props {
   tracking: boolean;
   zoom: number;
   enabled: boolean;
+  /** A short look to one side: the turn that starts her walk that way, held, then back. */
+  glance?: { side: 'left' | 'right'; key: number } | null;
 }
+// How long a glance lasts, and the turn in and out of it, in milliseconds.
+const GLANCE = 1500,
+  GLANCE_TURN = 130;
 export function AnimatedIllustration(props: Props) {
   // Older generated packs play on a rest pose drawn like their motions (see animation/rest.ts).
   const source = spriteAnimation(props.skin);
@@ -59,6 +64,9 @@ export function AnimatedIllustration(props: Props) {
     const loading = new Set<number>();
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     const playback = newActivityPlayback();
+    let glanceKey = 0,
+      glanceAt = -Infinity,
+      glanceSide: 'left' | 'right' = 'left';
     const ensurePage = (page: number) => {
       if (pages.has(page) || loading.has(page)) return;
       const src = pageSource(imageUrl!, animation, page);
@@ -110,7 +118,7 @@ export function AnimatedIllustration(props: Props) {
         paused,
         speechInterrupt,
       );
-      const selected =
+      let selected =
         activity ||
         selectSpriteFrame(animation, {
           time,
@@ -122,6 +130,26 @@ export function AnimatedIllustration(props: Props) {
           mouth: p.mouth.current,
           paused,
         });
+      // A glance interrupts only standing still: idle, blinking or listening.
+      if (p.glance && p.glance.key !== glanceKey) {
+        glanceKey = p.glance.key;
+        glanceAt = time;
+        glanceSide = p.glance.side;
+      }
+      const turn = animation.clips[`enter_walk_${glanceSide}`];
+      const looked = time - glanceAt;
+      if (
+        !paused &&
+        looked >= 0 &&
+        looked < GLANCE &&
+        turn &&
+        turn.frames.length >= 2 &&
+        ['idle', 'blink', 'listen'].includes(selected.clip)
+      )
+        selected = {
+          frame: looked < GLANCE_TURN || looked > GLANCE - GLANCE_TURN ? turn.frames[0] : turn.frames[1],
+          clip: 'glance',
+        };
       // A frame whose page is still loading keeps the last drawn frame on screen meanwhile.
       let shown = selected.frame;
       if (!cells[shown]) {

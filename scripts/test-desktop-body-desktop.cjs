@@ -44,9 +44,12 @@ let surfaces = [];
 // Only the first window (the workshop) drives the test; the pet and fixture windows do not.
 let started = false;
 require('../electron/desktop-icons.cjs').desktopIcons = async () => ({ supported: true, icons: [] });
+// What the user is doing, as the helper would report it (none unless a step sets it).
+let activity = () => undefined;
 require('../electron/desktop-surfaces.cjs').desktopSurfaces = async () => ({
   supported: true,
   surfaces: surfaces(),
+  ...(activity() ? { activity: activity() } : {}),
 });
 surfaces = () => [];
 app.on('browser-window-created', (_e, win) => {
@@ -170,6 +173,48 @@ app.on('browser-window-created', (_e, win) => {
         );
       const opacity = (selector) =>
         pj(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).opacity`).then(Number);
+
+      const status = () => pj('document.querySelector(".desktop-pet-shell").dataset.status');
+
+      // 1b. The user types in an editor: she goes to stand beside its window, not over it, and
+      // goes back to her own life when the user is away.
+      const editor = new BrowserWindow({
+        x: area.x + 160,
+        y: area.y + 90,
+        width: 620,
+        height: 420,
+        show: true,
+        title: 'editor',
+      });
+      await editor.loadURL('data:text/html,<p>Editor fixture window</p>');
+      const eb = editor.getBounds();
+      const typing = {
+        app: { bundle: 'com.microsoft.VSCode', name: 'Code' },
+        self: false,
+        keyIdle: 1,
+        pointerIdle: 1,
+        focus: { id: 'editor', ...eb },
+      };
+      surfaces = () =>
+        editor.isDestroyed() ? [] : [{ ...editor.getBounds(), id: 'editor', app: 'com.microsoft.VSCode' }];
+      activity = () => typing;
+      await wait(async () => (await status()).includes('陪着你'), 'keeping the user company', 500);
+      const beside = await feet();
+      const width = await pj(
+        `(() => { const c = document.querySelector('.pet-draggable canvas'); return JSON.parse(c.dataset.figureBounds).width * c.offsetWidth / c.width; })()`,
+      );
+      assert.ok(
+        beside.x - width / 2 >= eb.x + eb.width - width * 0.2 || beside.x + width / 2 <= eb.x + width * 0.2,
+        'beside the window, hardly over it',
+      );
+      assert.ok(near(beside.y, eb.y + eb.height), 'feet level with the window bottom');
+      fs.writeFileSync(path.join(dir, 'pet-company.png'), (await pet.webContents.capturePage()).toPNG());
+      activity = () => ({ ...typing, keyIdle: 900, pointerIdle: 900 });
+      await wait(async () => !(await status()).includes('陪着你'), 'back to her own life', 200);
+      report.company = { window: eb, feet: beside };
+      activity = () => undefined;
+      editor.destroy();
+      surfaces = () => [];
 
       // 2. Lift her and let go in the middle of the screen: she swings while carried and then
       // stays exactly where she was put. There is no gravity.
@@ -357,6 +402,28 @@ app.on('browser-window-created', (_e, win) => {
       );
       fs.writeFileSync(path.join(dir, 'pet-chat.png'), (await pet.webContents.capturePage()).toPNG());
       report.chat = { reply };
+
+      // 9b. A game on the desktop: a small bubble above her, never over her.
+      await pj('document.querySelector(\'[aria-label="收起输入框"]\').click()');
+      await wait(() => pj('!!document.querySelector(\'[aria-label="一起玩"]\')'), 'toolbar back');
+      await pj('document.querySelector(\'[aria-label="一起玩"]\').click()');
+      await wait(
+        () => pj('!!document.querySelector(".pet-moment-bubble .moment-card.compact")'),
+        'game bubble',
+      );
+      const game = await rect('.pet-moment-bubble');
+      assert.ok(game.bottom <= bands.top + 2, 'the game sits above her');
+      assert.ok(!(await pj('!!document.querySelector(".pet-moment")')), 'no card over her');
+      await pj(
+        '[...document.querySelectorAll(".pet-moment-bubble button")].find((b) => b.textContent.includes("左手")).click()',
+      );
+      await wait(
+        () => pj('/猜中|另一只手/.test(document.querySelector(".pet-moment-bubble").textContent)'),
+        'her answer',
+      );
+      fs.writeFileSync(path.join(dir, 'pet-game.png'), (await pet.webContents.capturePage()).toPNG());
+      await pj('document.querySelector(\'[aria-label="结束这个小活动"]\').click()');
+      await wait(() => pj('!document.querySelector(".pet-moment-bubble")'), 'game closed');
 
       // 10. She reopens where she was left.
       const left = pet.getBounds();

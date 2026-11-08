@@ -27,7 +27,19 @@ export interface LifeState {
   pending: { offer: MomentId; expires: number } | null;
   lastOffer?: MomentId;
   moments: Moment[];
-  desktopEvents?: {at:number;text:string}[];
+  desktopEvents?: { at: number; text: string }[];
+  /** The app the user was working in when she last chose something to do alongside them. */
+  contextKey?: string;
+}
+/** What the user is doing (see userContext.ts), as far as her routine needs to know. */
+export interface LifeContext {
+  mode: 'typing' | 'active' | 'idle' | 'away';
+  /** The front app, to notice when the user turns to something else. */
+  key: string;
+  /** What she can do beside the user to go with their work (her pack has it), if anything. */
+  companion: Activity | null;
+  /** Minutes without any input. */
+  idleMinutes: number;
 }
 export interface Temperament {
   energy: number;
@@ -80,7 +92,7 @@ export function restoreLife(value: unknown, now = Date.now()): LifeState {
     missed: Math.min(4, Math.max(0, number(saved.missed, 0))),
     moments: Array.isArray(saved.moments) ? saved.moments.slice(-12) : [],
     lastOffer: saved.lastOffer,
-    desktopEvents:Array.isArray(saved.desktopEvents)?saved.desktopEvents.slice(-12):[],
+    desktopEvents: Array.isArray(saved.desktopEvents) ? saved.desktopEvents.slice(-12) : [],
   };
   // Within half an hour she simply continues what she was doing; after that she starts fresh.
   if (now - number(saved.updatedAt, 0) < 30 * 60000)
@@ -107,13 +119,16 @@ function chooseActivity(
   temperament: Temperament,
   hour: number,
   random: () => number,
+  // With the user away she plays more; quiet work is for keeping them company.
+  away = false,
 ): Activity {
+  const fun = away ? 2 : 1;
   const weights: Record<Activity, number> = {
-    office: 1 + temperament.curiosity / 70,
+    office: (1 + temperament.curiosity / 70) / fun,
     read: 2 + temperament.curiosity / 40 + (hour >= 20 ? 1 : 0),
-    gaming: 1 + temperament.energy / 35,
-    snack: [10, 15, 16, 21].includes(hour) ? 2 : 0.6,
-    music: 1.2 + temperament.affection / 80,
+    gaming: (1 + temperament.energy / 35) * fun,
+    snack: ([10, 15, 16, 21].includes(hour) ? 2 : 0.6) * (away ? 1.5 : 1),
+    music: (1.2 + temperament.affection / 80) * (away ? 1.5 : 1),
     diary: 1 + temperament.curiosity / 60 + (hour >= 21 ? 1.5 : 0),
   };
   const pool = available.filter((activity) => activity !== previous);
@@ -133,11 +148,13 @@ const REASONS: Record<string, string[]> = {
   hungry: ['肚子有点饿了，先吃点东西，待会儿接着做。', '嘴有点馋了，吃块点心再继续。'],
   resume: ['休息好了，接着刚才那一段。', '回来啦，继续刚刚没做完的事。'],
   stretch: ['专心太久啦，起来活动一下。', '眼睛有点累了，先放松一会儿。'],
+  company: ['你在忙，我就在旁边陪你一起做点事。', '我也找点事情做，陪着你。'],
+  alone: ['你不在，我先自己玩一会儿。', '等你回来之前，做点自己喜欢的事。'],
   read: ['接着看下一段。', '这本书正看到有意思的地方。', '找到一本想读的书，读一会儿。'],
   gaming: ['玩一小局放松一下。', '这一关我一定能过！'],
   snack: ['来块小点心，心情会变好。', '甜甜的东西最适合现在了。'],
   music: ['听首喜欢的歌，安静一会儿。', '这首歌的旋律好温柔。'],
-  office:['先把手头这点事情做完。','还有一点没做完，再专心一会儿。'],
+  office: ['先把手头这点事情做完。', '还有一点没做完，再专心一会儿。'],
   diary: ['把今天的小事记下来吧。', '写几行日记，留住这一刻。'],
   idle: ['就这样待一会儿也很好。', '发一小会儿呆。'],
 };
@@ -194,6 +211,8 @@ export function advanceLife(
     // The attention budget (see attention.ts): whether she may invite or remark right now.
     canInvite = true,
     canRemark = true,
+    // What the user is doing, when the desktop pet can see it (macOS).
+    context = undefined as LifeContext | undefined,
   } = {},
 ): LifeStep | null {
   const elapsed = Math.max(0, now - s.updatedAt);
@@ -209,8 +228,19 @@ export function advanceLife(
   );
   // Affectionate characters want company sooner.
   s.social = clamp(s.social + (1.5 + temperament.affection / 40) * minutes);
-  s.focus = clamp(s.focus + (['read', 'diary', 'office', 'gaming'].includes(s.activity) ? 12 : -15) * minutes);
+  s.focus = clamp(
+    s.focus + (['read', 'diary', 'office', 'gaming'].includes(s.activity) ? 12 : -15) * minutes,
+  );
 
+  // The user turned to something she can do alongside them (writing, coding, reading…): she
+  // finishes up and joins in, once per change of app rather than every few seconds.
+  const working = context && (context.mode === 'typing' || context.mode === 'active');
+  const away = context?.mode === 'away';
+  if (working && context.companion && context.key !== s.contextKey) {
+    s.contextKey = context.key;
+    if (s.activity !== context.companion && s.activity !== 'sleep' && s.hunger <= 62)
+      s.until = Math.min(s.until, now);
+  }
   let changed = false;
   let announce = false;
   if (now >= s.until) {
@@ -232,6 +262,13 @@ export function advanceLife(
       s.resume = resumable(previous);
       s.activity = 'idle';
       key = 'stretch';
+    } else if (working && context.companion && available.includes(context.companion) && random() < 0.8) {
+      s.activity = context.companion;
+      key = 'company';
+    } else if (away && context.idleMinutes >= 20 && (s.energy < 70 || quiet(hour))) {
+      // A long while alone: she naps until the user comes back.
+      s.activity = 'sleep';
+      key = 'sleep';
     } else {
       s.activity = chooseActivity(
         previous,
@@ -239,8 +276,9 @@ export function advanceLife(
         temperament,
         hour,
         random,
+        away,
       );
-      key = s.activity;
+      key = away && random() < 0.5 ? 'alone' : s.activity;
     }
     s.reason = reasonFor(key, random);
     s.chapter++;
@@ -310,7 +348,10 @@ export function lifeSituation(s: LifeState, doing: Record<string, string>, now =
     doing: s.activity === 'sleep' ? '在休息' : doing[s.activity] || '',
     reason: s.reason,
     feeling: needs,
-    desktopMoments:(s.desktopEvents||[]).filter(e=>now-e.at<6*3600000).slice(-3).map(e=>e.text),
+    desktopMoments: (s.desktopEvents || [])
+      .filter((e) => now - e.at < 6 * 3600000)
+      .slice(-3)
+      .map((e) => e.text),
     recentMoments: s.moments
       .filter((moment) => now - moment.at < 6 * 3600000)
       .slice(-3)

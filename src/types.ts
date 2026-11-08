@@ -587,8 +587,20 @@ export interface DesktopScene {
   area: DesktopRect;
   /** How far the pet window may hang past the top and bottom of the work area. */
   margins?: { top: number; bottom: number };
-  surfaces: (DesktopRect & { id: string })[];
+  /** Visible app windows, front to back; `app` is the owning app's bundle identifier or name. */
+  surfaces: (DesktopRect & { id: string; app?: string })[];
   icons: (DesktopRect & { id: string })[];
   supported: boolean;
   reason?: string;
+  /** What the user is doing (macOS): the front app and its window, seconds since input. */
+  activity?: UserActivity;
+}
+export interface UserActivity {
+  app: { bundle: string; name: string } | null;
+  /** Mori itself is in front: the user is with her rather than in another app. */
+  self?: boolean;
+  keyIdle: number;
+  pointerIdle: number;
+  /** The front app's front window. */
+  focus?: DesktopRect & { id: string };
 }

@@ -183,6 +183,7 @@ function loadWindow(window, petMode = false) {
 let quitting = false;
 app.on('before-quit', () => {
   quitting = true;
+  require('./desktop-surfaces.cjs').stopWatching();
 });
 // Settings and drafts save a moment after each change. Closing the window or quitting first lets
 // the page finish those writes (bounded, so a stuck page can never block quitting).
@@ -383,7 +384,9 @@ async function createPet() {
   });
   pet.on('closed', () => {
     pet = null;
+    require('./desktop-surfaces.cjs').stopWatching();
   });
+  require('./desktop-surfaces.cjs').startWatching();
   loadWindow(pet, true).catch((error) => dialog.showErrorBox('无法打开桌宠', error.message));
 }
 
@@ -1201,6 +1204,8 @@ app.whenReady().then(async () => {
       // How far the window may hang past the top and bottom of the work area.
       margins: { top, bottom },
       surfaces: windows.surfaces,
+      // What the user is doing: the front app, its window, and seconds since typing or pointing.
+      ...(windows.activity ? { activity: windows.activity } : {}),
       icons: targets.icons,
       supported: windows.supported,
       reason: windows.reason || targets.reason,
