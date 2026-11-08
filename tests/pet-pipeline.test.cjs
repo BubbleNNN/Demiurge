@@ -701,3 +701,37 @@ test('a finished pack as large as the atlas cap is read back; smaller task recor
   await fs.writeFile(packFile, JSON.stringify(saved));
   await assert.rejects(createPetPipeline(context.options).results(job.id), /无效或过大/);
 });
+
+test('a finished task can be repacked from its saved sheets without any image request, replacing its result', async (t) => {
+  const installs = [];
+  const context = await setup(t, {
+    installSkin: async (skin, digest, replaces) => {
+      installs.push({ id: skin.id, replaces });
+    },
+  });
+  let job = await context.pipeline.start(character, { styles: ['3d'], motions: ['wave'] }, settings, {});
+  while (job.status !== 'ready') job = await context.pipeline.advance(job.id, character, settings, {});
+  const calls = context.calls();
+  const first = job.results[0].skinId;
+  await assert.rejects(context.pipeline.repack('0'.repeat(8) + '-0000-4000-8000-' + '0'.repeat(12)), /./);
+  job = await context.pipeline.repack(job.id);
+  assert.equal(job.status, 'queued');
+  assert.equal(job.steps.at(-1).status, 'queued');
+  assert.equal(job.steps.at(-1).replaces, first);
+  assert.deepEqual(job.steps.slice(0, -1).map((s) => s.status), ['done', 'done'], 'saved sheets are reused');
+  job = await createPetPipeline(context.options).advance(job.id, character, settings, {});
+  assert.equal(job.status, 'ready');
+  assert.equal(context.calls(), calls, 'no image request');
+  assert.equal(job.results.length, 1);
+  assert.notEqual(job.results[0].skinId, first);
+  assert.equal(installs.at(-1).replaces, first, 'the earlier result is named for replacement');
+  assert.equal(job.steps.at(-1).replaces, undefined);
+  assert.ok((await fs.readdir(context.root)).some((name) => name.includes('.superseded-')), 'the earlier atlas is kept on disk');
+  await assert.rejects(
+    (async () => {
+      const busy = await context.pipeline.repack(job.id);
+      return context.pipeline.repack(busy.id);
+    })(),
+    /只有已完成/,
+  );
+});

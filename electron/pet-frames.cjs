@@ -89,6 +89,183 @@ function footAnchor(frame, box) {
     }
   return { x: count ? sum / count : (box.left + box.right) / 2, y: box.bottom };
 }
+// Image models space the poses of a sheet evenly, but rarely on the equal grid: a row of four
+// is often drawn about 8% narrower than the canvas and each row sits at its own height. Cutting
+// equal cells and keeping one registration per clip turns that layout error into motion, and a
+// hair tip crossing a grid line is cut off one pose and pasted into the next.
+//
+// Twelve-frame sheets are therefore read by shape: every connected figure is assigned to the
+// cell holding its centre and copied whole, foreign pieces are removed from each cell, and each
+// pose is registered by where the model actually put its column and its floor line. Pixels move
+// by whole steps only; nothing is resized.
+function labelFigures(sheet) {
+  const { width, height, bitmap } = sheet;
+  const labels = new Int32Array(width * height);
+  const stack = new Int32Array(width * height);
+  const figures = [];
+  for (let start = 0; start < width * height; start++) {
+    if (labels[start] || bitmap[start * 4 + 3] < 24) continue;
+    const figure = { id: figures.length + 1, count: 0, sumX: 0, sumY: 0, left: width, right: -1, top: height, bottom: -1 };
+    figures.push(figure);
+    let top = 0;
+    stack[top++] = start;
+    labels[start] = figure.id;
+    while (top) {
+      const p = stack[--top],
+        x = p % width,
+        y = (p - x) / width;
+      figure.count++;
+      figure.sumX += x;
+      figure.sumY += y;
+      if (x < figure.left) figure.left = x;
+      if (x > figure.right) figure.right = x;
+      if (y < figure.top) figure.top = y;
+      if (y > figure.bottom) figure.bottom = y;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx,
+            ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const q = ny * width + nx;
+          if (!labels[q] && bitmap[q * 4 + 3] >= 24) {
+            labels[q] = figure.id;
+            stack[top++] = q;
+          }
+        }
+    }
+  }
+  return { labels, figures };
+}
+const median = (values) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+function registeredFrames(sheet, recipe, width, height, edgeContacts) {
+  const { columns, rows, count } = recipe;
+  const cellW = sheet.width / columns,
+    cellH = sheet.height / rows;
+  const { labels, figures } = labelFigures(sheet);
+  if (figures.reduce((n, figure) => n + figure.count, 0) > sheet.width * sheet.height * 0.6)
+    throw new Error('生成帧没有透明背景，请换用支持透明 PNG 的图像接口。');
+  const owner = new Map(); // figure id -> frame index
+  const parts = Array.from({ length: count }, () => []);
+  for (const figure of figures) {
+    if (figure.right - figure.left + 1 > cellW * 1.4 || figure.bottom - figure.top + 1 > cellH * 1.4)
+      throw new Error('相邻两格的人物连在一起，无法分开成单独的帧。请重新生成这个动作，让每个姿势之间留出透明间隔。');
+    const col = Math.min(columns - 1, Math.max(0, Math.floor(figure.sumX / figure.count / cellW)));
+    const row = Math.min(rows - 1, Math.max(0, Math.floor(figure.sumY / figure.count / cellH)));
+    owner.set(figure.id, row * columns + col);
+    parts[row * columns + col].push(figure);
+  }
+  // The largest shape in a cell is the character; its centre and lowest point register the pose.
+  const main = parts.map((list, index) => {
+    if (!list.length) throw new Error(`第 ${index + 1} 帧没有角色内容。请重新生成这个动作。`);
+    return list.reduce((a, b) => (b.count > a.count ? b : a));
+  });
+  const margin = Math.max(1, Math.floor(Math.min(cellW, cellH) * 0.015));
+  // A figure cut by the sheet border is really clipped; a narrow graze is kept and reported.
+  for (let index = 0; index < count; index++)
+    for (const figure of parts[index]) {
+      const own = (x, y) => labels[y * sheet.width + x] === figure.id && sheet.bitmap[(y * sheet.width + x) * 4 + 3] >= 128;
+      for (const [side, touches, length, at] of [
+        ['top', figure.top < margin, cellW, (i, d) => [i, d]],
+        ['bottom', figure.bottom >= sheet.height - margin, cellW, (i, d) => [i, sheet.height - 1 - d]],
+        ['left', figure.left < margin, cellH, (i, d) => [d, i]],
+        ['right', figure.right >= sheet.width - margin, cellH, (i, d) => [sheet.width - 1 - d, i]],
+      ]) {
+        if (!touches) continue;
+        const along = side === 'top' || side === 'bottom' ? sheet.width : sheet.height;
+        let span = 0;
+        for (let i = 0; i < along; i++)
+          for (let d = 0; d < margin; d++) {
+            const [x, y] = at(i, d);
+            if (own(x, y)) {
+              span++;
+              break;
+            }
+          }
+        if (!span) continue;
+        if (span > length * 0.1)
+          throw new Error('人物贴近画布或分格边缘，可能被裁切。请重新生成这个动作，保留头发、手和脚的留白。');
+        edgeContacts.push({ frame: index + 1, side, span });
+      }
+    }
+  // Columns: the model's real column centres, fitted across every row. A layout that already
+  // matches the equal grid keeps exact grid spacing, so well-drawn sheets are untouched.
+  const centres = main.map((figure) => figure.sumX / figure.count);
+  const columnCentre = Array.from({ length: columns }, (_, c) =>
+    median(centres.filter((_, index) => index % columns === c)),
+  );
+  const meanC = (columns - 1) / 2,
+    meanX = columnCentre.reduce((a, b) => a + b, 0) / columns;
+  let slope =
+    columnCentre.reduce((s, x, c) => s + (c - meanC) * (x - meanX), 0) /
+    columnCentre.reduce((s, _, c) => s + (c - meanC) ** 2, 0);
+  if (!Number.isFinite(slope) || Math.abs(slope / cellW - 1) <= 0.02 || Math.abs(slope / cellW - 1) > 0.25)
+    slope = cellW;
+  const slotX = (col) => meanX + (col - meanC) * slope;
+  // Rows: every twelve-frame motion stays on the floor (sitting, lying, walking in place), so
+  // each row's floor line is its median lowest point; poses inside a row keep their own heights.
+  const floor = Array.from({ length: rows }, (_, r) =>
+    median(main.filter((_, index) => Math.floor(index / columns) === r).map((figure) => figure.bottom)),
+  );
+  // Row 1 keeps its old place in the canvas, so a sheet already on the grid packs as before.
+  const floorY = height - (cellH - (floor[0] - 0));
+  const offsets = main.map((_, index) => {
+    const col = index % columns,
+      row = Math.floor(index / columns);
+    return [Math.round(width / 2 - slotX(col)), Math.round(floorY - floor[row])];
+  });
+  // Grow the canvas only as much as the placed figures need, keeping the safety margin.
+  let padLeft = 0,
+    padRight = 0,
+    padTop = 0,
+    padBottom = 0;
+  // Wider than the edge check's own margin, which grows with the canvas.
+  const frameMargin = Math.floor(Math.min(width, height) * 0.02) + 2;
+  for (let index = 0; index < count; index++)
+    for (const figure of parts[index]) {
+      const [ox, oy] = offsets[index];
+      padLeft = Math.max(padLeft, frameMargin - (figure.left + ox));
+      padRight = Math.max(padRight, figure.right + ox - (width - 1 - frameMargin));
+      padTop = Math.max(padTop, frameMargin - (figure.top + oy));
+      padBottom = Math.max(padBottom, figure.bottom + oy - (height - 1 - frameMargin));
+    }
+  const padX = Math.max(padLeft, padRight),
+    canvasW = width + 2 * padX,
+    canvasH = height + padTop + padBottom;
+  return offsets.map(([ox, oy], index) => {
+    const bitmap = Buffer.alloc(canvasW * canvasH * 4);
+    const col = index % columns,
+      row = Math.floor(index / columns);
+    const x0 = Math.floor(col * cellW),
+      x1 = Math.floor((col + 1) * cellW),
+      y0 = Math.floor(row * cellH),
+      y1 = Math.floor((row + 1) * cellH);
+    const tx = ox + padX,
+      ty = oy + padTop;
+    const put = (x, y) => {
+      const cx = x + tx,
+        cy = y + ty;
+      if (cx < 0 || cy < 0 || cx >= canvasW || cy >= canvasH) return;
+      sheet.bitmap.copy(bitmap, (cy * canvasW + cx) * 4, (y * sheet.width + x) * 4, (y * sheet.width + x) * 4 + 4);
+    };
+    // The cell itself, faint edge pixels included, minus pieces of neighbouring poses.
+    for (let y = y0; y < y1; y++)
+      for (let x = x0; x < x1; x++) {
+        const id = labels[y * sheet.width + x];
+        if (!id || owner.get(id) === index) put(x, y);
+      }
+    // Parts of this pose that cross the grid line into a neighbouring cell.
+    for (const figure of parts[index])
+      if (figure.left < x0 || figure.right >= x1 || figure.top < y0 || figure.bottom >= y1)
+        for (let y = figure.top; y <= figure.bottom; y++)
+          for (let x = figure.left; x <= figure.right; x++)
+            if ((x < x0 || x >= x1 || y < y0 || y >= y1) && labels[y * sheet.width + x] === figure.id) put(x, y);
+    return { width: canvasW, height: canvasH, bitmap };
+  });
+}
 // Adapted from Anime Codex pet-artifacts.cjs; see docs/THIRD_PARTY.md.
 // Only small aspect deviations are repairable: never reinterpret a 4-frame sheet
 // as 8 frames. Inspect the ORIGINAL cell before padding so clipping stays an error.
@@ -110,7 +287,9 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
   const width = recipe.count === 8 ? unit * 3 : unit;
   const height = recipe.count === 8 ? unit * 4 : unit;
   const edgeContacts = [];
-  const frames = Array.from({ length: recipe.count }, (_, index) => {
+  const frames = recipe.aligned
+    ? registeredFrames(sheet, recipe, width, height, edgeContacts)
+    : Array.from({ length: recipe.count }, (_, index) => {
     const col = index % recipe.columns,
       row = Math.floor(index / recipe.columns);
     const x0 = Math.floor((col * sheet.width) / recipe.columns);
@@ -130,6 +309,8 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
       source.bitmap.copy(bitmap, ((y + dy) * width + dx) * 4, y * w * 4, (y + 1) * w * 4);
     return { width, height, bitmap };
   });
+  // Registered frames still need real content on a transparent background.
+  if (recipe.aligned) frames.forEach((frame) => bounds(frame));
   const unique = new Set(frames.map((f) => createHash('sha256').update(f.bitmap).digest('hex')));
   if (unique.size < 2) throw new Error('所有帧完全相同，没有实际动作或表情变化，请重新生成这个动作。');
   if (recipe.count === 8 && unique.size < 6)
@@ -164,8 +345,8 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
     report: {
       sourceWidth: sheet.width,
       sourceHeight: sheet.height,
-      cellWidth: width,
-      cellHeight: height,
+      cellWidth: frames[0].width,
+      cellHeight: frames[0].height,
       padded: sheet.width !== width * recipe.columns || sheet.height !== height * recipe.rows,
       distinctFrames: representatives.length,
       edgeContacts,

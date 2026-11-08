@@ -203,7 +203,9 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         !['queued', 'working', 'done', 'failed', 'unsaved', 'uncertain'].includes(step.status) ||
         (step.kind === 'sheet' && !job.motions.includes(step.motion)) ||
         (step.attempts !== undefined && !(Number.isInteger(step.attempts) && step.attempts >= 0 && step.attempts <= 9)) ||
-        (step.hint !== undefined && (typeof step.hint !== 'string' || step.hint.length > 600))
+        (step.hint !== undefined && (typeof step.hint !== 'string' || step.hint.length > 600)) ||
+        (step.replaces !== undefined &&
+          (step.kind !== 'pack' || typeof step.replaces !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(step.replaces)))
       )
         throw new Error('桌宠任务阶段无效。');
     }
@@ -781,7 +783,11 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       if (step.kind === 'pack') {
         const skin = validateSkin(returned.skin);
         phase = 'installing';
-        await installSkin(skin, job.referenceDigest);
+        await installSkin(skin, job.referenceDigest, step.replaces);
+        if (step.replaces) {
+          job.results = job.results.filter((r) => r.skinId !== step.replaces);
+          delete step.replaces;
+        }
         if (!job.results.some((r) => r.skinId === skin.id))
           job.results.push({ style: step.style, skinId: skin.id, warnings: returned.warnings || [] });
       }
@@ -860,6 +866,31 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     job.status = 'queued';
     return persist(job);
   }
+  // Rebuild a finished task's animation from its saved pose sheets, for example after the
+  // packer improves. No image request: every sheet is reused as saved. The previous result is
+  // set aside, and replaced in the wardrobe unless it was already approved or is in use.
+  async function repack(id) {
+    const job = await load(id);
+    if (active.has(id)) throw new Error('任务正在处理中，请稍后再试。');
+    if (job.status !== 'ready') throw new Error('只有已完成的任务可以重新整理动画。');
+    for (let index = 0; index < job.steps.length; index++) {
+      const step = job.steps[index];
+      if (step.kind !== 'pack') continue;
+      const previous = job.results.find((r) => r.style === step.style)?.skinId;
+      try {
+        await io.rename(artifact(id, index), path.join(root, `${id}-${index}.superseded-${Date.now()}.json`));
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+      pendingPixels.delete(`${id}:${index}`);
+      step.status = 'queued';
+      delete step.error;
+      if (previous) step.replaces = previous;
+      else delete step.replaces;
+    }
+    job.status = 'queued';
+    return persist(job);
+  }
   async function results(id) {
     const job = await load(id),
       skins = [];
@@ -896,6 +927,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     advance: (id, character, settings, credentials, progress = () => {}) =>
       serial(`job:${id}`, () => advance(id, character, settings, credentials, progress)),
     retry: (id, index) => serial(`job:${id}`, () => retry(id, index)),
+    repack: (id) => serial(`job:${id}`, () => repack(id)),
     cancel: (id) => serial(`job:${id}`, () => cancel(id)),
     list,
     load,

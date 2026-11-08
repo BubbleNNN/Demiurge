@@ -403,6 +403,8 @@ export interface PetJob extends PetProductionOptions {
     attempts?: number;
     /** Guidance for the next request, derived from the last rejection. */
     hint?: string;
+    /** On a pack step being rebuilt: the earlier result it will replace. */
+    replaces?: string;
   }[];
   results: { style: ArtStyle; skinId: string; warnings: string[] }[];
 }
@@ -491,6 +493,8 @@ export interface MoriBridge {
   advancePetJob(jobId: string): Promise<PetJob>;
   listPetJobs(characterId: string): Promise<PetJob[]>;
   retryPetStep(input: { jobId: string; index: number }): Promise<PetJob>;
+  /** Rebuild a finished task's animation from its saved sheets; no image request. */
+  repackPetJob(jobId: string): Promise<PetJob>;
   cancelPetJob(jobId: string): Promise<PetJob>;
   petJobResults(jobId: string): Promise<Skin[]>;
   petJobMasters(jobId: string): Promise<Skin[]>;

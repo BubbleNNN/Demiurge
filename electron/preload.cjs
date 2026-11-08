@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('mori', {
   advancePetJob: invoke('advance-pet-job'),
   listPetJobs: invoke('list-pet-jobs'),
   retryPetStep: invoke('retry-pet-step'),
+  repackPetJob: invoke('repack-pet-job'),
   cancelPetJob: invoke('cancel-pet-job'),
   petJobResults: invoke('pet-job-results'),
   petJobMasters: invoke('pet-job-masters'),

@@ -134,3 +134,76 @@ test('aligned packing preserves source RGBA samples instead of interpolating the
   };
   frames.forEach((frame,i)=>assert.deepEqual(histogram(atlas,result.sprite.frames[i+1].rect),histogram(frame,[0,0,frame.width,frame.height])));
 });
+
+test('a twelve-frame sheet drawn off the grid is registered by its real columns and floor lines', () => {
+  const { splitSheet } = require('../electron/pet-frames.cjs');
+  // Poses evenly spaced but 8% narrower than the canvas, rows at different heights, and a horn
+  // from each row-3 pose crossing the grid line into the row above.
+  const size = 384,
+    cw = size / 4,
+    ch = size / 3,
+    bitmap = Buffer.alloc(size * size * 4);
+  const rect = (x, y, w, h, color) => {
+    for (let yy = Math.round(y); yy < Math.round(y + h); yy++)
+      for (let xx = Math.round(x); xx < Math.round(x + w); xx++) {
+        const i = (yy * size + xx) * 4;
+        bitmap[i] = color[0];
+        bitmap[i + 1] = color[1];
+        bitmap[i + 2] = color[2];
+        bitmap[i + 3] = 255;
+      }
+  };
+  const spacing = cw * 0.92,
+    rowLift = [0, 9, 18];
+  for (let n = 0; n < 12; n++) {
+    const col = n % 4,
+      row = Math.floor(n / 4),
+      cx = size / 2 + (col - 1.5) * spacing,
+      floor = (row + 1) * ch - 14 - rowLift[row];
+    rect(cx - 10, floor - 70, 20, 20, [210, 115, 160]); // head
+    rect(cx - 7, floor - 50, 14, 30, [180, 120, 220]); // body
+    rect(cx - 7, floor - 20, 5, 20, [75, 50, 120]); // legs
+    rect(cx + 2, floor - 20, 5, 20, [75, 50, 120]);
+    rect(cx + 7, floor - 46 + (n % 4) * 4, 8, 4, [215, 150, 185]); // arm: the authored motion
+    if (row === 2) rect(cx - 2, floor - 70 - 26, 4, 26, [240, 200, 220]); // horn above the grid line
+  }
+  const png = f.url(f.encode(bitmap, size, size));
+  const { frames, report } = splitSheet(png, f.codec, 'listen', options);
+  const measure = (frame) => {
+    let sum = 0,
+      count = 0,
+      bottom = -1,
+      top = frame.height;
+    for (let y = 0; y < frame.height; y++)
+      for (let x = 0; x < frame.width; x++) {
+        const i = (y * frame.width + x) * 4;
+        if (frame.bitmap[i + 3] < 128) continue;
+        bottom = Math.max(bottom, y);
+        top = Math.min(top, y);
+        // Head colour only: the part that should never move in this sheet.
+        if (frame.bitmap[i] === 210 && frame.bitmap[i + 1] === 115) {
+          sum += x;
+          count++;
+        }
+      }
+    return { head: sum / count, bottom, top };
+  };
+  const m = frames.map(measure);
+  assert.ok(Math.max(...m.map((v) => v.head)) - Math.min(...m.map((v) => v.head)) <= 1, `head stays put: ${m.map((v) => v.head)}`);
+  assert.ok(Math.max(...m.map((v) => v.bottom)) - Math.min(...m.map((v) => v.bottom)) <= 1, `feet stay on one floor: ${m.map((v) => v.bottom)}`);
+  for (const index of [8, 9, 10, 11]) assert.ok(m[index].top < m[0].top - 20, 'row-3 horns are kept whole with their own pose');
+  for (const index of [4, 5, 6, 7]) assert.ok(m[index].bottom - m[index].top < 80, 'no horn pieces left below the row-2 poses');
+  assert.deepEqual(report.edgeContacts, []);
+});
+
+test('two poses drawn touching each other cannot be split and ask for a new sheet', () => {
+  const { inspectSheet } = require('../electron/pet-frames.cjs');
+  const image = f.decode(stageSheet());
+  // A bar joining the first two poses of row 1 into one shape.
+  for (let x = 30; x < 140; x++)
+    for (let y = 60; y < 64; y++) {
+      const i = (y * image.width + x) * 4;
+      image.bitmap[i] = image.bitmap[i + 3] = 255;
+    }
+  assert.throws(() => inspectSheet(f.url(f.encode(image.bitmap, image.width, image.height)), f.codec, 'listen', options), /连在一起/);
+});

@@ -338,13 +338,17 @@ app.whenReady().then(async () => {
       encode: (bitmap, width, height) =>
         nativeImage.createFromBitmap(bitmap, { width, height, scaleFactor: 1 }).toPNG(),
     },
-    installSkin: async (candidate, digest) => {
+    installSkin: async (candidate, digest, replaces) => {
       const base = await store.loadState();
       const character = base?.characters.find((c) => c.id === candidate.characterId);
       if (!character || require('./references.cjs').referencePack(character).digest !== digest)
         throw new Error('角色或参考图刚发生变化，动画结果已留在任务中，请核对后处理。');
       if (base.skins.some((s) => s.id === candidate.id)) return;
-      const saved = await store.saveMergedState({ ...base, skins: [...base.skins, candidate] }, base);
+      // A repacked result takes the old one's place unless that one was approved or is in use.
+      const old = replaces && base.skins.find((s) => s.id === replaces && s.characterId === candidate.characterId);
+      const drop = old && old.review?.status !== 'approved' && base.activeSkinId !== old.id;
+      const skins = [...base.skins.filter((s) => !(drop && s.id === old.id)), candidate];
+      const saved = await store.saveMergedState({ ...base, skins }, base);
       broadcast(saved);
     },
   });
@@ -652,6 +656,7 @@ app.whenReady().then(async () => {
       return petPipeline.retry(input.jobId, input.index);
     }),
   );
+  handle('repack-pet-job', (event, jobId) => job(event, 'skin', async () => petPipeline.repack(jobId)));
   handle('cancel-pet-job', (event, jobId) => job(event, 'skin', async () => petPipeline.cancel(jobId)));
   handle('select-pet-base', (event, input) =>
     job(event, 'skin', async () => {

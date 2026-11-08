@@ -58,6 +58,7 @@ export const bridge: MoriBridge = window.mori ?? {
   advancePetJob: desktopRequired,
   listPetJobs: desktopRequired,
   retryPetStep: desktopRequired,
+  repackPetJob: desktopRequired,
   cancelPetJob: desktopRequired,
   petJobResults: desktopRequired,
   petJobMasters: desktopRequired,

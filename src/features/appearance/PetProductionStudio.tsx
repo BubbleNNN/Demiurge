@@ -1190,6 +1190,21 @@ export function PetProductionStudio({
                     结束此任务，保留素材
                   </button>
                 )}
+                {!busy && job.status === 'ready' && (
+                  <button
+                    className="button secondary"
+                    title="用已保存的动作图重新切帧、对位并整理图集；不调用图像服务。尚未确认的旧成品会被替换，已确认或正在使用的会保留。"
+                    onClick={() =>
+                      void run(async () => {
+                        const queued = await bridge.repackPetJob(job.id);
+                        updateJob(queued);
+                        await execute(queued);
+                      })
+                    }
+                  >
+                    重新整理动画（不调用模型）
+                  </button>
+                )}
               </div>
               {job.results
                 .flatMap((r) => r.warnings)
