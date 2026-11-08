@@ -1,4 +1,6 @@
 'use strict';
+// Corrections go to a chat model and a search before the image model; this stands in for the chat model.
+const planner = require('./lib/revision-planner-fixture.cjs');
 // Isolated real Electron behavior with fixed PNG replies, not an art-quality test.
 const { app, safeStorage } = require('electron');
 const fs = require('node:fs');
@@ -68,8 +70,8 @@ fs.writeFileSync(
   path.join(dir, 'state.json'),
   JSON.stringify({
     settings: {
-      llmBaseUrl: 'https://never-call.example/v1',
-      llmModel: '',
+      llmBaseUrl: planner.llmBaseUrl,
+      llmModel: planner.llmModel,
       chatMode: 'local',
       imageBaseUrl: 'https://directions.mori.example/v1',
       searchProvider: 'wiki',
@@ -100,6 +102,8 @@ const wikiSearches = [];
 const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 const calls = [];
 global.fetch = async (url, init) => {
+  const planned = await planner.handle(url, init);
+  if (planned) return planned;
   if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
     // The chibi look first looks for an existing design; this isolated wiki has none.
     wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
@@ -112,7 +116,7 @@ global.fetch = async (url, init) => {
   const prompt = String(init.body.get('prompt'));
   const kind = prompt.includes('regular 2-by-2 grid')
     ? 'sheet'
-    : prompt.includes('Requested correction:')
+    : prompt.includes('Requested correction')
       ? 'edit'
       : 'base';
   assert.equal(kind, expectedKind);
@@ -225,7 +229,7 @@ app.on('browser-window-created', (_event, created) => {
     try {
       await wait(`!!document.querySelector('.room-rail')`);
       await js(
-        `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'direction-fixture'},{imageKey:'isolated-direction-key'}))`,
+        `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'direction-fixture'},{imageKey:'isolated-direction-key',llmKey:'${planner.llmKey}'}))`,
       );
       const initial = await state();
       await open();

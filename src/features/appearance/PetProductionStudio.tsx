@@ -34,6 +34,7 @@ import type {
   Skin,
   VisualReference,
   FrameReviewInput,
+  RevisionPlanSummary,
 } from '../../types';
 
 const checks = [
@@ -76,10 +77,42 @@ const revisionName = (job: PetJob) =>
     ? '修正形象'
     : `修正${motions.find((motion) => motion.id === job.revision?.motion)?.name || '动作'}`;
 
+// What the chat model made of a correction before the image model saw it.
+function RevisionPlanNote({ plan }: { plan: RevisionPlanSummary }) {
+  return (
+    <div className="revision-plan" aria-label="修正说明的整理结果">
+      <span>对话模型的理解：{plan.summary || '（未给出摘要）'}</span>
+      {plan.conflicts && <small>与原图不一致：{plan.conflicts}</small>}
+      <small>
+        搜索「{plan.query}」
+        {plan.searched ? `，找到 ${plan.searched} 条相关资料` : '，没有找到相关资料，只依据原图'}
+        {plan.sources.length ? '，引用：' : '。'}
+      </small>
+      {plan.sources.map((source) => (
+        <button
+          type="button"
+          className="text-button"
+          key={source.url}
+          onClick={() => void bridge.openExternal(source.url)}
+        >
+          {source.title}
+        </button>
+      ))}
+    </div>
+  );
+}
+function RevisionSetupNote() {
+  return (
+    <p className="notice" role="status">
+      修正要求会先交给对话模型理解并搜索资料：请先在「连接与设置」中配置对话模型和搜索服务。
+    </p>
+  );
+}
 export function PetProductionStudio({
   character,
   skins,
   imageReady,
+  revisionReady,
   onClose,
   onBusy,
   onOpenSettings,
@@ -89,6 +122,8 @@ export function PetProductionStudio({
   character: Character;
   skins: Skin[];
   imageReady: boolean;
+  /** A chat model and a search service are configured: corrections are planned with them first. */
+  revisionReady: boolean;
   onClose: () => void;
   onBusy: (busy: boolean) => void;
   onOpenSettings: () => void;
@@ -894,6 +929,7 @@ export function PetProductionStudio({
                   <strong>{revisionName(job)}</strong> · {job.revision.feedback}
                 </p>
               )}
+              {job.revision?.plan && <RevisionPlanNote plan={job.revision.plan} />}
               {job.styleReference && (
                 <>
                   <StyleReferencePanel
@@ -1045,7 +1081,11 @@ export function PetProductionStudio({
                         />
                       </label>
                       <div className="production-revision-actions">
-                        <p>预计 1 次图像编辑请求。完成后暂停等待选择，不自动生成动作。</p>
+                        <p>
+                          你的要求先交给对话模型对照图片理解，并搜索相关资料，再由它为图像模型写修正说明：约 2
+                          次对话请求、1 次搜索和 1 次图像编辑请求。完成后暂停等待选择，不自动生成动作。
+                        </p>
+                        {!revisionReady && <RevisionSetupNote />}
                         <div className="toolbar">
                           <button
                             type="button"
@@ -1066,6 +1106,7 @@ export function PetProductionStudio({
                             disabled={
                               busy ||
                               !imageReady ||
+                              !revisionReady ||
                               !baseEditFeedback.trim() ||
                               !!baseEditLimit(editSource.style)
                             }
@@ -1102,6 +1143,7 @@ export function PetProductionStudio({
                             {styleName(style)} · {baseEditStatusName[edit.status]}
                           </strong>
                           <p>{edit.feedback}</p>
+                          {edit.plan && <RevisionPlanNote plan={edit.plan} />}
                           {edit.error && (
                             <p className="inline-error" role="alert">
                               {edit.error}
@@ -1117,7 +1159,10 @@ export function PetProductionStudio({
                                 ? `恢复${styleName(style)}候选修正保存`
                                 : `重试${styleName(style)}候选修正`
                             }
-                            disabled={busy || (edit.status !== 'unsaved' && !imageReady)}
+                            disabled={
+                              busy ||
+                              (edit.status !== 'unsaved' && (!imageReady || (!edit.plan && !revisionReady)))
+                            }
                             onClick={() =>
                               void run(async () => {
                                 const updated = await bridge.retryPetBaseEdit({
@@ -1130,7 +1175,9 @@ export function PetProductionStudio({
                           >
                             {edit.status === 'unsaved'
                               ? '仅恢复本机保存（不调用模型）'
-                              : '重试这次修正（1 次图像请求）'}
+                              : edit.plan
+                                ? '重试这次修正（沿用已写好的修正说明，1 次图像请求）'
+                                : '重试这次修正（先理解与搜索，再 1 次图像请求）'}
                           </button>
                         )}
                       </section>
@@ -1357,15 +1404,17 @@ export function PetProductionStudio({
                     </label>
                     <div className="production-revision-actions">
                       <p>
-                        预计 {revisionRequests} 次图像请求。
+                        预计 {revisionRequests} 次图像请求，另有约 2 次对话请求和 1
+                        次搜索：你的要求先由对话模型理解并搜索资料，再由它为图像模型写修正说明。
                         {revisionTarget === 'base'
                           ? '先修正角色图，再重做这套画风的全部动作。'
                           : '沿用角色图和其他动作，只重新生成所选动作并整理动画。'}
                       </p>
+                      {!revisionReady && <RevisionSetupNote />}
                       <button
                         className="button secondary"
                         aria-label="创建桌宠修正版"
-                        disabled={busy || !imageReady || !revisionFeedback.trim()}
+                        disabled={busy || !imageReady || !revisionReady || !revisionFeedback.trim()}
                         onClick={() => void run(revise)}
                       >
                         <WandSparkles size={15} />

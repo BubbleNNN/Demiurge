@@ -6185,3 +6185,27 @@ select:focus {
 .pet-invite p {margin:0 0 8px}.pet-invite button {padding:6px 10px;border-radius:12px;background:var(--accent-soft);margin-right:8px;color:var(--accent)}
 .pet-moment {position:absolute;inset:48px 8px 38px;z-index:15;overflow:auto;background:var(--paper);border-radius:16px;border:1px solid var(--line)}
 .pet-moment .moment-card {margin:0;min-width:0;padding:12px}
+
+/* What the chat model understood from a correction, and the sources it used. */
+.revision-plan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-muted, rgba(127, 127, 127, 0.08));
+  font-size: 13px;
+  line-height: 1.5;
+}
+.revision-plan > span {
+  flex-basis: 100%;
+}
+.revision-plan small {
+  color: var(--muted, inherit);
+}
+.revision-plan .text-button {
+  font-size: 12px;
+  padding: 0;
+}

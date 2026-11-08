@@ -1,4 +1,5 @@
 'use strict';
+const { plan: revisionPlan } = require('./fixtures/revision-plan.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createServices } = require('../electron/services.cjs');
@@ -96,6 +97,7 @@ test('candidate correction attaches frozen style after originals; motions use th
       referenceDigest: referencePack(character).digest,
       styleReference: guide,
       feedback: '清晰的像素轮廓，保留衣服',
+      plan: revisionPlan('清晰的像素轮廓，保留衣服'),
     },
     settings,
     credentials,

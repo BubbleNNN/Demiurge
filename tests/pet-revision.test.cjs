@@ -1,4 +1,7 @@
 'use strict';
+const { plan: revisionPlan } = require('./fixtures/revision-plan.cjs');
+// Inputs the fake chat planner received (user corrections never reach the image fakes directly).
+const planned = [];
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -69,6 +72,10 @@ async function setup(t, overrides = {}) {
       async generateSkin(input) {
         calls.push({ kind: 'base', input: structuredClone(input) });
         return master(input.style, calls.length);
+      },
+      async planRevision(input) {
+        planned.push(structuredClone(input));
+        return revisionPlan(input.feedback);
       },
       async revisePetBase(input) {
         calls.push({ kind: 'revision', input: structuredClone(input) });
@@ -170,7 +177,15 @@ test('a single-motion revision spends one image request, copies other sheet byte
   const call = context.calls.at(-1);
   assert.equal(call.kind, 'sheet');
   assert.equal(call.input.motion, 'wave');
-  assert.equal(call.input.feedback, '手掌保持五指，动作更轻柔。');
+  // The user's words went to the chat planner with the current motion; the image request carries
+  // only the instruction it wrote.
+  const asked = planned.at(-1);
+  assert.equal(asked.feedback, '手掌保持五指，动作更轻柔。');
+  assert.equal(asked.motion, 'wave');
+  assert.ok(asked.images.length >= 2, 'the planner sees the current motion and the master');
+  assert.equal(call.input.correction, 'Planned correction for: 手掌保持五指，动作更轻柔。');
+  assert.equal(call.input.feedback, undefined);
+  assert.equal(revision.revision.plan.summary, '理解：手掌保持五指，动作更轻柔。');
   assert.equal(call.input.skin.id, source.selectedBases['3d']);
   assert.notDeepEqual(
     await fs.readFile(artifactPath(context.root, revision, 'wave')),
@@ -346,4 +361,47 @@ test('failed candidate selection remains selectable and does not silently accept
   assert.equal(job.selectedBases['3d'], candidates[1].id);
   const restarted = createPetPipeline(context.options);
   assert.equal((await restarted.load(job.id)).selectedBases['3d'], candidates[1].id);
+});
+
+test('a motion revision plans once: planning failures stop before the image request and retries reuse the plan', async (t) => {
+  const context = await setup(t),
+    source = await finished(context),
+    p = context.pipeline,
+    services = context.options.services;
+  let revision = await p.revise(source.id, { style: '3d', motion: 'wave', feedback: '挥手更轻' }, character, settings);
+  const index = revision.steps.findIndex((s) => s.motion === 'wave');
+  const plan = services.planRevision,
+    sheet = services.generatePetSheet;
+  let plans = 0,
+    failPlan = true,
+    failSheet = true;
+  services.planRevision = async (input) => {
+    plans++;
+    if (failPlan) throw new Error('修正资料搜索未完成：fixture');
+    return plan(input);
+  };
+  services.generatePetSheet = async (input) => {
+    if (failSheet) {
+      context.calls.push({ kind: 'failed-sheet' });
+      throw new Error('image service down');
+    }
+    return sheet(input);
+  };
+  const before = context.calls.length;
+  revision = await p.advance(revision.id, character, settings, {});
+  assert.equal(revision.steps[index].status, 'failed', 'no automatic retry and no image request after a planning failure');
+  assert.equal(revision.steps[index].attempts, undefined);
+  assert.equal(context.calls.length, before);
+  failPlan = false;
+  revision = await p.retry(revision.id, index);
+  revision = await p.advance(revision.id, character, settings, {});
+  assert.equal(revision.steps[index].status, 'uncertain');
+  assert.equal(plans, 2);
+  assert.equal(revision.revision.plan.summary, '理解：挥手更轻');
+  failSheet = false;
+  revision = await p.retry(revision.id, index);
+  revision = await complete(p, revision);
+  assert.equal(plans, 2, 'the saved plan is reused');
+  const drawn = context.calls.filter((call) => call.kind === 'sheet').at(-1);
+  assert.equal(drawn.input.correction, 'Planned correction for: 挥手更轻');
 });

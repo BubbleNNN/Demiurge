@@ -1,4 +1,7 @@
 'use strict';
+const { plan: revisionPlan } = require('./fixtures/revision-plan.cjs');
+// Inputs the fake chat planner received (user corrections never reach the image fakes directly).
+const planned = [];
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -69,6 +72,10 @@ async function setup(t, overrides = {}) {
       async generateSkin(input) {
         calls.push({ kind: 'base', input: structuredClone(input) });
         return master(input, calls.length);
+      },
+      async planRevision(input) {
+        planned.push(structuredClone(input));
+        return revisionPlan(input.feedback);
       },
       async revisePetBase(input) {
         calls.push({ kind: 'edit', input: structuredClone(input) });

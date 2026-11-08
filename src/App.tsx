@@ -2819,6 +2819,9 @@ export default function App() {
           character={character}
           skins={skins}
           imageReady={isDesktop && imageServiceReady(state.settings, keys)}
+          revisionReady={
+            isDesktop && chatServiceReady(state.settings, keys) && selectedSearchProvider(state.settings, keys) !== 'none'
+          }
           onClose={() => setPetProductionOpen(false)}
           onBusy={setJobBusy}
           onOpenSettings={() => {

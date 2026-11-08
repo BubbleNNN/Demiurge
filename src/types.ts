@@ -293,6 +293,14 @@ export interface AppState {
   memories: Memory[];
 }
 // What the character is doing right now, from the local daily-life routine (never canon).
+/** What the chat model understood from a correction and which sources it used for the image prompt. */
+export interface RevisionPlanSummary {
+  summary: string;
+  conflicts: string;
+  query: string;
+  sources: { title: string; url: string }[];
+  searched: number;
+}
 export interface LifeSituation {
   timeOfDay: string;
   doing: string;
@@ -398,12 +406,14 @@ export interface PetJob extends PetProductionOptions {
     createdAt: string;
     status: 'working' | 'done' | 'failed' | 'unsaved' | 'uncertain';
     error?: string;
+    plan?: RevisionPlanSummary;
   }[];
   revision?: {
     sourceJobId: string;
     kind: 'base' | 'motion';
     motion?: PetMotion;
     feedback: string;
+    plan?: RevisionPlanSummary;
   };
   createdAt: string;
   updatedAt: string;

@@ -6,6 +6,8 @@ const { referencePack, imageDigest, styleReferencePack } = require('./references
 const { validateSkin, validateStyleReference } = require('./store.cjs');
 const { inspectMaster, inspectSheet, packFrames } = require('./pet-frames.cjs');
 const { productionOptions, motionParts } = require('./pet-recipes.cjs');
+const { validatePlan, compactPlan, validateCompactPlan } = require('./revision-plan.cjs');
+const motionNames = Object.fromEntries(require('../shared/pet-motions.json').map((m) => [m.id, m.name]));
 const styles = Object.keys(require('../shared/art-styles.json'));
 // New tasks offer four looks only; earlier looks keep resuming and revising from their saved files.
 const creationStyles = require('../shared/creation-styles.json');
@@ -186,7 +188,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
           edit.createdAt.length > 40 ||
           !Number.isFinite(Date.parse(edit.createdAt)) ||
           !['working', 'done', 'failed', 'unsaved', 'uncertain'].includes(edit.status) ||
-          (edit.error !== undefined && (typeof edit.error !== 'string' || edit.error.length > 700))
+          (edit.error !== undefined && (typeof edit.error !== 'string' || edit.error.length > 700)) ||
+          (edit.plan !== undefined && !validateCompactPlan(edit.plan))
         )
           throw new Error('角色修图记录无效。');
         ids.add(edit.id);
@@ -200,6 +203,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         typeof job.revision.feedback !== 'string' ||
         !job.revision.feedback.trim() ||
         job.revision.feedback.length > 600 ||
+        (job.revision.plan !== undefined && !validateCompactPlan(job.revision.plan)) ||
         (job.revision.kind === 'motion' && !job.motions.includes(job.revision.motion)))
     )
       throw new Error('修正任务记录无效。');
@@ -410,6 +414,76 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     inspectMaster(skin.images.neutral, codec);
     return skin;
   }
+  // The user's words go to the chat model and a search first; the image model receives only the
+  // instruction the chat model wrote. A plan is made once and saved, so an image retry reuses it.
+  async function savedPlan(file) {
+    try {
+      return validatePlan((await readJson(file, 256 * 1024)).plan);
+    } catch {
+      return null;
+    }
+  }
+  async function editPlan(job, edit, source, character, settings, credentials, progress) {
+    const file = editFile(job.id, edit.id, 'plan');
+    let plan = await savedPlan(file);
+    if (!plan) {
+      plan = validatePlan(
+        await services.planRevision(
+          { character, style: edit.style, feedback: edit.feedback, images: [source.images.neutral] },
+          settings,
+          credentials,
+          progress,
+        ),
+      );
+      await writeJson(file, { plan });
+    }
+    edit.plan = compactPlan(plan);
+    await persist(job);
+    return plan;
+  }
+  async function revisionPlan(job, character, settings, credentials, progress) {
+    const file = path.join(root, `${job.id}.revision-plan.json`);
+    let plan = await savedPlan(file);
+    if (!plan) {
+      const revision = job.revision,
+        style = job.styles[0];
+      const images = [];
+      if (revision.kind === 'base')
+        images.push((await readJson(path.join(root, `${job.id}.revision.json`), 12 * 1024 * 1024)).skin.images.neutral);
+      else {
+        // The motion as it is now, from the finished task being revised, then the master.
+        try {
+          const finished = await load(revision.sourceJobId);
+          for (const [i, step] of finished.steps.entries())
+            if (step.kind === 'sheet' && step.style === style && step.motion === revision.motion && images.length < 2) {
+              const data = await pixels(finished, i);
+              if (data?.image) images.push(data.image);
+            }
+        } catch {
+          /* The earlier task may be gone; the master still shows the character. */
+        }
+        images.push((await chosenMaster(job, style)).images.neutral);
+      }
+      plan = validatePlan(
+        await services.planRevision(
+          {
+            character,
+            style,
+            feedback: revision.feedback,
+            images,
+            ...(revision.kind === 'motion' ? { motion: revision.motion, motionName: motionNames[revision.motion] } : {}),
+          },
+          settings,
+          credentials,
+          progress,
+        ),
+      );
+      await writeJson(file, { plan });
+    }
+    job.revision.plan = compactPlan(plan);
+    await persist(job);
+    return plan;
+  }
   async function runBaseEdit(job, edit, before, character, settings, credentials, progress, resume) {
     const source = resume
       ? null
@@ -430,9 +504,11 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       throw error;
     }
     let returned,
-      phase = 'generating';
+      phase = 'planning';
     const key = `${job.id}:${edit.id}`;
     try {
+      const plan = resume ? null : await editPlan(job, edit, source, character, settings, credentials, progress);
+      phase = 'generating';
       if (resume) {
         returned = await editPixels(job, edit);
         if (!returned) throw new Error('本机修图输出缺失；请核对上次请求后明确重试，或选择原候选。');
@@ -445,6 +521,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
               style: edit.style,
               referenceDigest: job.referenceDigest,
               feedback: edit.feedback,
+              plan,
               ...(guide ? { styleReference: guide } : {}),
             },
             settings,
@@ -482,7 +559,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       pendingEdits.delete(key);
       return job;
     } catch (error) {
-      edit.status = returned && phase !== 'checking' ? 'unsaved' : returned ? 'failed' : 'uncertain';
+      edit.status =
+        phase === 'planning' ? 'failed' : returned && phase !== 'checking' ? 'unsaved' : returned ? 'failed' : 'uncertain';
       edit.error = String(error.message || '角色修图未完成。').slice(0, 700);
       job.status = 'attention';
       try {
@@ -517,8 +595,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       status: 'working',
     };
     job.baseEdits = [...edits, edit];
-    // Reserve room for a 700-character UTF-8 failure message and state changes.
-    if (Buffer.byteLength(JSON.stringify(job)) + 3000 > 65536)
+    // Reserve room for a 700-character UTF-8 failure message, the plan summary and state changes.
+    if (Buffer.byteLength(JSON.stringify(job)) + 6000 > 65536)
       throw new Error('桌宠任务记录已接近容量上限，无法安全添加修图。');
     await writeJson(editFile(id, edit.id, 'source'), { skin: editSource(job, edit, source) });
     return runBaseEdit(job, edit, before, character, settings, credentials, progress, false);
@@ -670,6 +748,18 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       returned = await pixels(job, index);
       if (!returned && before === 'unsaved')
         throw new Error('本机暂存素材不可恢复，请核对上次请求后明确重试。');
+      // A revised master or motion is drawn from the chat model's instruction, never the raw text.
+      let plan = null;
+      if (
+        !returned &&
+        job.revision &&
+        ((step.kind === 'base' && job.revision.kind === 'base') ||
+          (step.kind === 'sheet' && job.revision.kind === 'motion' && job.revision.motion === step.motion))
+      ) {
+        phase = 'planning';
+        plan = await revisionPlan(job, character, settings, credentials, progress);
+        phase = 'generating';
+      }
       if (!returned) {
         let chibiContext;
         if (step.kind === 'base' && step.style === 'chibi-pet' && !job.revision) {
@@ -701,6 +791,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
                     ? {
                         skin: (await readJson(path.join(root, `${id}.revision.json`), 12 * 1024 * 1024)).skin,
                         feedback: job.revision.feedback,
+                        plan,
                       }
                     : {}),
                 },
@@ -751,11 +842,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
                 continuityReferences,
                 referenceDigest: job.referenceDigest,
                 ...productionOptions(job),
-                ...(job.revision?.kind === 'motion' && job.revision.motion === step.motion
-                  ? { feedback: job.revision.feedback }
-                  : step.hint
-                    ? { feedback: step.hint }
-                    : {}),
+                ...(plan ? { correction: plan.prompt } : {}),
+                ...(step.hint ? { feedback: step.hint } : {}),
               },
               settings,
               credentials,
@@ -835,7 +923,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       // Written or cached output can be recovered locally. A technical-quality
       // rejection keeps its source output but needs a regeneration.
       const localSaveFailure = returned && phase !== 'checking';
-      step.status = localSaveFailure ? 'unsaved' : returned ? 'failed' : 'uncertain';
+      // Planning (chat model and search) fails before any image request.
+      step.status = phase === 'planning' ? 'failed' : localSaveFailure ? 'unsaved' : returned ? 'failed' : 'uncertain';
       if (step.kind === 'base' && job.awaitingSelection === step.style) delete job.awaitingSelection;
       if (step.kind === 'pack') step.status = returned ? 'unsaved' : 'failed';
       step.error = String(error.message || '桌宠制作未完成。').slice(0, 700);
@@ -843,7 +932,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       // A pose sheet that fails the local quality check is regenerated automatically, a bounded
       // number of times, with the reason fed back into the next request. The rejected file is
       // kept as evidence, the same way an explicit retry keeps it.
-      if (step.kind === 'sheet' && step.status === 'failed' && (step.attempts || 0) < AUTO_RETRIES) {
+      if (step.kind === 'sheet' && step.status === 'failed' && phase !== 'planning' && (step.attempts || 0) < AUTO_RETRIES) {
         try {
           await io.rename(artifact(id, index), path.join(root, `${id}-${index}.rejected-${Date.now()}.json`));
         } catch {

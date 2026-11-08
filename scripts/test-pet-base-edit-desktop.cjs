@@ -1,4 +1,6 @@
 'use strict';
+// Corrections go to a chat model and a search before the image model; this stands in for the chat model.
+const planner = require('./lib/revision-planner-fixture.cjs');
 // Real Electron candidate-edit controls, IPC and local files. Fixed PNG responses
 // exercise behavior without calling a paid image service or certifying art quality.
 const { app, safeStorage } = require('electron');
@@ -36,8 +38,8 @@ fs.writeFileSync(
   path.join(dir, 'state.json'),
   JSON.stringify({
     settings: {
-      llmBaseUrl: 'https://never-call.example/v1',
-      llmModel: '',
+      llmBaseUrl: planner.llmBaseUrl,
+      llmModel: planner.llmModel,
       chatMode: 'local',
       imageBaseUrl: 'https://base-edit.mori.example/v1',
       searchProvider: 'wiki',
@@ -105,6 +107,8 @@ storeModule.createStore = (options) => {
 const wikiSearches = [];
 const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 global.fetch = async (url, init) => {
+  const planned = await planner.handle(url, init);
+  if (planned) return planned;
   if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
     // The chibi look first looks for an existing design; this isolated wiki has none.
     wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
@@ -118,7 +122,7 @@ global.fetch = async (url, init) => {
     prompt = String(form.get('prompt'));
   const kind = prompt.includes('regular 2-by-2 grid')
     ? 'sheet'
-    : prompt.includes('Requested correction:')
+    : prompt.includes('Requested correction')
       ? 'edit'
       : 'base';
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
@@ -248,7 +252,7 @@ app.on('browser-window-created', (_event, created) => {
     try {
       await wait(`!!document.querySelector('.room-rail')`);
       await js(
-        `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'base-edit-fixture'},{imageKey:'isolated-base-edit-key'}))`,
+        `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'base-edit-fixture'},{imageKey:'isolated-base-edit-key',llmKey:'${planner.llmKey}'}))`,
       );
       const initial = await state();
       await open();
@@ -273,7 +277,7 @@ app.on('browser-window-created', (_event, created) => {
       await change('角色候选修正要求', '眼睛更清楚，保留衣服与发饰。', 'textarea');
       assert.match(
         await js(`document.querySelector('[aria-label="修正角色候选"]').textContent`),
-        /预计 1 次图像编辑请求/,
+        /约 2 次对话请求、1 次搜索和 1 次图像编辑请求/,
       );
       holdEdit = true;
       await click('生成角色候选修正版');
@@ -297,7 +301,26 @@ app.on('browser-window-created', (_event, created) => {
         original,
       );
       assert.equal(corrected.generation.parentSkinId, original.id);
-      assert.match(calls[1].prompt, /眼睛更清楚/);
+      // The image model received the chat model's instruction for this request, not the user's words.
+      assert.ok(calls[1].prompt.includes(planner.plannedPrompt('眼睛更清楚，保留衣服与发饰。')));
+      assert.doesNotMatch(calls[1].prompt, /眼睛更清楚/);
+      assert.deepEqual(
+        planner.calls.slice(-2).map((call) => [call.stage, call.feedback]),
+        [
+          ['search', '眼睛更清楚，保留衣服与发饰。'],
+          ['prompt', '眼睛更清楚，保留衣服与发饰。'],
+        ],
+      );
+      // What the chat model understood is shown with the correction.
+      await wait(`!!document.querySelector('[aria-label="修正说明的整理结果"]')`);
+      assert.match(
+        await js(`document.querySelector('[aria-label="修正说明的整理结果"]').textContent`),
+        /对话模型的理解：修正：眼睛更清楚.*搜索「costume detail」，没有找到相关资料/,
+      );
+      await js(
+        `document.querySelector('[aria-label="修正说明的整理结果"]').scrollIntoView({block:'center',behavior:'instant'})`,
+      );
+      await capture('correction-plan.png');
       await wait(`!!document.querySelector('[aria-label="修正前的角色候选放大视图"]')`);
       assert.equal(
         await js(`document.querySelector('[aria-label="修正前的角色候选放大视图"] img').src`),
@@ -390,7 +413,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(calls.length, 7, 'Recovering generated pixels must not send a new image request');
       credentialsUnavailable = false;
       await js(
-        `window.mori.load().then(r=>window.mori.saveSettings(r.state.settings,{imageKey:'isolated-base-edit-key'}))`,
+        `window.mori.load().then(r=>window.mori.saveSettings(r.state.settings,{imageKey:'isolated-base-edit-key',llmKey:'${planner.llmKey}'}))`,
       );
       await idle();
       assert.equal(

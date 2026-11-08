@@ -1,4 +1,7 @@
 'use strict';
+const { plan: revisionPlan } = require('./fixtures/revision-plan.cjs');
+// Inputs the fake chat planner received (user corrections never reach the image fakes directly).
+const planned = [];
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -66,6 +69,10 @@ async function setup(t, overrides = {}) {
       async generateSkin(input) {
         calls.push({ kind: 'base', input: structuredClone(input) });
         return master(input.style, calls.length);
+      },
+      async planRevision(input) {
+        planned.push(structuredClone(input));
+        return overrides.plan ? overrides.plan(input) : revisionPlan(input.feedback);
       },
       async revisePetBase(input) {
         calls.push({ kind: 'edit', input: structuredClone(input) });
@@ -508,4 +515,54 @@ test('cancel waits for an active edit, preserves both candidates and cannot resu
   );
   await assert.rejects(restarted.advance(job.id, character, settings, {}), /已结束/);
   assert.equal(editCalls(c).length, 1);
+});
+
+test('a correction is planned by the chat model first; planning failures spend no image request and image retries reuse the plan', async (t) => {
+  let failPlan = true,
+    failEdit = true,
+    plans = 0;
+  const context = await setup(t, {
+    plan: (input) => {
+      plans++;
+      if (failPlan) throw new Error('修正资料搜索未完成：fixture');
+      return revisionPlan(input.feedback, { prompt: 'Planned fixture correction' });
+    },
+    edit: (input, count) => {
+      if (failEdit) throw new Error('image service down');
+      return master(input.style, count);
+    },
+  });
+  let job = await bases(context);
+  const original = (await context.pipeline.masters(job.id))[0];
+  const before = context.calls.length;
+  job = await context.pipeline.refineBase(
+    job.id,
+    editInput(original, '发饰改成两朵花'),
+    character,
+    settings,
+    {},
+  );
+  let edit = job.baseEdits.at(-1);
+  // The search failed before any image request: a plain failure, not an interrupted request.
+  assert.equal(edit.status, 'failed');
+  assert.match(edit.error, /修正资料搜索未完成/);
+  assert.equal(edit.plan, undefined);
+  assert.equal(context.calls.length, before);
+  assert.equal(planned.at(-1).feedback, '发饰改成两朵花');
+  assert.deepEqual(planned.at(-1).images, [original.images.neutral]);
+  failPlan = false;
+  job = await context.pipeline.retryBaseEdit(job.id, edit.id, character, settings, {});
+  edit = job.baseEdits.at(-1);
+  assert.equal(plans, 2);
+  assert.equal(edit.status, 'uncertain', 'the image request itself failed after planning');
+  assert.equal(edit.plan.summary, '理解：发饰改成两朵花');
+  assert.equal(context.calls.at(-1).input.plan.prompt, 'Planned fixture correction');
+  failEdit = false;
+  job = await context.pipeline.retryBaseEdit(job.id, edit.id, character, settings, {});
+  assert.equal(plans, 2, 'an image retry reuses the saved plan instead of asking the chat model again');
+  assert.equal(job.baseEdits.at(-1).status, 'done');
+  assert.equal(context.calls.at(-1).input.plan.prompt, 'Planned fixture correction');
+  // The plan summary survives a restart through the validated task record.
+  const reloaded = await createPetPipeline(context.options).load(job.id);
+  assert.equal(reloaded.baseEdits.at(-1).plan.summary, '理解：发饰改成两朵花');
 });

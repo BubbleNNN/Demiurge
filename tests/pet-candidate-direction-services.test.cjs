@@ -1,4 +1,5 @@
 'use strict';
+const { plan: revisionPlan } = require('./fixtures/revision-plan.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createServices } = require('../electron/services.cjs');
@@ -118,7 +119,7 @@ test('legacy and subtle candidates keep unlabelled provenance while corrections 
     credentials,
   );
   const corrected = await services.revisePetBase(
-    { character, skin: base, referenceDigest: referencePack(character).digest, feedback: '修正手指' },
+    { character, skin: base, referenceDigest: referencePack(character).digest, feedback: '修正手指', plan: revisionPlan('修正手指') },
     settings,
     credentials,
   );
@@ -172,7 +173,7 @@ test('sticker style travels through real generation, correction and motion reque
   assert.match(calls[0].prompt, /one hard-edged shadow/);
   assert.deepEqual(calls[0].images, [character.visualReferences[0].image, styleReference.image].map(bytes));
   const corrected = await services.revisePetBase(
-    { character, skin: base, referenceDigest: referencePack(character).digest, feedback: '保留帽子上的标记' },
+    { character, skin: base, referenceDigest: referencePack(character).digest, feedback: '保留帽子上的标记', plan: revisionPlan('保留帽子上的标记') },
     settings,
     credentials,
   );

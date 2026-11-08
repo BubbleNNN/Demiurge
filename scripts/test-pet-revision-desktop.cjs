@@ -1,4 +1,6 @@
 'use strict';
+// Corrections go to a chat model and a search before the image model; this stands in for the chat model.
+const planner = require('./lib/revision-planner-fixture.cjs');
 // Real Electron UI/IPC and disk persistence with isolated fixed image responses.
 // These checks validate production behavior, not the quality of generated artwork.
 const { app, safeStorage } = require('electron');
@@ -35,8 +37,8 @@ fs.writeFileSync(
   path.join(dir, 'state.json'),
   JSON.stringify({
     settings: {
-      llmBaseUrl: 'https://never-call.example/v1',
-      llmModel: '',
+      llmBaseUrl: planner.llmBaseUrl,
+      llmModel: planner.llmModel,
       imageBaseUrl: 'https://revision.mori.example/v1',
       searchProvider: 'wiki',
       imageModel: '',
@@ -68,6 +70,8 @@ const masters = [tinted(false, 1), tinted(false, 2)],
 const wikiSearches = [];
 const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 global.fetch = async (url, init) => {
+  const planned = await planner.handle(url, init);
+  if (planned) return planned;
   if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
     // The chibi look first looks for an existing design; this isolated wiki has none.
     wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
@@ -164,7 +168,7 @@ app.on('browser-window-created', (_event, created) => {
     try {
       await wait(`!!document.querySelector('.room-rail')`);
       await js(
-        `window.mori.load().then(result=>window.mori.saveSettings({...result.state.settings,imageModel:'revision-fixture'},{imageKey:'isolated-revision-key'}))`,
+        `window.mori.load().then(result=>window.mori.saveSettings({...result.state.settings,imageModel:'revision-fixture'},{imageKey:'isolated-revision-key',llmKey:'${planner.llmKey}'}))`,
       );
       const before = await state();
       await open();
@@ -257,7 +261,11 @@ app.on('browser-window-created', (_event, created) => {
       await idle();
       assert.equal(calls.length, 5, 'A wave revision must make exactly one additional request');
       assert.equal(calls.at(-1).isSheet, true);
-      assert.match(calls.at(-1).prompt, /手掌保持五指，招手幅度更轻柔/);
+      // The image model received the chat model's instruction for this request, not the user's words.
+      assert.ok(calls.at(-1).prompt.includes(planner.plannedPrompt('手掌保持五指，招手幅度更轻柔。')));
+      assert.doesNotMatch(calls.at(-1).prompt, /手掌保持五指/);
+      assert.equal(planner.calls.at(-1).feedback, '手掌保持五指，招手幅度更轻柔。');
+      assert.ok(planner.calls.at(-1).images >= 2, 'the planner saw the current motion and the master');
       jobs = await js(`window.mori.listPetJobs('revision-desktop')`);
       const revised = jobs.find((job) => job.id !== originalJobId);
       assert.equal(revised.status, 'ready');

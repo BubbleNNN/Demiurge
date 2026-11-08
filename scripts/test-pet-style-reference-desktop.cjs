@@ -1,4 +1,6 @@
 'use strict';
+// Corrections go to a chat model and a search before the image model; this stands in for the chat model.
+const planner = require('./lib/revision-planner-fixture.cjs');
 // Real Electron UI + IPC with isolated files and fixed images. No paid requests.
 const { app, dialog, safeStorage } = require('electron');
 const fs = require('node:fs');
@@ -72,10 +74,11 @@ fs.writeFileSync(
   path.join(dir, 'state.json'),
   JSON.stringify({
     settings: {
-      llmBaseUrl: 'https://never-call.example/v1',
-      llmModel: '',
+      llmBaseUrl: planner.llmBaseUrl,
+      llmModel: planner.llmModel,
       chatMode: 'local',
       imageBaseUrl: 'https://style-reference.mori.example/v1',
+      searchProvider: 'wiki',
       imageModel: '',
       demoMode: false,
       proactiveEnabled: false,
@@ -124,12 +127,19 @@ const calls = [],
   masterBytes = new Map([['3d', tinted(1)]]);
 let expectedGuide = guideA;
 global.fetch = async (url, init) => {
+  const planned = await planner.handle(url, init);
+  if (planned) return planned;
+  if (String(url).startsWith('https://zh.wikipedia.org/w/api.php'))
+    // The correction's search reaches an isolated wiki with no pages.
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   assert.equal(url, 'https://style-reference.mori.example/v1/images/edits');
   assert.equal(init.headers.Authorization, 'Bearer isolated-style-key');
   const prompt = String(init.body.get('prompt'));
   const kind = prompt.includes('regular 2-by-2 grid')
     ? 'sheet'
-    : prompt.includes('Requested correction:')
+    : prompt.includes('Requested correction')
       ? 'edit'
       : 'base';
   const style =
@@ -242,7 +252,7 @@ app.on('browser-window-created', (_event, created) => {
       await idle();
       assert.deepEqual((await state()).characters, initial.characters);
       await js(
-        `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'style-fixture'},{imageKey:'isolated-style-key'}))`,
+        `window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,imageModel:'style-fixture'},{imageKey:'isolated-style-key',llmKey:'${planner.llmKey}'}))`,
       );
       for (const motion of motions) {
         const pressed = await js(

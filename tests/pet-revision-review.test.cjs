@@ -1,4 +1,5 @@
 'use strict';
+const { plan: revisionPlan } = require('./fixtures/revision-plan.cjs');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -89,6 +90,9 @@ test('base revision sends the chosen pixels plus every original and subsequent s
     skin: base,
     referenceDigest: referencePack(character).digest,
     feedback: '只修清晰的眼睛',
+    plan: revisionPlan('只修清晰的眼睛', {
+      prompt: 'Make both eyes crisp and clear; keep everything else unchanged.',
+    }),
   };
   const revised = await services.revisePetBase(input, settings, credentials);
   assert.equal(requests.length, 1);
@@ -98,7 +102,9 @@ test('base revision sends the chosen pixels plus every original and subsequent s
     requests[0].images,
     [base.images.neutral, ...character.visualReferences.map((r) => r.image)].map(bytes),
   );
-  assert.match(requests[0].prompt, /只修清晰的眼睛/);
+  // The image model receives the chat model's instruction, not the user's own words.
+  assert.match(requests[0].prompt, /Make both eyes crisp and clear/);
+  assert.doesNotMatch(requests[0].prompt, /只修清晰的眼睛/);
   assert.notEqual(revised.id, base.id);
   assert.equal(revised.images.neutral, output);
   assert.equal(revised.generation.parentSkinId, base.id);
