@@ -11,6 +11,20 @@ const styles = Object.keys(require('../shared/art-styles.json'));
 const creationStyles = require('../shared/creation-styles.json');
 // Old task files remain readable; retired styles cannot start or resume generation.
 const recognizedStyles = [...styles, 'realistic', 'watercolor', 'plush', 'figurine'];
+// Pose sheets that fail the local quality check are regenerated this many times before stopping.
+const AUTO_RETRIES = 3;
+// What the next request is told about the rejected one; written for the image model.
+function retryHint(message) {
+  if (/裁切|边缘/.test(message))
+    return 'The previous attempt was rejected because the character touched a grid cell edge and would be clipped. Keep the WHOLE figure, including hair tips, horns, hands, feet and props, inside its own cell with at least 8% transparent margin on every side; draw the character smaller rather than letting anything reach an edge, and never let a figure cross into a neighbouring cell.';
+  if (/完全相同|可见变化|缺少真实姿势|重复帧/.test(message))
+    return 'The previous attempt was rejected because frames repeated the same pose. Make every frame a clearly different pose exactly as specified, with visible changes in limbs, eyelids and mouth.';
+  if (/比例变化/.test(message))
+    return 'The previous attempt was rejected because the character changed size between frames. Keep the same head and body size in every cell; only the pose changes.';
+  if (/透明背景/.test(message))
+    return 'The previous attempt was rejected because the background was not transparent. Output a fully transparent PNG background with no scenery, floor or checkerboard.';
+  return `The previous attempt was rejected: ${message.slice(0, 300)}. Fix that and keep everything else unchanged.`;
+}
 const motions = require('../shared/pet-motions.json').map((m) => m.id);
 const stamp = () => new Date().toISOString();
 function validId(id) {
@@ -185,7 +199,9 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         !job.styles.includes(step.style) ||
         !['base', 'sheet', 'pack'].includes(step.kind) ||
         !['queued', 'working', 'done', 'failed', 'unsaved', 'uncertain'].includes(step.status) ||
-        (step.kind === 'sheet' && !job.motions.includes(step.motion))
+        (step.kind === 'sheet' && !job.motions.includes(step.motion)) ||
+        (step.attempts !== undefined && !(Number.isInteger(step.attempts) && step.attempts >= 0 && step.attempts <= 9)) ||
+        (step.hint !== undefined && (typeof step.hint !== 'string' || step.hint.length > 600))
       )
         throw new Error('桌宠任务阶段无效。');
     }
@@ -710,7 +726,9 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
                 ...productionOptions(job),
                 ...(job.revision?.kind === 'motion' && job.revision.motion === step.motion
                   ? { feedback: job.revision.feedback }
-                  : {}),
+                  : step.hint
+                    ? { feedback: step.hint }
+                    : {}),
               },
               settings,
               credentials,
@@ -781,13 +799,30 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       return job;
     } catch (error) {
       // Written or cached output can be recovered locally. A technical-quality
-      // rejection keeps its source output but needs an explicit regeneration.
+      // rejection keeps its source output but needs a regeneration.
       const localSaveFailure = returned && phase !== 'checking';
       step.status = localSaveFailure ? 'unsaved' : returned ? 'failed' : 'uncertain';
       if (step.kind === 'base' && job.awaitingSelection === step.style) delete job.awaitingSelection;
       if (step.kind === 'pack') step.status = returned ? 'unsaved' : 'failed';
       step.error = String(error.message || '桌宠制作未完成。').slice(0, 700);
       job.status = 'attention';
+      // A pose sheet that fails the local quality check is regenerated automatically, a bounded
+      // number of times, with the reason fed back into the next request. The rejected file is
+      // kept as evidence, the same way an explicit retry keeps it.
+      if (step.kind === 'sheet' && step.status === 'failed' && (step.attempts || 0) < AUTO_RETRIES) {
+        try {
+          await io.rename(artifact(id, index), path.join(root, `${id}-${index}.rejected-${Date.now()}.json`));
+        } catch {
+          /* The checked output was cached only. */
+        }
+        pendingPixels.delete(`${id}:${index}`);
+        step.attempts = (step.attempts || 0) + 1;
+        step.hint = retryHint(step.error);
+        step.error = `上一次结果未通过检查，正在自动重做（第 ${step.attempts}/${AUTO_RETRIES} 次）：${step.error}`.slice(0, 700);
+        step.status = 'queued';
+        job.status = 'queued';
+      } else if (step.kind === 'sheet' && step.status === 'failed' && step.attempts)
+        step.error = `已自动重做 ${step.attempts} 次仍未通过检查，请手动重试或修正提示。${step.error}`.slice(0, 700);
       try {
         await persist(job);
       } catch {
@@ -818,6 +853,8 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     pendingPixels.delete(`${id}:${index}`);
     job.steps[index].status = 'queued';
     delete job.steps[index].error;
+    // A person's retry starts a fresh round of automatic attempts.
+    delete job.steps[index].attempts;
     job.status = 'queued';
     return persist(job);
   }

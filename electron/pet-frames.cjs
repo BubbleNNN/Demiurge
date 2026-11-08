@@ -44,9 +44,37 @@ function bounds(frame) {
   if (opaque < frame.width * frame.height * 0.015) throw new Error('生成帧没有足够的角色内容。');
   if (opaque > frame.width * frame.height * 0.9)
     throw new Error('生成帧没有透明背景，请换用支持透明 PNG 的图像接口。');
-  if (left < margin || top < margin || right >= frame.width - margin || bottom >= frame.height - margin)
-    throw new Error('人物贴近画布或分格边缘，可能被裁切。请重新生成这个动作，保留头发、手和脚的留白。');
-  return { left, top, right, bottom, width: right - left + 1, height: bottom - top + 1 };
+  // A hair tip or a shoe grazing a cell edge is not a cut figure. Measure how much SOLID content
+  // sits in the edge band: a narrow touch is kept and reported, a wide one means the body crosses
+  // the border and the frame really is clipped.
+  const contacts = [];
+  for (const [side, span, length] of [
+    ['top', top < margin ? bandSpan(frame, 'top', margin) : 0, frame.width],
+    ['bottom', bottom >= frame.height - margin ? bandSpan(frame, 'bottom', margin) : 0, frame.width],
+    ['left', left < margin ? bandSpan(frame, 'left', margin) : 0, frame.height],
+    ['right', right >= frame.width - margin ? bandSpan(frame, 'right', margin) : 0, frame.height],
+  ]) {
+    if (!span) continue;
+    if (span > length * 0.1)
+      throw new Error('人物贴近画布或分格边缘，可能被裁切。请重新生成这个动作，保留头发、手和脚的留白。');
+    contacts.push({ side, span });
+  }
+  return { left, top, right, bottom, width: right - left + 1, height: bottom - top + 1, contacts };
+}
+// Distinct rows or columns in an edge band holding solid (alpha >= 128) pixels.
+function bandSpan(frame, side, margin) {
+  const touched = new Set();
+  const along = side === 'top' || side === 'bottom' ? frame.width : frame.height;
+  for (let i = 0; i < along; i++)
+    for (let d = 0; d < margin; d++) {
+      const x = side === 'left' ? d : side === 'right' ? frame.width - 1 - d : i;
+      const y = side === 'top' ? d : side === 'bottom' ? frame.height - 1 - d : i;
+      if (frame.bitmap[(y * frame.width + x) * 4 + 3] >= 128) {
+        touched.add(i);
+        break;
+      }
+    }
+  return touched.size;
 }
 function footAnchor(frame, box) {
   let sum = 0,
@@ -81,6 +109,7 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
   const unit = recipe.count === 8 ? Math.ceil(Math.max(cw / 3, ch / 4)) : Math.max(cw, ch);
   const width = recipe.count === 8 ? unit * 3 : unit;
   const height = recipe.count === 8 ? unit * 4 : unit;
+  const edgeContacts = [];
   const frames = Array.from({ length: recipe.count }, (_, index) => {
     const col = index % recipe.columns,
       row = Math.floor(index / recipe.columns);
@@ -93,7 +122,7 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
       const offset = ((y0 + y) * sheet.width + x0) * 4;
       sheet.bitmap.copy(source.bitmap, y * w * 4, offset, offset + w * 4);
     }
-    bounds(source);
+    for (const contact of bounds(source).contacts) edgeContacts.push({ frame: index + 1, ...contact });
     const bitmap = Buffer.alloc(width * height * 4);
     const dx = Math.floor((width - w) / 2),
       dy = height - h;
@@ -139,6 +168,7 @@ function splitSheet(dataUrl, codec, motion, options = {}) {
       cellHeight: height,
       padded: sheet.width !== width * recipe.columns || sheet.height !== height * recipe.rows,
       distinctFrames: representatives.length,
+      edgeContacts,
     },
   };
 }
@@ -189,6 +219,10 @@ function packFrames(masterImage, sheets, style, codec, options = {}) {
     if (report.padded)
       warnings.push(
         `动作 ${motion} 的原始图集为 ${report.sourceWidth}×${report.sourceHeight}；已按等分网格补透明留白，每帧 ${report.cellWidth}×${report.cellHeight}，未拉伸或裁切原图。`,
+      );
+    if (report.edgeContacts.length)
+      warnings.push(
+        `动作 ${motion} 第 ${[...new Set(report.edgeContacts.map((c) => c.frame))].join('、')} 帧的发梢、手或脚贴到分格边缘（最宽 ${Math.max(...report.edgeContacts.map((c) => c.span))} 像素），已按原样保留；若试播时看到缺角，可单独重做这个动作。`,
       );
     if (style === 'sticker' || style === 'pastel' || style === 'chibi-pet') frames.forEach(cleanStickerAlpha);
     const first = bounds(frames[0]);

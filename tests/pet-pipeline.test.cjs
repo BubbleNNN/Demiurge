@@ -321,13 +321,13 @@ test('simultaneous creates cannot duplicate a plan and cancelling preserves arti
   await assert.rejects(p.load('../private'), /编号/);
 });
 
-test('a rejected pose sheet stops the task and explicit retry preserves the completed master', async (t) => {
-  let bad = true,
-    poseCalls = 0;
+test('a rejected pose sheet is regenerated automatically with the reason fed back, then stops after three tries', async (t) => {
+  let bad = true;
+  const requests = [];
   const context = await setup(t, {
     services: {
-      async generatePetSheet() {
-        poseCalls++;
+      async generatePetSheet(input) {
+        requests.push(input.feedback);
         return { image: fixture.url(fixture.image(true, { identical: bad })) };
       },
     },
@@ -336,18 +336,32 @@ test('a rejected pose sheet stops the task and explicit retry preserves the comp
   job = await context.pipeline.advance(job.id, character, settings, {});
   job = await context.pipeline.advance(job.id, character, settings, {});
   assert.equal(job.steps[0].status, 'done');
-  assert.equal(job.steps[1].status, 'failed');
-  assert.match(job.steps[1].error, /完全相同/);
+  assert.equal(job.steps[1].status, 'queued', 'the first rejection re-queues the sheet');
+  assert.equal(job.steps[1].attempts, 1);
+  assert.equal(job.status, 'queued');
+  assert.match(job.steps[1].error, /自动重做（第 1\/3 次）.*完全相同/);
+  assert.match(job.steps[1].hint, /repeated the same pose/);
+  job = await context.pipeline.advance(job.id, character, settings, {});
+  job = await context.pipeline.advance(job.id, character, settings, {});
+  assert.equal(job.steps[1].attempts, 3);
+  job = await context.pipeline.advance(job.id, character, settings, {});
+  assert.equal(job.steps[1].status, 'failed', 'the fourth rejection stops for a person');
+  assert.equal(job.status, 'attention');
+  assert.match(job.steps[1].error, /已自动重做 3 次/);
+  assert.equal(requests.length, 4);
+  assert.equal(requests[0], undefined, 'the first request carries no feedback');
+  assert.ok(requests.slice(1).every((feedback) => /repeated the same pose/.test(feedback)), 'retries carry the reason');
   await assert.rejects(context.pipeline.advance(job.id, character, settings, {}), /完全相同/);
-  assert.equal(poseCalls, 1);
+  assert.equal((await fs.readdir(context.root)).filter((name) => name.includes('.rejected-')).length, 3, 'automatic rounds keep each rejected sheet; the last stays as the step output');
   bad = false;
   job = await context.pipeline.retry(job.id, 1);
+  assert.equal((await fs.readdir(context.root)).filter((name) => name.includes('.rejected-')).length, 4, 'a manual retry sets the last one aside too');
+  assert.equal(job.steps[1].attempts, undefined, 'a manual retry starts a fresh round');
   job = await context.pipeline.advance(job.id, character, settings, {});
   job = await context.pipeline.advance(job.id, character, settings, {});
   assert.equal(job.status, 'ready');
   assert.equal(context.calls(), 1);
-  assert.equal(poseCalls, 2);
-  assert.ok((await fs.readdir(context.root)).some((name) => name.includes('.rejected-')));
+  assert.equal(requests.length, 5);
 });
 
 test('an existing same-style master avoids its image request and another style cannot silently use it', async (t) => {
@@ -651,4 +665,22 @@ test('new tasks accept only the four offered looks; an approved earlier look can
     {},
   );
   assert.deepEqual(job.styles, ['pastel']);
+});
+
+
+test('a hair tip or shoe grazing a cell edge is kept and reported; a body crossing the border is still rejected', () => {
+  const decoded = fixture.decode(fixture.image(true));
+  const graze = (rows, x0, w) => {
+    const copy = { ...decoded, bitmap: Buffer.from(decoded.bitmap) };
+    // Solid pixels on the top edge of the first cell, `w` columns wide.
+    for (let y = 0; y < rows; y++)
+      for (let x = x0; x < x0 + w; x++) copy.bitmap.fill(255, (y * copy.width + x) * 4, (y * copy.width + x) * 4 + 4);
+    return fixture.url(fixture.encode(copy.bitmap, copy.width, copy.height));
+  };
+  const cell = decoded.width / 2;
+  const report = inspectSheet(graze(2, 40, Math.floor(cell * 0.06)), fixture.codec, 'wave');
+  assert.deepEqual(report.edgeContacts, [{ frame: 1, side: 'top', span: Math.floor(cell * 0.06) }]);
+  assert.throws(() => inspectSheet(graze(2, 20, Math.floor(cell * 0.3)), fixture.codec, 'wave'), /裁切/);
+  const packed = packFrames(image, { wave: graze(2, 40, Math.floor(cell * 0.06)) }, 'original', fixture.codec);
+  assert.ok(packed.warnings.some((w) => /第 1 帧.*贴到分格边缘/.test(w)));
 });

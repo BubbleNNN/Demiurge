@@ -279,7 +279,7 @@ export function PetProductionStudio({
   async function execute(value: PetJob, oneStep = false) {
     let current = value;
     let reviewingBase = false;
-    for (let n = 0; n <= value.steps.length; n++) {
+    for (let n = 0; n <= value.steps.length * 4; n++) {
       if (stop.current || current.awaitingSelection || ['ready', 'cancelled'].includes(current.status)) break;
       const index = current.steps.findIndex((step) => step.status !== 'done');
       if (index < 0) break;
@@ -766,7 +766,7 @@ export function PetProductionStudio({
             <strong>
               {selectedStyles.length} 种画风 · {selectedMotions.length} 组动作
             </strong>
-            <p>预计 {requests} 次图像请求；整理动画不调用模型。请求失败不自动重试。</p>
+            <p>预计 {requests} 次图像请求；整理动画不调用模型。动作图未通过本机检查（裁切、重复帧等）时会自动重做，最多 3 次，每次都是一次图像请求；网络或服务错误不自动重试。</p>
           </div>
           <button
             className="button primary"
@@ -1108,7 +1108,10 @@ export function PetProductionStudio({
                           <span className={`production-step ${step.status}`} key={index}>
                             <i />
                             {stepName(step)}
-                            <small>{statusName[step.status]}</small>
+                            <small>
+                              {statusName[step.status]}
+                              {step.attempts ? ` · 自动重做 ${step.attempts}/3` : ''}
+                            </small>
                           </span>
                         ))}
                     </div>

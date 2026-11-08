@@ -396,6 +396,10 @@ export interface PetJob extends PetProductionOptions {
     motion?: PetMotion;
     status: 'queued' | 'working' | 'done' | 'failed' | 'unsaved' | 'uncertain';
     error?: string;
+    /** Automatic regenerations already spent on this pose sheet after quality rejections. */
+    attempts?: number;
+    /** Guidance for the next request, derived from the last rejection. */
+    hint?: string;
   }[];
   results: { style: ArtStyle; skinId: string; warnings: string[] }[];
 }
