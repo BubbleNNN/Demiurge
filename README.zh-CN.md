@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-0.3.34-8c72d6" />
+  <img alt="version" src="https://img.shields.io/badge/version-0.1.0-8c72d6" />
   <img alt="platforms" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-5a3f8f" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-c0668d" />
   <img alt="local first" src="https://img.shields.io/badge/local--first-no%20account%20needed-3a2d63" />
@@ -29,7 +29,7 @@
   <img src="docs/media/banner.svg" alt="一个小小的方块精灵坐在代码编辑器窗口上，说陪你一起写代码" width="100%" />
 </p>
 
-**当前代码版本：0.3.34。** Demiurge 原名 Mori，数据目录、已保存的密钥和 macOS 权限都原样沿用。
+**当前代码版本：0.1.0。** Demiurge 原名 Mori，数据目录、已保存的密钥和 macOS 权限都原样沿用。
 
 ## 为什么是 Demiurge
 
