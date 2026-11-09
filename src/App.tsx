@@ -1007,7 +1007,7 @@ export default function App() {
   }, [petMode, ready, skin]);
   useEffect(() => {
     if (!petMode) return;
-    return bridge.onSpaceChanged?.(({ direction }) => void enterRef.current(direction, true));
+    return bridge.onSpaceChanged?.(({ from }) => void enterRef.current(from, true));
   }, [petMode]);
   // The message box takes the keyboard when it opens, and folds away when the user goes back to
   // another app without having typed anything.
@@ -3644,7 +3644,8 @@ export default function App() {
             onRemovePlugin={async (id) => setPlugins(await bridge.removeCommunityPlugin(id))}
             onShare={async () => {
               const characterSkins = state.skins.filter((s) => s.characterId === character.id);
-              if (await bridge.exportCharacter({ character, skins: characterSkins })) await bridge.openCommunityShare();
+              if (await bridge.exportCharacter({ character, skins: characterSkins }))
+                await bridge.openCommunityShare();
             }}
           />
         </Modal>

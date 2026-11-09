@@ -400,13 +400,13 @@ async function createPet() {
     lastRoom = '';
     reportPetRoom();
   });
-  // She is on every Space, full-screen apps included; moving to another one, she runs in from
-  // the side the user moved toward (see the desktop helper's Space order).
+  // She is on every Space, full-screen apps included; moving to another one, she follows from
+  // the side the user came from: switching to the Space on the right, she runs in from the left.
   pet.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  require('./desktop-surfaces.cjs').onSpaceChange(({ display, direction }) => {
+  require('./desktop-surfaces.cjs').onSpaceChange(({ display, from }) => {
     if (!pet || pet.isDestroyed()) return;
     const shown = screen.getDisplayNearestPoint(require('./pet-layout.cjs').figureCentre(pet.getBounds()));
-    if (shown.id === display) pet.webContents.send('mori:space-changed', { direction });
+    if (shown.id === display) pet.webContents.send('mori:space-changed', { from });
   });
   pet.on('move', () => {
     reportPetRoom();

@@ -539,7 +539,7 @@ app.on('browser-window-created', (_e, win) => {
       pet.setPosition(area.x + 400, area.y + 220);
       await sleep(400);
       const home = await feet();
-      pet.webContents.send('mori:space-changed', { direction: 'right' });
+      pet.webContents.send('mori:space-changed', { from: 'left' });
       await wait(async () => (await status()).includes('跑过来了'), 'entering', 60);
       await wait(async () => !(await status()).includes('跑过来了'), 'arrived', 200);
       const back = await feet();

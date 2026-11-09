@@ -596,7 +596,8 @@ export interface MoriBridge {
   /** Points of the pet window's bands above and below her figure that are on screen. */
   onPetRoom?(callback: (room: { above: number; below: number }) => void): () => void;
   /** The user moved to another Space or full-screen app (macOS), toward this side. */
-  onSpaceChanged?(callback: (change: { direction: 'left' | 'right' }) => void): () => void;
+  /** The user moved to another Space; `from` is the side they came from, where she runs in. */
+  onSpaceChanged?(callback: (change: { from: 'left' | 'right' }) => void): () => void;
   onBeforeClose?(callback: () => Promise<unknown>): () => void;
 }
 declare global {

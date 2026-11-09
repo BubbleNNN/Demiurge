@@ -79,8 +79,10 @@ function noteSpaces(list) {
       continue;
     const before = shownSpaces.get(item.display);
     shownSpaces.set(item.display, item);
+    // Moving to a Space further right, the user leaves one on the left behind: she follows from
+    // that side, the side the user came from.
     if (before && before.space !== item.space && spaceListener)
-      spaceListener({ display: item.display, direction: item.index >= before.index ? 'right' : 'left' });
+      spaceListener({ display: item.display, from: item.index >= before.index ? 'left' : 'right' });
   }
 }
 function startWatching() {
