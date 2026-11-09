@@ -4,17 +4,20 @@
 // payload as the macOS build, zipped as release/Demiurge-<version>-windows-x64.zip.
 // Untested on Windows itself. The desktop helper (windows, Spaces, typing) is macOS only, so on
 // Windows the pet lives on the desktop without window awareness; everything else is the same.
+// `--public` makes the build meant for a download page: the bundled icon instead of your own
+// picture (private/app-icon.png), and no Live2D Cubism Core, which has its own license terms
+// (docs/THIRD_PARTY.md). Sprite and image pets work the same; Live2D models do not load.
 const fs = require('node:fs');
 const path = require('node:path');
 const { writePayload, auditPayload, hashFile, run } = require('./package-desktop.cjs');
 
 const root = path.resolve(__dirname, '..');
 
-async function packageWindows({ skipBuild = false } = {}) {
+async function packageWindows({ skipBuild = false, publicBuild = false } = {}) {
   if (process.platform !== 'darwin') throw new Error('This script packages for Windows from macOS.');
   const info = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(info.version)) throw new Error('Invalid package version.');
-  if (!fs.existsSync(path.join(root, 'public/vendor/live2dcubismcore.min.js')))
+  if (!publicBuild && !fs.existsSync(path.join(root, 'public/vendor/live2dcubismcore.min.js')))
     throw new Error('Live2D Core is missing. Run pnpm setup:live2d before building a complete package.');
   if (!skipBuild) {
     run(process.execPath, [require.resolve('typescript/bin/tsc'), '-b']);
@@ -42,18 +45,18 @@ async function packageWindows({ skipBuild = false } = {}) {
     run('/usr/bin/ditto', ['-x', '-k', archive, folder], { stdio: 'pipe' });
     fs.rmSync(path.join(folder, 'resources/default_app.asar'), { force: true });
     const payload = path.join(folder, 'resources/app');
-    const runtime = writePayload(payload, info, 'win32');
+    const runtime = writePayload(payload, info, 'win32', { live2d: !publicBuild });
     // The window and taskbar icon (Windows reads it at runtime): your own picture when there is one.
     const icons = path.join(temporary, 'icons');
     fs.mkdirSync(icons);
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
-    const customIcon = path.join(root, 'private/app-icon.png');
+    const customIcon = publicBuild ? '' : path.join(root, 'private/app-icon.png');
     run(
       require('electron'),
       [
         path.join(root, 'scripts/lib/package-icon.cjs'),
-        fs.existsSync(customIcon) ? customIcon : path.join(root, 'public/favicon.svg'),
+        customIcon && fs.existsSync(customIcon) ? customIcon : path.join(root, 'public/favicon.svg'),
         icons,
       ],
       { env },
@@ -72,6 +75,10 @@ async function packageWindows({ skipBuild = false } = {}) {
         `Demiurge ${info.version} for Windows (x64), unsigned local build.`,
         'Run Demiurge.exe. Windows SmartScreen may warn about an unknown publisher the first time.',
         'On Windows the desktop pet does not yet see other windows (that helper is macOS only).',
+        ...(publicBuild
+          ? ['This build does not include Live2D Cubism Core, so Live2D models do not load.']
+          : []),
+        'Your data is kept in %APPDATA%\\Mori. To uninstall, delete this folder (and that one to remove your data).',
         '',
       ].join('\r\n'),
     );
@@ -83,8 +90,10 @@ async function packageWindows({ skipBuild = false } = {}) {
       electron: electronVersion,
       signed: false,
       tested: false,
+      public: publicBuild,
+      live2d: !publicBuild,
       runtimeDependencies: runtime.map(({ name, version }) => ({ name, version })),
-      payload: auditPayload(payload),
+      payload: auditPayload(payload, { live2d: !publicBuild }),
     };
     fs.writeFileSync(path.join(folder, 'package-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     const zip = path.join(release, `${stem}.zip`);
@@ -105,7 +114,10 @@ async function packageWindows({ skipBuild = false } = {}) {
 
 module.exports = { packageWindows };
 if (require.main === module)
-  packageWindows({ skipBuild: process.argv.includes('--skip-build') }).catch((error) => {
+  packageWindows({
+    skipBuild: process.argv.includes('--skip-build'),
+    publicBuild: process.argv.includes('--public'),
+  }).catch((error) => {
     console.error(error.stack || error.message);
     process.exitCode = 1;
   });

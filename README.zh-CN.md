@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-0.3.33-8c72d6" />
+  <img alt="version" src="https://img.shields.io/badge/version-0.3.34-8c72d6" />
   <img alt="platforms" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-5a3f8f" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-c0668d" />
   <img alt="local first" src="https://img.shields.io/badge/local--first-no%20account%20needed-3a2d63" />
@@ -29,7 +29,7 @@
   <img src="docs/media/banner.svg" alt="一个小小的方块精灵坐在代码编辑器窗口上，说陪你一起写代码" width="100%" />
 </p>
 
-**当前代码版本：0.3.33。** Demiurge 原名 Mori，数据目录、已保存的密钥和 macOS 权限都原样沿用。
+**当前代码版本：0.3.34。** Demiurge 原名 Mori，数据目录、已保存的密钥和 macOS 权限都原样沿用。
 
 ## 为什么是 Demiurge
 
@@ -46,21 +46,46 @@
 | 🌐 **分享与下载**           | 社区目录里有大家分享的桌宠和纯数据插件，一键安装，每个文件都按记录的校验值核对。                                                                                                        |
 | 🔒 **隐私优先**             | 她只知道窗口的位置、最前面的应用、以及距离你上次按键过了几秒，不读取窗口标题、内容或按键。密钥存在系统钥匙串里，所有处理都在你的电脑上完成。                                            |
 
-## 快速开始
+## 安装
 
-**构建。** 目前还没有公开下载，安装包在本机构建，未签名（见 [macOS 打包说明](docs/MACOS_RELEASE.md)）：
+### Windows 10 / 11（64 位）
+
+> Windows 版本刚刚推出，还没有在 Windows 电脑上实际测试过。遇到问题请[提交 Issue](https://github.com/BubbleNNN/Mori/issues)。
+
+1. 在[最新发布页](https://github.com/BubbleNNN/Mori/releases/latest)下载 `Demiurge-<版本>-windows-x64.zip`。
+2. _可选：_ 核对下载文件。在 PowerShell 里运行 `Get-FileHash .\Demiurge-<版本>-windows-x64.zip`，显示的 SHA-256 应与旁边一起发布的 `.sha256` 文件一致。
+3. 右键压缩包，选择「全部解压缩…」，解压到一个会长期保留的文件夹，例如 `%LOCALAPPDATA%\Programs\Demiurge`。不要直接在压缩包里运行。
+4. 打开解压出的文件夹，双击 **Demiurge.exe**。
+5. 应用没有代码签名，第一次打开时 Windows 可能提示「Windows 已保护你的电脑」。点击「更多信息」，再点「仍要运行」。
+6. 想要快捷方式：右键 `Demiurge.exe`，选择「固定到开始屏幕」，或「显示更多选项 → 发送到 → 桌面快捷方式」。
+
+**更新：** 退出 Demiurge，解压新版本，再删除旧文件夹，角色、聊天和设置都会保留。**卸载：** 删除这个文件夹即可。数据保存在 `%APPDATA%\Mori`（粘贴到资源管理器地址栏打开），一并删除即可清除全部数据。
+
+目前 Windows 版与 macOS 版的区别：
+
+- 她住在你的桌面上，但暂时看不到其他窗口，不会坐到你正在打字的窗口上，也不会跟着你切换虚拟桌面（这部分依赖 macOS 助手）。
+- 下载版不包含 Live2D 运行库（它有单独的授权条款），因此无法播放 Live2D 模型；图片和动作桌宠不受影响。
+- `Demiurge.exe` 文件本身显示 Electron 的默认图标，窗口和任务栏显示 Demiurge 的图标。
+
+### macOS（Apple 芯片）
+
+暂时没有 macOS 下载，请按下面的方法在 Mac 上构建。应用未签名，第一次请右键选择「打开」。见 [macOS 打包说明](docs/MACOS_RELEASE.md)。
+
+### 从源码运行与构建
+
+需要 Node.js 22.12+ 和 pnpm。
 
 ```bash
 pnpm install
 pnpm setup:live2d        # 可选：Live2D 运行库
 pnpm desktop             # 从源码运行，带热更新
-node scripts/package-desktop.cjs   # 在 release/ 生成 macOS 应用
-node scripts/package-windows.cjs   # 在 release/ 生成 Windows x64 压缩包（尚未在 Windows 上测试）
+node scripts/package-desktop.cjs            # 在 release/ 生成 macOS 应用（在 Mac 上运行）
+node scripts/package-windows.cjs --public   # 在 release/ 生成 Windows x64 压缩包（在 Mac 上构建）
 ```
 
-macOS 上也可以双击 **Start Demiurge Dev.command**。需要 Node.js 22.12+。
+macOS 上也可以双击 **Start Demiurge Dev.command**。
 
-**第一次使用。**
+## 第一次使用
 
 1. 打开应用：示例角色不配置任何接口也能聊天。
 2. 点击「放到桌面」，她会跑进来、挥挥手，然后开始过她自己的一天。

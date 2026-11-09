@@ -191,7 +191,8 @@ function collectNotices(sourceRoot, target, names) {
   return records;
 }
 
-function auditPayload(payload) {
+// `live2d: false` is a build for publishing: Live2D Cubism Core (licensed separately) must be absent.
+function auditPayload(payload, { live2d = true } = {}) {
   for (const name of fs.readdirSync(payload))
     if (!allowedRoot.has(name)) throw new Error(`Unapproved package root: ${name}`);
   const realRoot = fs.realpathSync(payload);
@@ -219,18 +220,23 @@ function auditPayload(payload) {
     'shared/features.json',
     'dist/index.html',
     'dist/favicon.svg',
-    'dist/vendor/live2dcubismcore.min.js',
+    ...(live2d ? ['dist/vendor/live2dcubismcore.min.js'] : []),
     'licenses/THIRD_PARTY.md',
   ]) {
     if (!fs.existsSync(path.join(payload, required)))
       throw new Error(`Missing runtime resource: ${required}`);
   }
-  const vendor = fs.readFileSync(path.join(payload, 'dist/vendor/live2dcubismcore.min.js'), 'utf8');
-  if (
-    !vendor.includes('Live2D Cubism Core') ||
-    !vendor.includes('live2d-proprietary-software-license-agreement')
-  )
-    throw new Error('Live2D Core or its original license notice is missing.');
+  const core = path.join(payload, 'dist/vendor/live2dcubismcore.min.js');
+  if (!live2d) {
+    if (fs.existsSync(core)) throw new Error('A build for publishing must not bundle Live2D Cubism Core.');
+  } else {
+    const vendor = fs.readFileSync(core, 'utf8');
+    if (
+      !vendor.includes('Live2D Cubism Core') ||
+      !vendor.includes('live2d-proprietary-software-license-agreement')
+    )
+      throw new Error('Live2D Core or its original license notice is missing.');
+  }
   const art = fs.readdirSync(path.join(payload, 'dist/art'));
   for (const file of art) {
     const exportFile = path.join(payload, 'public/art', file);
@@ -250,7 +256,7 @@ function editPlist(file, values, remove = []) {
 // The app itself inside a packaged Electron (resources/app): code, shared data, the built page,
 // artwork, runtime dependencies and licenses. The same for every platform except the macOS
 // desktop helper.
-function writePayload(payload, info, platform) {
+function writePayload(payload, info, platform, { live2d = true } = {}) {
   fs.mkdirSync(payload, { recursive: true });
   const imports = runtimeImports(path.join(root, 'electron'));
   const dependencies = Object.fromEntries(
@@ -297,10 +303,11 @@ function writePayload(payload, info, platform) {
   const artwork = path.join(root, 'dist/art');
   const pngOnly = (file) => fs.statSync(file).isDirectory() || file.endsWith('.png');
   copyDirectory(artwork, path.join(payload, 'dist/art'), pngOnly);
-  copyDirectory(
-    path.join(root, 'dist/vendor/live2dcubismcore.min.js'),
-    path.join(payload, 'dist/vendor/live2dcubismcore.min.js'),
-  );
+  if (live2d)
+    copyDirectory(
+      path.join(root, 'dist/vendor/live2dcubismcore.min.js'),
+      path.join(payload, 'dist/vendor/live2dcubismcore.min.js'),
+    );
   copyDirectory(artwork, path.join(payload, 'public/art'), pngOnly);
   copyDirectory(path.join(root, 'LICENSE'), path.join(payload, 'LICENSE'));
   const runtime = installRuntimeDependencies(root, payload, imports);

@@ -232,6 +232,8 @@ function createWorkshop() {
   workshop = new BrowserWindow({
     title: `${DISPLAY_NAME} · 角色陪伴工坊`,
     ...(windowIcon ? { icon: windowIcon } : {}),
+    // Windows shows the menu inside the window; it stays out of the way until Alt is pressed.
+    ...(process.platform === 'win32' ? { autoHideMenuBar: true } : {}),
     width: 1400,
     height: 960,
     minWidth: 880,
@@ -432,10 +434,15 @@ app.whenReady().then(async () => {
         submenu: [
           { role: 'about', label: `关于 ${DISPLAY_NAME}` },
           { type: 'separator' },
-          { role: 'hide', label: `隐藏 ${DISPLAY_NAME}` },
-          { role: 'hideOthers', label: '隐藏其他' },
-          { role: 'unhide', label: '全部显示' },
-          { type: 'separator' },
+          // Hiding the app is a macOS idea.
+          ...(process.platform === 'darwin'
+            ? [
+                { role: 'hide', label: `隐藏 ${DISPLAY_NAME}` },
+                { role: 'hideOthers', label: '隐藏其他' },
+                { role: 'unhide', label: '全部显示' },
+                { type: 'separator' },
+              ]
+            : []),
           { role: 'quit', label: `退出 ${DISPLAY_NAME}` },
         ],
       },

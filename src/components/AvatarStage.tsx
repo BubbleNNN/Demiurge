@@ -34,7 +34,11 @@ function loadCore() {
       script.onerror = () => {
         script.remove();
         coreLoading = null;
-        reject(new Error('未找到 Live2D Core。请运行 pnpm setup:live2d 后重启开发版。'));
+        reject(
+          new Error(
+            '未找到 Live2D Core，Live2D 模型无法播放（图片和动作桌宠不受影响）。公开下载的版本不包含它；从源码运行时请执行 pnpm setup:live2d 后重启。',
+          ),
+        );
       };
       document.head.appendChild(script);
     });

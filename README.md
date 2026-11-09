@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-0.3.33-8c72d6" />
+  <img alt="version" src="https://img.shields.io/badge/version-0.3.34-8c72d6" />
   <img alt="platforms" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-5a3f8f" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-c0668d" />
   <img alt="local first" src="https://img.shields.io/badge/local--first-no%20account%20needed-3a2d63" />
@@ -46,21 +46,59 @@ their own routine and moods, and each one behaves like _themselves_.
 | 🌐 **Share and download**               | A community catalogue of pets and data-only plugins, installed with one click, every file checked against its digest.                                                                                                                                                        |
 | 🔒 **Private by design**                | She sees window positions, the front app and seconds since your last key press, never titles, contents or keystrokes. Keys live in the system keychain. Everything runs on your computer.                                                                                    |
 
-## Quick start
+## Install
 
-**Build.** There are no published downloads yet; builds are made locally and are unsigned (see [macOS packaging](docs/MACOS_RELEASE.md)):
+### Windows 10 / 11 (64-bit)
+
+> The Windows version is new and has not been tested on a Windows PC yet. If anything goes wrong,
+> please [open an issue](https://github.com/BubbleNNN/Mori/issues).
+
+1. Download `Demiurge-<version>-windows-x64.zip` from the
+   [latest release](https://github.com/BubbleNNN/Mori/releases/latest).
+2. _Optional:_ check the download. In PowerShell, `Get-FileHash .\Demiurge-<version>-windows-x64.zip`
+   should print the same SHA-256 as the `.sha256` file published next to it.
+3. Right-click the zip and choose **Extract All…**. Pick a folder you will keep, for example
+   `%LOCALAPPDATA%\Programs\Demiurge`. Don't run it from inside the zip.
+4. Open the extracted folder and double-click **Demiurge.exe**.
+5. The app is not code-signed, so the first time Windows may say _"Windows protected your PC"_.
+   Click **More info**, then **Run anyway**.
+6. For a shortcut, right-click `Demiurge.exe` and choose **Pin to Start**, or
+   **Show more options → Send to → Desktop (create shortcut)**.
+
+**Update:** quit Demiurge, extract the new zip, then delete the old folder. Your characters, chats
+and settings are kept. **Uninstall:** delete the folder. Your data lives in `%APPDATA%\Mori`
+(paste that into the Explorer address bar); delete it too to remove everything.
+
+What is different on Windows for now:
+
+- She lives on your desktop but does not see other windows yet, so she won't sit on the window you
+  are typing in or follow you between virtual desktops (that part uses a macOS helper).
+- Live2D models don't load in the download, because the Live2D runtime has its own licence.
+  Picture and animated pets work as usual.
+- `Demiurge.exe` itself shows the generic Electron icon; the window and taskbar show Demiurge's.
+
+### macOS (Apple silicon)
+
+There is no macOS download yet; build the app on your Mac as below. It is unsigned, so open it the
+first time with right-click → **Open**. See [macOS packaging](docs/MACOS_RELEASE.md).
+
+### From source
+
+Requires Node.js 22.12+ and pnpm.
 
 ```bash
 pnpm install
 pnpm setup:live2d        # optional: Live2D runtime
 pnpm desktop             # run from source with hot reload
-node scripts/package-desktop.cjs   # macOS app in release/
-node scripts/package-windows.cjs   # Windows x64 zip in release/ (untested on Windows)
+node scripts/package-desktop.cjs            # macOS app in release/ (run on a Mac)
+node scripts/package-windows.cjs --public   # Windows x64 zip in release/ (built on a Mac)
 ```
 
-On macOS you can also double-click **Start Demiurge Dev.command**. Requires Node.js 22.12+.
+On macOS you can also double-click **Start Demiurge Dev.command**.
 
-**First steps.** The interface is in Chinese for now.
+## First steps
+
+The interface is in Chinese for now.
 
 1. Open the app: the example character is ready to talk to without any API.
 2. Click **放到桌面** (put on desktop). She runs in, waves and gets on with her day.
