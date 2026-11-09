@@ -96,6 +96,18 @@ async function connect(url) {
     fs.readFileSync(path.join(path.dirname(appPath), 'package-manifest.json'), 'utf8'),
   );
   assert.deepEqual(manifest, expected.payload, 'Packaged files must match the recorded build manifest.');
+  // App Nap would pause her for up to a minute at a time while the user works in another app.
+  assert.equal(
+    spawnSync(
+      '/usr/bin/plutil',
+      ['-extract', 'NSAppSleepDisabled', 'raw', path.join(appPath, 'Contents/Info.plist')],
+      {
+        encoding: 'utf8',
+      },
+    ).stdout.trim(),
+    'true',
+    'App Nap must be off for the packaged app.',
+  );
   const runtime = spawnSync(
     binary,
     [
@@ -243,6 +255,7 @@ async function connect(url) {
     desktopPet: true,
     nativeDesktopScene: true,
     desktopInteraction: true,
+    appNapDisabled: true,
     reloadPersistence: true,
     userCredentialsBundled: false,
     paidRequests: 0,

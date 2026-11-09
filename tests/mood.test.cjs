@@ -108,3 +108,65 @@ test('lonely, she asks for a chat or a pat; cross, only to be comforted; feeling
   // The chat model hears how she feels.
   assert.ok(life.lifeSituation(life.createLife(0), {}, 0, '有点生气').feeling.includes('有点生气'));
 });
+
+test('how she feels changes what she does, not only her face', () => {
+  const conduct = (name) => m.moodConduct(name);
+  // Happy, she is brisk and restless; lonely, she drags her feet and stays down by you longest of
+  // all but cross, when she sits sulking even longer.
+  assert.ok(conduct('happy').pace > conduct('calm').pace);
+  assert.ok(conduct('lonely').pace < conduct('calm').pace);
+  assert.ok(conduct('lonely').walksOnly && conduct('angry').walksOnly && !conduct('happy').walksOnly);
+  assert.ok(conduct('happy').hold[1] <= conduct('calm').hold[1]);
+  assert.ok(conduct('lonely').hold[0] > conduct('calm').hold[0]);
+  assert.ok(conduct('angry').hold[0] > conduct('lonely').hold[0]);
+  // Sitting or lying down is a stay of most of a minute at least, not a gesture.
+  for (const name of ['calm', 'happy', 'lonely', 'angry']) assert.ok(conduct(name).hold[0] >= 30, name);
+  // Lonely, she stays with you; cross, she keeps away from your window.
+  assert.equal(conduct('lonely').ownChance, 0);
+  assert.equal(conduct('angry').keepsCompany, false);
+  assert.ok(['calm', 'happy', 'lonely'].every((name) => conduct(name).keepsCompany));
+
+  // Her habits as her mood allows: no humming while cross; sitting by you while lonely even if
+  // sitting is not one of her habits; humming and stretching when happy.
+  const own = ['lookAround', 'hum', 'stretch'];
+  assert.deepEqual(m.moodHabits('calm', own), own);
+  assert.deepEqual(new Set(m.moodHabits('angry', own)), new Set(['sit']));
+  assert.deepEqual(new Set(m.moodHabits('lonely', own)), new Set(['lookAround', 'sit', 'lie']));
+  assert.deepEqual(new Set(m.moodHabits('happy', ['sit'])), new Set(['sit', 'hum', 'stretch']));
+  assert.equal(
+    m.within([45, 90], () => 0),
+    45000,
+  );
+  assert.equal(
+    m.within([45, 90], () => 1),
+    90000,
+  );
+
+  // The routine leans the same way: cross, she writes in her diary rather than play games.
+  const picks = (name) => {
+    const counts = {};
+    for (let i = 0; i < 400; i++) {
+      const s = life.createLife(0);
+      s.until = 0;
+      s.focus = 0;
+      let n = ((i + 1) * 2654435761) % 2147483647 || 1;
+      const random = () => (n = (n * 48271) % 2147483647) / 2147483647;
+      const step = life.advanceLife(s, {
+        now: 1000,
+        hour: 15,
+        available: ['read', 'gaming', 'music', 'diary'],
+        proactive: false,
+        leanings: m.moodConduct(name).activities,
+        random,
+      });
+      counts[step.activity] = (counts[step.activity] || 0) + 1;
+    }
+    return counts;
+  };
+  const calm = picks('calm'),
+    angry = picks('angry'),
+    happy = picks('happy');
+  assert.ok(angry.diary > calm.diary * 1.5, JSON.stringify({ calm, angry }));
+  assert.ok((angry.gaming || 0) < calm.gaming / 2, JSON.stringify({ calm, angry }));
+  assert.ok(happy.gaming + happy.music > calm.gaming + calm.music, JSON.stringify({ calm, happy }));
+});

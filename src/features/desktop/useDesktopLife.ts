@@ -25,6 +25,7 @@ import {
 } from '../../desktopBehavior';
 import type { DesktopRect, DesktopScene, PetAction } from '../../types';
 import type { Habit, Travel } from '../../characterBehavior';
+import { moodConduct, moodHabits, within, type MoodName } from '../../mood';
 import {
   companySpot,
   coverage,
@@ -72,6 +73,9 @@ interface Options {
   habits?: Habit[];
   /** Left alone too long: she goes over to the user's window to ask for attention. */
   lonely?: boolean;
+  /** How she feels (mood.ts): it sets her pace, her habits, how long she sits or lies down,
+   *  and whether she keeps the user company. */
+  mood?: MoodName;
   /** What she shows now, to notice when she has been standing about with nothing to do. */
   current?: () => PetAction;
   /** She would like the user's attention (arrived lonely, or now and then while keeping company);
@@ -224,6 +228,7 @@ export function useDesktopLife(options: Options) {
   // Horizontal walk along the ledge she stands on. Her own wandering (yieldable) gives way the
   // moment an activity starts; walking to a spot chosen for an activity does not.
   const canWalk = () => ref.current.supports('walk_left') || ref.current.supports('walk_right');
+  const conduct = () => moodConduct(ref.current.mood || 'calm');
   async function walkTo(to: Point, token: number, yieldable = false, pace = 1) {
     const body = measureBody();
     if (!body || !bounds.current) return false;
@@ -242,7 +247,7 @@ export function useDesktopLife(options: Options) {
       }
       return true;
     }
-    const speed = walkSpeed(ref.current.temperament) * pace;
+    const speed = walkSpeed(ref.current.temperament) * pace * conduct().pace;
     const started = Date.now();
     let last = performance.now();
     for (;;) {
@@ -366,8 +371,10 @@ export function useDesktopLife(options: Options) {
   async function travelTo(to: Point, token: number, pace = 1) {
     const body = measureBody();
     if (!body || !bounds.current) return false;
-    if (ref.current.travel === 'fly' && ref.current.supports('fly')) return flyTo(to, token);
-    if (ref.current.travel === 'walk') pace = Math.min(pace, 1.3);
+    // Lonely or cross, she walks, whatever her usual way of getting about.
+    const walks = ref.current.travel === 'walk' || conduct().walksOnly;
+    if (ref.current.travel === 'fly' && ref.current.supports('fly') && !walks) return flyTo(to, token);
+    if (walks) pace = Math.min(pace, 1.3);
     if (!canWalk() && !ref.current.supports('bounce')) return teleportTo(to, token);
     const feet = feetOf(body, bounds.current);
     if (Math.abs(to.y - feet.y) > 6) {
@@ -448,7 +455,7 @@ export function useDesktopLife(options: Options) {
       : null;
     go('company');
     setStatus(spot.perch ? '在你的窗口上陪着你' : spot.over ? '在你窗口的角落陪着你' : '在你窗口旁边陪着你');
-    if (!ref.current.occupied) settlePose(Math.random() < 0.5);
+    if (!ref.current.occupied) settlePose(Math.random() < conduct().ownChance);
     else ref.current.onCompany(false);
   }
   // The window under her is gone: yanked away or closed. She falls to the bottom of the screen;
@@ -881,7 +888,7 @@ export function useDesktopLife(options: Options) {
     // One of her small habits, so she never just stands there.
     const habit = () => {
       const o = ref.current;
-      const usable = (o.habits || ['lookAround']).filter((h) =>
+      const usable = moodHabits(o.mood || 'calm', o.habits || ['lookAround']).filter((h) =>
         h === 'sit' || h === 'lie'
           ? o.supports(h)
           : h === 'lookAround'
@@ -894,7 +901,7 @@ export function useDesktopLife(options: Options) {
       if (!chosen) return;
       if (chosen === 'sit' || chosen === 'lie') {
         habitAction = chosen;
-        habitUntil = Date.now() + 25000 + Math.random() * 30000;
+        habitUntil = Date.now() + within(conduct().hold);
         o.onAction(chosen);
       } else if (chosen === 'lookAround') {
         const first = Math.random() < 0.5 ? 'left' : 'right';
@@ -947,7 +954,7 @@ export function useDesktopLife(options: Options) {
           ['idle', 'company'].includes(phaseRef.current) &&
           Date.now() - idleSince > habitGap
         ) {
-          habitGap = 9000 + Math.random() * 14000;
+          habitGap = within(conduct().habitGap);
           idleSince = Date.now();
           habit();
         }
@@ -963,7 +970,13 @@ export function useDesktopLife(options: Options) {
         // She goes to the user's window when they work in it, or, left alone too long, to ask for
         // their attention there.
         const wanted = Boolean(
-          ctx && ctx.focus && reachable && o.enabled && (ctx.company || (o.lonely && ctx.mode !== 'away')),
+          ctx &&
+            ctx.focus &&
+            reachable &&
+            o.enabled &&
+            // Cross with the user, she keeps away from their window.
+            conduct().keepsCompany &&
+            (ctx.company || (o.lonely && ctx.mode !== 'away')),
         );
         if (!ctx || !ctx.focus || !wanted) {
           if (phaseRef.current === 'company' && (steady || !ctx || ctx.mode === 'away')) leaveCompany();
@@ -1002,16 +1015,18 @@ export function useDesktopLife(options: Options) {
             if (nextSeek) o.onSeek?.();
             nextSeek = Date.now() + 8 * 60000 + Math.random() * 7 * 60000;
           }
-          // Every minute or so she shifts: sits, lies down, or does something of her own.
+          // Now and then she shifts: sits, lies down, or does something of her own. How long she
+          // stays down and how often she busies herself instead follow her mood.
           if (Date.now() >= nextPose) {
-            if (nextPose && (!o.occupied || pose.current === 'own')) settlePose(Math.random() < 0.3);
-            nextPose = Date.now() + 45000 + Math.random() * 45000;
+            if (nextPose && (!o.occupied || pose.current === 'own'))
+              settlePose(Math.random() < conduct().ownChance * 0.75);
+            nextPose = Date.now() + within(conduct().hold);
           }
           return;
         }
         // On the window's top edge when it leaves her room, otherwise just beside it.
         const spot = perchSpot(value.area, body, focus, feet) || companySpot(value.area, body, focus, feet);
-        nextPose = Date.now() + 45000 + Math.random() * 45000;
+        nextPose = Date.now() + within(conduct().hold);
         if (!seeking) nextSeek = Date.now() + 8 * 60000 + Math.random() * 7 * 60000;
         if (
           Math.hypot(spot.to.x - feet.x, spot.to.y - feet.y) < 40 ||
@@ -1105,7 +1120,7 @@ export function useDesktopLife(options: Options) {
         const body = measureBody();
         if (!body || !alive(token)) return;
         const home = feetOf(body, value.bounds);
-        const flies = ref.current.travel === 'fly' && ref.current.supports('fly');
+        const flies = ref.current.travel === 'fly' && ref.current.supports('fly') && !conduct().walksOnly;
         if (!flies && !canWalk() && !ref.current.supports('bounce')) {
           ref.current.onTeleport?.('out');
           await sleep(120);

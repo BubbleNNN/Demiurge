@@ -53,6 +53,46 @@ export function measureSequenceBounds(cells: MeasuredCell[]): FigureBounds {
   return { x: left / 128, y: top / 128, width: (right - left + 1) / 128, height: (bottom - top + 1) / 128 };
 }
 
+// How much of her figure, from the top, is her head: big heads in chibi-like styles.
+function headShare(root: Element) {
+  const style = root.querySelector<HTMLElement>('[data-art-style]')?.dataset.artStyle;
+  return style === 'powerpuff'
+    ? 0.6
+    : ['chibi-pet', 'chibi', 'sticker', 'pastel', 'figure', '8bit', 'pixel'].includes(style || '')
+      ? 0.42
+      : 0.28;
+}
+
+/**
+ * Over her head, for stroking it: anywhere across the top of her figure, a little wider and a
+ * little above it, including the gaps between strands of hair. A hand stroking a head passes
+ * over its outline all the time; only clicks need her actual pixels (hitCharacter).
+ */
+export function overHead(root: Element, clientX: number, clientY: number): boolean {
+  const canvas = root.querySelector<HTMLCanvasElement>('.animated-illustration canvas:not(.canvas-pending)');
+  if (canvas) {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return false;
+    const x = ((clientX - rect.left) * canvas.width) / rect.width;
+    const y = ((clientY - rect.top) * canvas.height) / rect.height;
+    let bounds: FigureBounds | null = null;
+    try {
+      bounds = JSON.parse(canvas.dataset.figureBounds || 'null') as FigureBounds | null;
+    } catch {
+      bounds = null;
+    }
+    const box = bounds || { x: 0, y: 0, width: canvas.width, height: canvas.height };
+    const across = (x - box.x) / box.width,
+      down = (y - box.y) / box.height;
+    return across >= -0.15 && across <= 1.15 && down >= -0.12 && down < headShare(root);
+  }
+  if (root.querySelector('.animated-illustration')) return false;
+  const rect = root.getBoundingClientRect();
+  const x = (clientX - rect.left) / rect.width,
+    y = (clientY - rect.top) / rect.height;
+  return x >= 0.2 && x <= 0.8 && y >= 0 && y < 0.4;
+}
+
 export function hitCharacter(root: Element, clientX: number, clientY: number): 'headpat' | 'poke' | null {
   const canvas = root.querySelector<HTMLCanvasElement>('.animated-illustration canvas:not(.canvas-pending)');
   if (canvas) {
@@ -65,10 +105,7 @@ export function hitCharacter(root: Element, clientX: number, clientY: number): '
       if ((canvas.getContext('2d')?.getImageData(x, y, 1, 1).data[3] || 0) < 40) return null;
       const bounds = JSON.parse(canvas.dataset.figureBounds || 'null') as FigureBounds | null;
       const localY = bounds ? (y - bounds.y) / bounds.height : y / canvas.height;
-      const style = root.querySelector<HTMLElement>('[data-art-style]')?.dataset.artStyle;
-      const head =
-        style === 'powerpuff' ? 0.6 : ['chibi-pet', 'chibi', 'sticker', 'pastel', 'figure', '8bit', 'pixel'].includes(style || '') ? 0.42 : 0.28;
-      return localY < head ? 'headpat' : 'poke';
+      return localY < headShare(root) ? 'headpat' : 'poke';
     } catch {
       return null;
     }

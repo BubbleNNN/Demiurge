@@ -380,6 +380,9 @@ async function createPet() {
     hasShadow: false,
     alwaysOnTop: true,
     skipTaskbar: true,
+    // The user is nearly always working in another app: the first click on her (a pat, a grab,
+    // a toolbar button) must reach her rather than only bring her window forward.
+    acceptFirstMouse: true,
     // Her bands may hang past the screen edges so that she can stand right at them.
     enableLargerThanScreen: true,
     show: false,

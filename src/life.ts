@@ -130,6 +130,8 @@ function chooseActivity(
   away = false,
   // Her favourite things (characterBehavior.ts), favourite first.
   hobbies: Activity[] = [],
+  // How her mood leans her (mood.ts moodConduct): cross, she writes in her diary rather than play.
+  leanings: Partial<Record<Activity, number>> = {},
 ): Activity {
   const fun = away ? 2 : 1;
   const weights: Record<Activity, number> = {
@@ -146,6 +148,8 @@ function chooseActivity(
     (activity, rank) =>
       (weights[activity] = Math.max(weights[activity], strongest) * ([2, 1.4, 1.1][rank] || 1)),
   );
+  for (const [activity, factor] of Object.entries(leanings) as [Activity, number][])
+    weights[activity] *= factor;
   const pool = available.filter((activity) => activity !== previous);
   const choices = pool.length ? pool : available;
   if (!choices.length) return 'read';
@@ -249,6 +253,8 @@ export function advanceLife(
     feelings = undefined as Feelings | undefined,
     // What she likes doing most (characterBehavior.ts).
     hobbies = [] as Activity[],
+    // What her mood makes her more or less inclined to (mood.ts moodConduct).
+    leanings = {} as Partial<Record<Activity, number>>,
   } = {},
 ): LifeStep | null {
   const elapsed = Math.max(0, now - s.updatedAt);
@@ -314,6 +320,7 @@ export function advanceLife(
         random,
         away,
         hobbies,
+        leanings,
       );
       key = away && random() < 0.5 ? 'alone' : s.activity;
     }

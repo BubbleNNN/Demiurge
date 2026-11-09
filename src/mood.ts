@@ -3,7 +3,8 @@
 // what happens between her and the user: being played with makes her happy, being woken up or
 // flung off a window makes her cross until someone comforts her. Pure functions; the state is
 // saved with her daily life (life.ts).
-import type { Emotion } from './types';
+import type { Activity, Emotion } from './types';
+import type { Habit } from './characterBehavior';
 
 export interface Mood {
   joy: number;
@@ -146,6 +147,88 @@ export const moodFace = (name: MoodName): Emotion =>
 /** The little mark above her head (manga style). */
 export const moodMark = (name: MoodName) =>
   name === 'angry' ? '💢' : name === 'lonely' ? '…' : name === 'happy' ? '♪' : '';
+
+/**
+ * How her mood shows in what she does, not only on her face. The routine (life.ts) and her body
+ * on the desktop (useDesktopLife.ts) read this:
+ * - happy: brisk, hums and stretches, plays more, often busies herself beside you;
+ * - lonely: drags her feet, stays close and sits or lies by your window looking at you;
+ * - angry: stomps rather than runs, keeps away from your window, sits sulking, writes it all
+ *   down in her diary rather than playing;
+ * - calm: her ordinary routine.
+ */
+export interface Conduct {
+  /** Multiplies how fast she gets about. */
+  pace: number;
+  /** She walks even if she usually runs, hops or flies. */
+  walksOnly: boolean;
+  /** What fills the time between things, from her own habits; `extra` are added whatever her
+   *  profile says (lonely, she sits by you even if sitting is not one of her habits). */
+  habits: { keep: Habit[]; extra: Habit[] };
+  /** Seconds between her small habits. */
+  habitGap: [number, number];
+  /** Seconds she stays sitting or lying down. */
+  hold: [number, number];
+  /** At the user's window: the chance she does something of her own instead of sitting with them. */
+  ownChance: number;
+  /** Whether she goes over to the user's window to keep them company. */
+  keepsCompany: boolean;
+  /** How much more (or less) she takes to each activity. */
+  activities: Partial<Record<Activity, number>>;
+}
+const ALL_HABITS: Habit[] = ['sit', 'lie', 'lookAround', 'stretch', 'hum'];
+const CONDUCT: Record<MoodName, Conduct> = {
+  calm: {
+    pace: 1,
+    walksOnly: false,
+    habits: { keep: ALL_HABITS, extra: [] },
+    habitGap: [9, 23],
+    hold: [45, 90],
+    ownChance: 0.4,
+    keepsCompany: true,
+    activities: {},
+  },
+  happy: {
+    pace: 1.25,
+    walksOnly: false,
+    habits: { keep: ALL_HABITS, extra: ['hum', 'stretch'] },
+    habitGap: [6, 14],
+    hold: [30, 60],
+    ownChance: 0.6,
+    keepsCompany: true,
+    activities: { gaming: 1.6, music: 1.6, snack: 1.3 },
+  },
+  lonely: {
+    pace: 0.75,
+    walksOnly: true,
+    habits: { keep: ['sit', 'lie', 'lookAround'], extra: ['sit', 'lie'] },
+    habitGap: [8, 16],
+    hold: [90, 180],
+    ownChance: 0,
+    keepsCompany: true,
+    activities: { read: 1.4, diary: 1.6, gaming: 0.5, music: 0.7 },
+  },
+  angry: {
+    pace: 0.9,
+    walksOnly: true,
+    habits: { keep: ['sit'], extra: ['sit'] },
+    habitGap: [5, 10],
+    hold: [120, 240],
+    ownChance: 1,
+    keepsCompany: false,
+    activities: { diary: 3, read: 1.2, gaming: 0.3, music: 0.3, snack: 0.6 },
+  },
+};
+export const moodConduct = (name: MoodName): Conduct => CONDUCT[name];
+/** Her habits as her mood allows them, before checking which her pack can show. */
+export function moodHabits(name: MoodName, habits: Habit[]): Habit[] {
+  const { keep, extra } = CONDUCT[name].habits;
+  const kept = habits.filter((h) => keep.includes(h));
+  return [...new Set([...kept, ...extra])];
+}
+/** A moment in milliseconds within a range given in seconds. */
+export const within = ([low, high]: [number, number], random = Math.random) =>
+  (low + (high - low) * random()) * 1000;
 
 /** For the chat model, so her replies match how she feels. */
 export function moodWords(m: Mood): string {

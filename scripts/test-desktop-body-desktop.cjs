@@ -503,18 +503,38 @@ app.on('browser-window-created', (_e, win) => {
       await pj('document.querySelector(\'[aria-label="结束这个小活动"]\').click()');
       await wait(() => pj('!document.querySelector(".pet-moment-bubble")'), 'game closed');
 
-      // 9c. Stroking her head with the pointer, without clicking, is a pat.
+      // 9c. Stroking her head with the pointer, without clicking, is a pat: at an ordinary
+      // stroking speed, and passing over the outline of her hair rather than only on it.
       await sleep(3000);
       const crown = await pj(
-        `(() => { const c = document.querySelector('.pet-draggable canvas'); const f = JSON.parse(c.dataset.figureBounds); let x = 0, y = 0; for (let n = c; n; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } const sx = c.offsetWidth / c.width, sy = c.offsetHeight / c.height; return { x: x + (f.x + f.width / 2) * sx, y: y + (f.y + f.height * 0.12) * sy }; })()`,
+        `(() => { const c = document.querySelector('.pet-draggable canvas'); const f = JSON.parse(c.dataset.figureBounds); let x = 0, y = 0; for (let n = c; n; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } const sx = c.offsetWidth / c.width, sy = c.offsetHeight / c.height; return { x: x + (f.x + f.width / 2) * sx, y: y + (f.y - f.height * 0.04) * sy, half: (f.width / 2) * sx }; })()`,
       );
-      await pj('document.querySelectorAll(".touch-feedback").forEach((e) => e.remove()); true');
-      for (let i = 0; i < 8; i++) {
-        input('mouseMove', crown.x + (i % 2 ? 14 : -14), crown.y);
-        await sleep(90);
+      // Feedback already shown is marked rather than removed: the page owns those elements.
+      const seen = () =>
+        pj('document.querySelectorAll(".touch-feedback").forEach((e) => (e.dataset.seen = "1")); true');
+      const patted = () => pj('!!document.querySelector(".touch-feedback.headpat:not([data-seen])")');
+      await seen();
+      assert.equal(
+        await pj(
+          `document.elementFromPoint(${crown.x}, ${crown.y})?.closest('.pet-draggable') ? 'on her' : 'just above her'`,
+        ),
+        'just above her',
+        'the stroke passes just above her hair',
+      );
+      for (let i = 0; i < 6; i++) {
+        input('mouseMove', crown.x + (i % 2 ? 1 : -1) * crown.half * 0.5, crown.y);
+        await sleep(170);
       }
-      await wait(() => pj('!!document.querySelector(".touch-feedback.headpat")'), 'pat by stroking', 60);
+      await wait(patted, 'pat by stroking', 60);
       report.hoverPat = true;
+      // The toolbar under her feet has a pat too.
+      await sleep(2000);
+      await seen();
+      await pj(
+        `[...document.querySelectorAll('.pet-toolbar button')].find((b) => b.getAttribute('aria-label') === '摸摸头').click()`,
+      );
+      await wait(patted, 'pat from the toolbar', 60);
+      report.toolbarPat = true;
 
       // 9d. At the bottom of the screen her toolbar still opens below her, on screen.
       await carry(0, 1400);

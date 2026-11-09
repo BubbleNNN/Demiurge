@@ -74,6 +74,10 @@ optional in the overrides. Validation: `validateDesktopProfile` in `electron/sto
 - [`src/life.ts`](../src/life.ts): the routine (what she does next, from time of day, hobbies,
   mood and what you are doing) and invitations (chat, pat, games).
 - [`src/mood.ts`](../src/mood.ts): joy, loneliness and anger, which rise and settle over time.
+  `moodConduct` turns the mood into behaviour that both the routine and the desktop engine read:
+  pace, walking instead of running, which habits fill the gaps, how long she stays sitting or lying
+  down, whether she busies herself or sits with you, whether she keeps you company at all, and
+  which activities she leans towards.
 - [`src/userContext.ts`](../src/userContext.ts): what kind of app you are in, and where she can sit
   beside or on top of the window you are using.
 - [`src/features/desktop/useDesktopLife.ts`](../src/features/desktop/useDesktopLife.ts): the

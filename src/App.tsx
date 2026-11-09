@@ -23,6 +23,7 @@ import {
   feel,
   moodFace,
   moodLine,
+  moodConduct,
   moodMark,
   moodName,
   moodWords,
@@ -79,6 +80,7 @@ import {
   EyeOff,
   FolderHeart,
   Moon,
+  HandHeart,
   Sun,
 } from 'lucide-react';
 import { bridge, isDesktop } from './bridge';
@@ -126,7 +128,7 @@ import { admitBehavior, freshBehavior, interactionPlan, proactiveInterval } from
 import { SkinArtwork } from './components/SkinArtwork';
 import { spriteAnimation, animationDescription, supportsAction, supportsEmotion } from './artwork';
 import { clipDuration } from './animation/timeline';
-import { hitCharacter } from './animation/framing';
+import { hitCharacter, overHead } from './animation/framing';
 import { PersonaEditor } from './components/PersonaEditor';
 import { PersonaPreview } from './components/PersonaPreview';
 import { userError } from './errors';
@@ -147,6 +149,8 @@ import type {
   VisualReference,
 } from './types';
 const id = (): string => crypto.randomUUID();
+// The longest she stays sitting or lying down when nothing else gets her up.
+const POSE_STAY = 5 * 60000;
 const now = () => new Date().toISOString();
 const errorText = userError;
 const emotions: { id: Emotion; name: string; mark: string }[] = [
@@ -386,9 +390,14 @@ export default function App() {
       ? activityEnd.current > Date.now()
         ? Math.min(600000, activityEnd.current - Date.now())
         : activityDuration
-      : animation && clip
-        ? Math.min(120000, clipDuration(animation, clip) + 80)
-        : 2600;
+      : // Sitting and lying down are stays, not gestures: whoever sat her down (her habits, keeping
+        // the user company, the toolbar) decides when she gets up; this only stops a stay that
+        // nobody ends.
+        (action === 'sit' || action === 'lie') && clip
+        ? POSE_STAY
+        : animation && clip
+          ? Math.min(120000, clipDuration(animation, clip) + 80)
+          : 2600;
     const timeout = setTimeout(() => setAction('idle'), duration);
     return () => clearTimeout(timeout);
   }, [action, actionKey, skin]);
@@ -735,6 +744,7 @@ export default function App() {
     habits: petProfile.habits,
     // Nobody has been with her for a long while: she goes over to the user to ask for attention.
     lonely: moodName(moodOf()) === 'lonely' || Date.now() - moodOf().lastContact > 25 * 60000,
+    mood: moodName(moodOf()),
     current: () => actionNow.current,
     onSeek: () => seekAttention(),
     onTeleport: (phase) => setVanished(phase === 'out'),
@@ -832,6 +842,7 @@ export default function App() {
         : {}),
       feelings: { lonely: feeling === 'lonely', angry: feeling === 'angry' },
       hobbies: petProfile.hobbies,
+      leanings: moodConduct(feeling).activities,
       blocked:
         interactionBusy ||
         talking ||
@@ -841,6 +852,9 @@ export default function App() {
         petChat ||
         petComposer ||
         Boolean(drag.current) ||
+        // Sitting or lying down is a stay: her routine waits until she gets up.
+        action === 'sit' ||
+        action === 'lie' ||
         (behavior.current.priority >= 100 && behavior.current.until > performance.now()),
     });
     // She asked and nobody answered.
@@ -1044,8 +1058,9 @@ export default function App() {
     if (!petMode || !isDesktop) return;
     let ignore = false;
     let over = false;
-    // A head pat without clicking: the pointer moving back and forth over her head. Four turns of
-    // at least 5 points within 1.4 seconds count; then a pause before the next one.
+    // A head pat without clicking: the pointer moving back and forth over her head. Three turns
+    // of at least 4 points within 2 seconds count, at an ordinary stroking speed; then a pause
+    // before the next one. Over her head means the top of her figure, gaps in her hair included.
     let strokes: { x: number; at: number; dir: number }[] = [],
       patAt = 0;
     const stroke = (e: MouseEvent, onHead: boolean) => {
@@ -1057,14 +1072,14 @@ export default function App() {
       const last = strokes.at(-1);
       if (!last) return void strokes.push({ x: e.clientX, at: now, dir: 0 });
       const dx = e.clientX - last.x;
-      if (Math.abs(dx) < 5) return;
+      if (Math.abs(dx) < 4) return;
       const dir = Math.sign(dx);
       strokes.push({ x: e.clientX, at: now, dir });
-      strokes = strokes.filter((s) => now - s.at < 1400);
+      strokes = strokes.filter((s) => now - s.at < 2000);
       let turns = 0;
       for (let i = 1; i < strokes.length; i++)
         if (strokes[i].dir && strokes[i - 1].dir && strokes[i].dir !== strokes[i - 1].dir) turns++;
-      if (turns >= 4) {
+      if (turns >= 3) {
         patAt = now;
         strokes = [];
         hoverPat.current();
@@ -1079,7 +1094,7 @@ export default function App() {
       const figure = document.querySelector('.pet-draggable');
       const hit = figure ? hitCharacter(figure, e.clientX, e.clientY) : null;
       const onFigure = Boolean(hit);
-      stroke(e, hit === 'headpat' && !controls);
+      stroke(e, !controls && !!figure && overHead(figure, e.clientX, e.clientY));
       const next = !drag.current && !controls && !onFigure;
       if (next !== ignore) {
         ignore = next;
@@ -1274,9 +1289,14 @@ export default function App() {
     behavior.current = admitted;
     interactionCounts.current[event] = (interactionCounts.current[event] || 0) + 1;
     setResting(admitted.resting);
-    setAction(motionEnabled || event === 'rest' ? plan.action : 'idle');
+    // Patted or poked while sitting or lying down, she stays down and answers with a look and a
+    // word instead of getting up for a nod.
+    const staysDown = (action === 'sit' || action === 'lie') && ['touch', 'headpat', 'poke'].includes(event);
+    if (!staysDown) {
+      setAction(motionEnabled || event === 'rest' ? plan.action : 'idle');
+      setActionKey((key) => key + 1);
+    }
     setEmotion(plan.emotion);
-    setActionKey((key) => key + 1);
     if (!automatic) {
       setInteractionLine(plan.text);
       setBubbleHidden(false);
@@ -2161,6 +2181,13 @@ export default function App() {
                 <Compass size={16} />
               </button>
             )}
+            <button
+              aria-label="摸摸头"
+              title={`摸摸${character.name}的头（也可以用指针在她头上来回蹭）`}
+              onClick={() => (resting ? wakeUp() : touchCharacter('headpat'))}
+            >
+              <HandHeart size={16} />
+            </button>
             <button aria-label="一起玩" title="一起玩" onClick={() => openMoment('guess')}>
               <Heart size={16} />
             </button>

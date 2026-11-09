@@ -253,7 +253,16 @@ function editPlist(file, values, remove = []) {
   // plutil is present on supported macOS systems; no Python or Xcode is required.
   for (const key of remove) spawnSync('/usr/bin/plutil', ['-remove', key, file], { stdio: 'ignore' });
   for (const [key, value] of Object.entries(values))
-    run('/usr/bin/plutil', ['-replace', key, '-string', value, file], { stdio: 'pipe' });
+    run(
+      '/usr/bin/plutil',
+      [
+        '-replace',
+        key,
+        ...(typeof value === 'boolean' ? ['-bool', value ? 'YES' : 'NO'] : ['-string', value]),
+        file,
+      ],
+      { stdio: 'pipe' },
+    );
 }
 
 // The app itself inside a packaged Electron (resources/app): code, shared data, the built page,
@@ -385,6 +394,10 @@ function packageDesktop({ skipBuild = false, makeZip = true } = {}) {
         CFBundleVersion: info.version,
         CFBundleIconFile: 'demiurge.icns',
         LSApplicationCategoryType: 'public.app-category.lifestyle',
+        // She lives on the desktop while the user works in other apps. App Nap would pause the app
+        // for up to a minute at a time: she would freeze, and a pat or a grab would pass through
+        // her to the window below. This turns App Nap off for this app only; the Mac still sleeps.
+        NSAppSleepDisabled: true,
         NSHumanReadableCopyright:
           'Demiurge (formerly Mori) contributors. Third-party code and artwork retain their own rights.',
       },
