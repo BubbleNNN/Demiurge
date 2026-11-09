@@ -52,6 +52,7 @@ require('../electron/desktop-surfaces.cjs').desktopSurfaces = async () => ({
   ...(activity() ? { activity: activity() } : {}),
 });
 surfaces = () => [];
+let cursor = null;
 app.on('browser-window-created', (_e, win) => {
   // Keep animation frames running in windows that are not focused.
   win.webContents.setBackgroundThrottling(false);
@@ -69,6 +70,8 @@ app.on('browser-window-created', (_e, win) => {
       await js(
         'window.mori.load().then(r=>window.mori.saveSettings({...r.state.settings,chatMode:"local",proactiveEnabled:false,motionEnabled:true,desktopLifeEnabled:true},{}))',
       );
+      // The system pointer as the pet window reads it: far away unless a step moves it.
+      screen.getCursorScreenPoint = () => cursor || { x: -10000, y: -10000 };
       await js('window.mori.openPet()');
       let pet;
       await wait(() => {
@@ -504,7 +507,9 @@ app.on('browser-window-created', (_e, win) => {
       await wait(() => pj('!document.querySelector(".pet-moment-bubble")'), 'game closed');
 
       // 9c. Stroking her head with the pointer, without clicking, is a pat: at an ordinary
-      // stroking speed, and passing over the outline of her hair rather than only on it.
+      // stroking speed, and passing over the outline of her hair rather than only on it. The
+      // pointer is read from the system (the page gets no mouse moves while another app is in
+      // front), so the test moves the system pointer, not page events.
       await sleep(3000);
       const crown = await pj(
         `(() => { const c = document.querySelector('.pet-draggable canvas'); const f = JSON.parse(c.dataset.figureBounds); let x = 0, y = 0; for (let n = c; n; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } const sx = c.offsetWidth / c.width, sy = c.offsetHeight / c.height; return { x: x + (f.x + f.width / 2) * sx, y: y + (f.y - f.height * 0.04) * sy, half: (f.width / 2) * sx }; })()`,
@@ -521,10 +526,22 @@ app.on('browser-window-created', (_e, win) => {
         'just above her',
         'the stroke passes just above her hair',
       );
+      // Page mouse moves alone (the app in front) are not what counts.
       for (let i = 0; i < 6; i++) {
         input('mouseMove', crown.x + (i % 2 ? 1 : -1) * crown.half * 0.5, crown.y);
         await sleep(170);
       }
+      await sleep(300);
+      assert.equal(await patted(), false, 'page moves alone are not read as strokes');
+      const w = pet.getBounds();
+      for (let i = 0; i < 6; i++) {
+        cursor = {
+          x: Math.round(w.x + crown.x + (i % 2 ? 1 : -1) * crown.half * 0.5),
+          y: Math.round(w.y + crown.y),
+        };
+        await sleep(170);
+      }
+      cursor = null;
       await wait(patted, 'pat by stroking', 60);
       report.hoverPat = true;
       // The toolbar under her feet has a pat too.

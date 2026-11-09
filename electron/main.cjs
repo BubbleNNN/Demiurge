@@ -348,6 +348,30 @@ function movePetTo(x, y, free = false) {
   rememberPetPlace();
   return pet.getBounds();
 }
+// Where the pointer is over her window, told to the page whichever app is in front. macOS sends
+// mouse moves only to the active app's windows: while the user works in another app, stroking her
+// head (a pat), her toolbar appearing and clicks passing through her would otherwise go unnoticed.
+// Looked up often only while the pointer is over her window.
+let pointerTimer = null,
+  lastPointer = '';
+function watchPointer() {
+  clearTimeout(pointerTimer);
+  if (!pet || pet.isDestroyed()) return;
+  const point = screen.getCursorScreenPoint(),
+    bounds = pet.getBounds();
+  const inside =
+    pet.isVisible() &&
+    point.x >= bounds.x &&
+    point.x < bounds.x + bounds.width &&
+    point.y >= bounds.y &&
+    point.y < bounds.y + bounds.height;
+  const key = inside ? `${point.x - bounds.x},${point.y - bounds.y}` : 'out';
+  if (key !== lastPointer) {
+    lastPointer = key;
+    pet.webContents.send('mori:pointer', inside ? { x: point.x - bounds.x, y: point.y - bounds.y } : null);
+  }
+  pointerTimer = setTimeout(watchPointer, inside ? 30 : 200);
+}
 async function createPet() {
   const state = await store.loadState();
   const character = state?.characters.find((c) => c.id === state.activeCharacterId);
@@ -417,9 +441,11 @@ async function createPet() {
   });
   pet.on('closed', () => {
     pet = null;
+    clearTimeout(pointerTimer);
     require('./desktop-surfaces.cjs').stopWatching();
   });
   require('./desktop-surfaces.cjs').startWatching();
+  watchPointer();
   loadWindow(pet, true).catch((error) => dialog.showErrorBox('无法打开桌宠', error.message));
 }
 

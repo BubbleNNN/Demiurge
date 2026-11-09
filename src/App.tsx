@@ -1061,20 +1061,22 @@ export default function App() {
     // A head pat without clicking: the pointer moving back and forth over her head. Three turns
     // of at least 4 points within 2 seconds count, at an ordinary stroking speed; then a pause
     // before the next one. Over her head means the top of her figure, gaps in her hair included.
+    // Strokes are read from where the pointer is (the main process reports it whichever app is in
+    // front), since the page gets no mouse moves while another app is active.
     let strokes: { x: number; at: number; dir: number }[] = [],
       patAt = 0;
-    const stroke = (e: MouseEvent, onHead: boolean) => {
+    const stroke = (x: number, onHead: boolean) => {
       const now = performance.now();
-      if (!onHead || e.buttons || drag.current || now - patAt < 2500) {
+      if (!onHead || drag.current || now - patAt < 2500) {
         strokes = [];
         return;
       }
       const last = strokes.at(-1);
-      if (!last) return void strokes.push({ x: e.clientX, at: now, dir: 0 });
-      const dx = e.clientX - last.x;
+      if (!last) return void strokes.push({ x, at: now, dir: 0 });
+      const dx = x - last.x;
       if (Math.abs(dx) < 4) return;
       const dir = Math.sign(dx);
-      strokes.push({ x: e.clientX, at: now, dir });
+      strokes.push({ x, at: now, dir });
       strokes = strokes.filter((s) => now - s.at < 2000);
       let turns = 0;
       for (let i = 1; i < strokes.length; i++)
@@ -1085,16 +1087,17 @@ export default function App() {
         hoverPat.current();
       }
     };
-    const pointer = (e: MouseEvent) => {
+    // Where the pointer is: over her, over her controls, or over nothing (clicks pass through).
+    const pointAt = (x: number, y: number, target: EventTarget | null, reported: boolean) => {
       const controls =
-        e.target instanceof Element &&
-        e.target.closest(
+        target instanceof Element &&
+        target.closest(
           '.pet-toolbar-zone,.pet-composer-area,.pet-chat-panel,.pet-speech,.pet-invite,.pet-moment-bubble,.star-field .falling-star,.pet-toast',
         );
       const figure = document.querySelector('.pet-draggable');
-      const hit = figure ? hitCharacter(figure, e.clientX, e.clientY) : null;
+      const hit = figure ? hitCharacter(figure, x, y) : null;
       const onFigure = Boolean(hit);
-      stroke(e, !controls && !!figure && overHead(figure, e.clientX, e.clientY));
+      if (reported) stroke(x, !controls && !!figure && overHead(figure, x, y));
       const next = !drag.current && !controls && !onFigure;
       if (next !== ignore) {
         ignore = next;
@@ -1105,8 +1108,17 @@ export default function App() {
         setFigureHover(onFigure);
       }
     };
+    const pointer = (e: MouseEvent) => pointAt(e.clientX, e.clientY, e.target, false);
+    const unsubscribe = bridge.onPointer?.((point) => {
+      if (point) pointAt(point.x, point.y, document.elementFromPoint(point.x, point.y), true);
+      else {
+        strokes = [];
+        if (!drag.current) pointAt(-1, -1, null, false);
+      }
+    });
     window.addEventListener('mousemove', pointer);
     return () => {
+      unsubscribe?.();
       window.removeEventListener('mousemove', pointer);
       bridge.setPetClickThrough(false);
     };

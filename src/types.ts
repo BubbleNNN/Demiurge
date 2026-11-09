@@ -598,6 +598,9 @@ export interface MoriBridge {
   /** The user moved to another Space or full-screen app (macOS), toward this side. */
   /** The user moved to another Space; `from` is the side they came from, where she runs in. */
   onSpaceChanged?(callback: (change: { from: 'left' | 'right' }) => void): () => void;
+  /** The pointer over the pet window (window coordinates), or null once it leaves, whichever app
+   *  is in front. */
+  onPointer?(callback: (point: { x: number; y: number } | null) => void): () => void;
   onBeforeClose?(callback: () => Promise<unknown>): () => void;
 }
 declare global {
