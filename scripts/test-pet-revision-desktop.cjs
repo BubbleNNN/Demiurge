@@ -172,12 +172,26 @@ app.on('browser-window-created', (_event, created) => {
       );
       const before = await state();
       await open();
+      // Her motions are planned from her profile: what suits her is selected, the rest folded.
+      await js(
+        `document.querySelector('[aria-label="自动制作动作"]').scrollIntoView({block:'start',behavior:'instant'})`,
+      );
+      await capture('motion-plan.png');
+      await js(`document.querySelector('[aria-label="自动制作动作"] details').open=true`);
+      await js(
+        `document.querySelector('[aria-label="自动制作动作"] details').scrollIntoView({block:'start',behavior:'instant'})`,
+      );
+      await capture('motion-plan-aside.png');
       await change('角色候选数量', '2');
-      // Labels come from the shared catalogue; keep only the initially selected wave/talk.
-      const motionNames = require('../shared/pet-motions.json')
-        .filter((m) => !['wave', 'talk'].includes(m.id))
-        .map((m) => m.name);
-      for (const name of motionNames) await click('制作动作：' + name);
+      // Labels come from the shared catalogue; only wave and talk stay selected. Motions that do
+      // not suit her start unselected, so each is set by its state rather than toggled blindly.
+      for (const motion of require('../shared/pet-motions.json')) {
+        const label = '制作动作：' + motion.name;
+        const pressed = await js(
+          `document.querySelector('[aria-label=${JSON.stringify(label)}]').getAttribute('aria-pressed')==='true'`,
+        );
+        if (pressed !== ['wave', 'talk'].includes(motion.id)) await click(label);
+      }
       assert.match(await js(`document.querySelector('.production-start').textContent`), /预计 4 次图像请求/);
       await click('开始自动制作桌宠');
       await wait(`document.querySelectorAll('[aria-label="角色基准预览"] img').length===2`);
@@ -327,15 +341,46 @@ app.on('browser-window-created', (_event, created) => {
         `document.querySelector('[aria-label="修正桌宠成品"]').scrollIntoView({block:'center',behavior:'instant'})`,
       );
       await capture('single-action-revision.png');
-      // A finished task offers the motions added since (sitting and lying on a window), ticked.
+      // A finished task offers the motions it lacks that suit her, ticked. This task has only
+      // wave and talk; her profile (lively, runs, music/reading/snacks by temperament) keeps
+      // gaming, diary, office, lying down and flying aside, unticked and folded.
       await wait(`!!document.querySelector('[aria-label="补充新动作"]')`);
-      const added = await js(
-        `[...document.querySelectorAll('.production-add-motions label')].filter(l=>l.querySelector('input').checked).map(l=>l.textContent)`,
-      );
-      assert.equal(added.length, 3);
+      const catalogue = require('../shared/pet-motions.json');
+      const offered = async (group) =>
+        (
+          await js(
+            `[...document.querySelectorAll('[aria-label="${group}"] label')].map(l=>({name:l.textContent,on:l.querySelector('input').checked}))`,
+          )
+        ).map((m) => ({ ...m, id: catalogue.find((c) => m.name.startsWith(c.name)).id }));
+      const suited = await offered('要补充的动作');
       assert.ok(
-        added[0].startsWith('坐下') && added[1].startsWith('趴着') && added[2].startsWith('飞行'),
-        added.join(),
+        suited.every((m) => m.on),
+        JSON.stringify(suited),
+      );
+      assert.deepEqual(
+        suited.map((m) => m.id),
+        catalogue
+          .map((c) => c.id)
+          .filter((id) => !['wave', 'talk', 'gaming', 'diary', 'office', 'lie', 'fly'].includes(id)),
+      );
+      assert.match(suited.find((m) => m.id === 'sit').name, /基础动作 · 坐在你正在用的窗口上陪你/);
+      assert.match(suited.find((m) => m.id === 'read').name, /适合她 · 按她的性格推断/);
+      const aside = await offered('不适合她的动作');
+      assert.deepEqual(
+        aside.map((m) => [m.id, m.on]),
+        [
+          ['gaming', false],
+          ['diary', false],
+          ['office', false],
+          ['lie', false],
+          ['fly', false],
+        ],
+      );
+      assert.match(aside.find((m) => m.id === 'fly').name, /她靠跑移动，不会飞/);
+      assert.equal(
+        await js(`document.querySelector('[aria-label="补充新动作"] details').open`),
+        false,
+        'kept aside, folded',
       );
       assert.match(
         await js(`document.querySelector('[aria-label="补充新动作"]').textContent`),

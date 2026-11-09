@@ -41,6 +41,14 @@ motion recipes in [`shared/pet-motions.json`](../shared/pet-motions.json) and
 `electron/pet-frames.cjs`, review in `electron/pet-pipeline.cjs`. A finished pack can gain new
 motions later (补充新动作) without regenerating the old ones.
 
+**Which motions to make** is decided per character by `motionPlan` in
+[`src/characterBehavior.ts`](../src/characterBehavior.ts), from her own behaviour profile (section
+3): every pet gets the motions the desktop needs (blink, talk, expressions, wave, nod, shake, a
+small jump, sleep, listen, being carried, walking four ways, sitting on a window); beyond that
+only her hobbies' activities, lying down if it is one of her habits, and flying if that is how she
+gets about. Each motion carries a short reason; the production page selects the fitting ones and
+folds the rest away. Plugins do not change the plan, since motions stay after a plugin is removed.
+
 **Approved packs are immutable.** Playback may adjust what it draws (a rest pose swap in
 `src/animation/rest.ts`, head-size correction in `src/animation/heads.ts`), but saved clips are
 never rewritten on load.

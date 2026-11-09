@@ -109,14 +109,12 @@ export function desktopProfile(
   );
   return merged;
 }
-function derivedProfile(
-  character: Pick<
-    Character,
-    'id' | 'summary' | 'personality' | 'speakingStyle' | 'appearance' | 'work' | 'behavior'
-  >,
-): DesktopProfile {
-  if (character.id === CYRENE_ID) return CYRENE;
-  const text = [
+type ProfileSource = Pick<
+  Character,
+  'id' | 'summary' | 'personality' | 'speakingStyle' | 'appearance' | 'work' | 'behavior'
+>;
+const profileText = (character: ProfileSource) =>
+  [
     character.summary,
     (character.personality || []).join(' '),
     character.speakingStyle,
@@ -125,7 +123,12 @@ function derivedProfile(
   ]
     .filter(Boolean)
     .join(' ');
-  const t = character.behavior || { energy: 50, affection: 50, curiosity: 50 };
+const temperament = (character: ProfileSource) =>
+  character.behavior || { energy: 50, affection: 50, curiosity: 50 };
+function derivedProfile(character: ProfileSource): DesktopProfile {
+  if (character.id === CYRENE_ID) return CYRENE;
+  const text = profileText(character);
+  const t = temperament(character);
   // Named traits count most; the temperament sliders fill in the rest.
   const manner: Manner = {
     shy: 0.15 + (100 - t.energy) / 400,
@@ -173,6 +176,82 @@ export function touchMark(profile: DesktopProfile, kind: 'headpat' | 'poke'): st
   const manner = leadingManner(profile);
   if (kind === 'headpat') return manner === 'shy' ? '///' : manner === 'teasing' ? '✦' : '♡';
   return manner === 'shy' ? '💦' : manner === 'teasing' ? 'ψ' : manner === 'calm' ? '？' : '♪';
+}
+
+/** How a motion fits her: every pet needs it, it is something she does, or she would not do it. */
+export type MotionFit = 'core' | 'suits' | 'unsuited';
+export interface MotionChoice {
+  id: string;
+  fit: MotionFit;
+  /** Why, in a few words for the production page. */
+  reason: string;
+}
+const ACTIVITY_IDS: readonly string[] = ['office', 'read', 'gaming', 'snack', 'music', 'diary'];
+const WALK = '在桌面上走动、跑到你正在用的窗口';
+// What every desktop pet uses, whoever she is.
+const CORE: Record<string, string> = {
+  blink: '待着时眨眼',
+  talk: '说话时的口型',
+  emotions: '开心、思考、难过和惊讶的表情',
+  wave: '来的时候打招呼，走的时候告别',
+  nod: '聊天时点头回应',
+  shake: '聊天时摇头',
+  bounce: '开心时的小跳，小游戏里的反应',
+  sleep: '困了打个盹',
+  listen: '你说话时认真听',
+  drag: '被你拎起来的时候',
+  walk_left: WALK,
+  walk_right: WALK,
+  walk_up: WALK,
+  walk_down: WALK,
+  sit: '坐在你正在用的窗口上陪你',
+};
+const TRAVEL_NAME: Record<Travel, string> = { walk: '走路', run: '跑', hop: '蹦蹦跳跳', fly: '飞' };
+
+/**
+ * Which motions to make for her, from her own profile (her pack's profile laid over what her
+ * persona and temperament suggest; not plugins, which come and go while motions stay). Every pet
+ * gets what the desktop needs; beyond that only what she does: her hobbies, her habits, her way
+ * of getting about. The production page selects the fitting ones and keeps the rest aside.
+ */
+export function motionPlan(
+  ids: readonly string[],
+  character: ProfileSource & { desktopProfile?: Character['desktopProfile'] },
+): MotionChoice[] {
+  const profile = desktopProfile(character);
+  const authored = character.id === CYRENE_ID || !!character.desktopProfile?.hobbies?.length;
+  const text = profileText(character);
+  const t = temperament(character);
+  const guessed = t.curiosity >= 60 ? '好奇心强' : t.energy >= 60 ? '精力充沛' : '性子安静';
+  return ids.map((id): MotionChoice => {
+    if (CORE[id]) return { id, fit: 'core', reason: CORE[id] };
+    if (ACTIVITY_IDS.includes(id)) {
+      const rank = profile.hobbies.indexOf(id as Activity);
+      if (rank < 0) return { id, fit: 'unsuited', reason: '不是她会做的事' };
+      const named = HOBBIES.find(([activity]) => activity === id)?.[1].test(text);
+      return {
+        id,
+        fit: 'suits',
+        reason: authored
+          ? rank === 0
+            ? '她最喜欢做的事'
+            : '她的爱好'
+          : named
+            ? '她的资料里提到了'
+            : `按她的性格推断（${guessed}）`,
+      };
+    }
+    if (id === 'lie')
+      return profile.habits.includes('lie')
+        ? { id, fit: 'suits', reason: '她习惯趴着待一会儿' }
+        : { id, fit: 'unsuited', reason: '她不常趴着' };
+    if (id === 'fly')
+      return profile.travel === 'fly'
+        ? { id, fit: 'suits', reason: '她靠飞行移动' }
+        : { id, fit: 'unsuited', reason: `她靠${TRAVEL_NAME[profile.travel]}移动，不会飞` };
+    // A motion this plan does not know yet: offered, as before.
+    return { id, fit: 'suits', reason: '' };
+  });
 }
 
 export const pickLine = (profile: DesktopProfile, key: LineKey, random = Math.random) => {

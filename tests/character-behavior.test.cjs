@@ -76,6 +76,52 @@ test('other characters are read from their own profile: traits, hobbies and how 
   assert.equal(plain.travel, 'walk');
 });
 
+test('motions are planned from who she is: every pet gets the basics, beyond that only what she does', () => {
+  const ids = require('../shared/pet-motions.json').map((m) => m.id);
+  const fit = (plan) => Object.fromEntries(plan.map((c) => [c.id, c]));
+  // The built-in character runs, sits and lies, writes, reads, listens to music and snacks.
+  const cyrene = fit(b.motionPlan(ids, { ...base, id: 'mori-cyrene' }));
+  for (const id of ['blink', 'talk', 'wave', 'listen', 'drag', 'walk_left', 'sit'])
+    assert.equal(cyrene[id].fit, 'core', id);
+  assert.equal(cyrene.fly.fit, 'unsuited');
+  assert.match(cyrene.fly.reason, /跑.*不会飞/);
+  assert.equal(cyrene.lie.fit, 'suits');
+  assert.equal(cyrene.diary.fit, 'suits');
+  assert.equal(cyrene.diary.reason, '她最喜欢做的事');
+  for (const id of ['read', 'music', 'snack']) assert.equal(cyrene[id].fit, 'suits', id);
+  for (const id of ['office', 'gaming']) assert.equal(cyrene[id].fit, 'unsuited', id);
+  assert.equal(ids.length, Object.keys(cyrene).length, 'every motion has a verdict');
+
+  // A winged character flies; a lively one does not lie about; what her profile names is cited.
+  const fairy = fit(
+    b.motionPlan(ids, {
+      ...base,
+      id: 'c',
+      personality: ['活泼', '元气'],
+      summary: '有一对透明翅膀的花之妖精，喜欢唱歌',
+      behavior: { energy: 80, affection: 60, curiosity: 40 },
+    }),
+  );
+  assert.equal(fairy.fly.fit, 'suits');
+  assert.equal(fairy.lie.fit, 'unsuited');
+  assert.equal(fairy.music.fit, 'suits');
+  assert.equal(fairy.music.reason, '她的资料里提到了');
+  assert.match(fairy.gaming.reason, /按她的性格推断/);
+
+  // What her pack says about her decides; a motion the plan does not know is still offered.
+  const packed = fit(
+    b.motionPlan([...ids, 'swim'], {
+      ...base,
+      id: 'd',
+      desktopProfile: { hobbies: ['office'], travel: 'fly' },
+    }),
+  );
+  assert.equal(packed.office.reason, '她最喜欢做的事');
+  assert.equal(packed.read.fit, 'unsuited');
+  assert.equal(packed.fly.fit, 'suits');
+  assert.equal(packed.swim.fit, 'suits');
+});
+
 test('her favourite activities come up far more often in her routine', () => {
   const count = (hobbies) => {
     const seen = {};

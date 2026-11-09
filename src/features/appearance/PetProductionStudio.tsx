@@ -1,5 +1,5 @@
 import { isActivity } from '../../animation/activities';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Check,
@@ -12,6 +12,7 @@ import {
   WandSparkles,
 } from 'lucide-react';
 import { bridge } from '../../bridge';
+import { motionPlan, type MotionChoice } from '../../characterBehavior';
 import { userError } from '../../errors';
 import { styles, styleName } from '../../theme';
 import { Modal } from '../../components/Modal';
@@ -72,8 +73,6 @@ const baseEditStatusName = {
   unsaved: '已生成，待本机保存',
   uncertain: '请求中断',
 };
-// Motions added in later versions, offered first to finished tasks that lack them.
-const NEWEST_MOTIONS = ['sit', 'lie', 'fly'];
 const motionName = (id: string) => motions.find((motion) => motion.id === id)?.name || id;
 const revisionName = (job: PetJob) =>
   job.extension
@@ -106,6 +105,16 @@ function RevisionPlanNote({ plan }: { plan: RevisionPlanSummary }) {
     </div>
   );
 }
+/** Why a motion suits her or not, from her profile. */
+function MotionReason({ choice }: { choice?: MotionChoice }) {
+  if (!choice?.reason) return null;
+  return (
+    <small className={`motion-reason ${choice.fit}`}>
+      {choice.fit === 'core' ? '基础动作 · ' : choice.fit === 'suits' ? '适合她 · ' : '不适合 · '}
+      {choice.reason}
+    </small>
+  );
+}
 function RevisionSetupNote() {
   return (
     <p className="notice" role="status">
@@ -136,7 +145,21 @@ export function PetProductionStudio({
   onSaveSkin: (skin: Skin, activate: boolean) => Promise<void>;
 }) {
   const [selectedStyles, setSelectedStyles] = useState<ArtStyle[]>(['chibi-pet']);
-  const [selectedMotions, setSelectedMotions] = useState<PetMotion[]>(motions.map((m) => m.id as PetMotion));
+  // Which motions suit her (characterBehavior.ts): the ones every pet needs, and beyond that only
+  // what she does. Those are selected; the others stay aside unless chosen on purpose.
+  const plan = useMemo(
+    () =>
+      new Map(
+        motionPlan(
+          motions.map((m) => m.id),
+          character,
+        ).map((c) => [c.id, c]),
+      ),
+    [character],
+  );
+  const fits = (id: string) => plan.get(id)?.fit !== 'unsuited';
+  const planned = motions.filter((m) => fits(m.id)).map((m) => m.id as PetMotion);
+  const [selectedMotions, setSelectedMotions] = useState<PetMotion[]>(planned);
   const [frameCount, setFrameCount] = useState<4 | 8>(4);
   const [candidateCount, setCandidateCount] = useState<1 | 2 | 3>(1);
   const [candidateVariation, setCandidateVariation] =
@@ -163,7 +186,7 @@ export function PetProductionStudio({
   const [selectedSkinId, setSelectedSkinId] = useState('');
   const [revisionTarget, setRevisionTarget] = useState<PetMotion | 'base'>('base');
   const [revisionFeedback, setRevisionFeedback] = useState('');
-  // Motions chosen to add to a finished task; until changed, the newest ones it lacks.
+  // Motions chosen to add to a finished task; until changed, the ones she lacks that suit her.
   const [addChoice, setAddChoice] = useState<string[] | null>(null);
   const [checked, setChecked] = useState<boolean[]>(checks.map(() => false));
   const [frameReview, setFrameReview] = useState<FrameReviewInput | null>(null);
@@ -203,7 +226,7 @@ export function PetProductionStudio({
   // Motions this finished task does not have yet, and how many images adding them takes.
   const missingMotions = job ? motions.filter((m) => !job.motions.includes(m.id as PetMotion)) : [];
   const addedMotions = missingMotions
-    .filter((m) => (addChoice ? addChoice.includes(m.id) : NEWEST_MOTIONS.includes(m.id)))
+    .filter((m) => (addChoice ? addChoice.includes(m.id) : fits(m.id)))
     .map((m) => m.id as PetMotion);
   const addRequests = addedMotions.reduce(
     (n, id) => n + motionImages(id, job?.quality === 'sharp' ? 'sharp' : 'standard'),
@@ -422,6 +445,49 @@ export function PetProductionStudio({
       }
     }
   }
+  const addBox = (m: (typeof motions)[number]) => (
+    <label className="checkbox-label" key={m.id}>
+      <input
+        type="checkbox"
+        checked={addedMotions.includes(m.id as PetMotion)}
+        disabled={busy}
+        onChange={(e) =>
+          setAddChoice(e.target.checked ? [...addedMotions, m.id] : addedMotions.filter((id) => id !== m.id))
+        }
+      />
+      <span>
+        {m.name}
+        <small>{m.description}</small>
+        <MotionReason choice={plan.get(m.id)} />
+      </span>
+    </label>
+  );
+  const motionButton = (m: (typeof motions)[number]) => {
+    const on = selectedMotions.includes(m.id as PetMotion);
+    return (
+      <button
+        key={m.id}
+        aria-label={`制作动作：${m.name}`}
+        aria-pressed={on}
+        className={on ? 'selected' : ''}
+        disabled={busy}
+        onClick={() =>
+          setSelectedMotions((items) =>
+            items.includes(m.id as PetMotion)
+              ? items.filter((item) => item !== m.id)
+              : [...items, m.id as PetMotion],
+          )
+        }
+      >
+        <span>
+          <strong>{m.name}</strong>
+          <small>{m.description}</small>
+          <MotionReason choice={plan.get(m.id)} />
+        </span>
+        <i>{on ? <Check size={14} /> : <Film size={14} />}</i>
+      </button>
+    );
+  };
   async function start() {
     if (!inputReady) return;
     resultRequest.current++;
@@ -822,12 +888,8 @@ export function PetProductionStudio({
               <small>02 · 动画</small>
               <h4>选择需要的动作</h4>
             </div>
-            <button
-              className="text-button"
-              disabled={busy}
-              onClick={() => setSelectedMotions(motions.map((m) => m.id as PetMotion))}
-            >
-              完整桌宠动作包
+            <button className="text-button" disabled={busy} onClick={() => setSelectedMotions(planned)}>
+              按{character.name}的性格选择
             </button>
           </div>
           <p className="muted">
@@ -835,35 +897,21 @@ export function PetProductionStudio({
             {quality === 'sharp'
               ? '清晰优先时每组分三张图绘制，每张四个姿势。'
               : '每组一次 1024×1024 图像请求。'}
-            默认已选完整动作包与新版 Q 版。其他动作沿用上方帧数。
+            默认只选适合{character.name}
+            的动作：每个桌宠都需要的基础动作，加上她的爱好、习惯和移动方式用得到的动作；她不会做的动作收在下面，不会白白生成。其他动作沿用上方帧数。
             原帧不自动降清晰度；图集超限会保留已生成素材并提示处理。
           </p>
-          <div className="production-motion-grid">
-            {motions.map((m) => (
-              <button
-                key={m.id}
-                aria-label={`制作动作：${m.name}`}
-                aria-pressed={selectedMotions.includes(m.id as PetMotion)}
-                className={selectedMotions.includes(m.id as PetMotion) ? 'selected' : ''}
-                disabled={busy}
-                onClick={() =>
-                  setSelectedMotions((items) =>
-                    items.includes(m.id as PetMotion)
-                      ? items.filter((item) => item !== m.id)
-                      : [...items, m.id as PetMotion],
-                  )
-                }
-              >
-                <span>
-                  <strong>{m.name}</strong>
-                  <small>{m.description}</small>
-                </span>
-                <i>
-                  {selectedMotions.includes(m.id as PetMotion) ? <Check size={14} /> : <Film size={14} />}
-                </i>
-              </button>
-            ))}
-          </div>
+          <div className="production-motion-grid">{motions.filter((m) => fits(m.id)).map(motionButton)}</div>
+          {motions.some((m) => !fits(m.id)) && (
+            <details className="production-other-motions">
+              <summary>
+                不适合{character.name}的动作（{motions.filter((m) => !fits(m.id)).length}）
+              </summary>
+              <div className="production-motion-grid">
+                {motions.filter((m) => !fits(m.id)).map(motionButton)}
+              </div>
+            </details>
+          )}
         </section>
         <div className="production-start">
           <div>
@@ -1464,28 +1512,23 @@ export function PetProductionStudio({
                         沿用这套画风已确认的角色图和已有的全部动作，只画新动作，再一起整理成一份新成品。原成品仍保留，新成品核对后再启用。
                       </p>
                     </div>
-                    <div className="production-add-motions" role="group" aria-label="要补充的动作">
-                      {missingMotions.map((m) => (
-                        <label className="checkbox-label" key={m.id}>
-                          <input
-                            type="checkbox"
-                            checked={addedMotions.includes(m.id as PetMotion)}
-                            disabled={busy}
-                            onChange={(e) =>
-                              setAddChoice(
-                                e.target.checked
-                                  ? [...addedMotions, m.id]
-                                  : addedMotions.filter((id) => id !== m.id),
-                              )
-                            }
-                          />
-                          <span>
-                            {m.name}
-                            <small>{m.description}</small>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
+                    {missingMotions.some((m) => fits(m.id)) ? (
+                      <div className="production-add-motions" role="group" aria-label="要补充的动作">
+                        {missingMotions.filter((m) => fits(m.id)).map(addBox)}
+                      </div>
+                    ) : (
+                      <p className="muted">{character.name}用得到的动作这套都有了。</p>
+                    )}
+                    {missingMotions.some((m) => !fits(m.id)) && (
+                      <details className="production-other-motions">
+                        <summary>
+                          不适合{character.name}的动作（{missingMotions.filter((m) => !fits(m.id)).length}）
+                        </summary>
+                        <div className="production-add-motions" role="group" aria-label="不适合她的动作">
+                          {missingMotions.filter((m) => !fits(m.id)).map(addBox)}
+                        </div>
+                      </details>
+                    )}
                     <div className="production-revision-actions">
                       <p>预计 {addRequests} 次图像请求，不调用对话模型；已有动作不会重画。</p>
                       <button
