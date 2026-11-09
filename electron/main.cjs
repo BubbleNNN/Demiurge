@@ -1321,7 +1321,7 @@ app.whenReady().then(async () => {
     const bundle = await require('./character-packs.cjs').portableBundle(
       input.character,
       await store.inlineAssets(Array.isArray(input.skins) ? input.skins : []),
-      path.resolve(__dirname, '../public/art'),
+      require('./artwork.cjs').artDirectory(),
     );
     const selected = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
       title: '导出角色包',

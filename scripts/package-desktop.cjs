@@ -75,7 +75,7 @@ function allowedPayloadPath(relative) {
     ].includes(normalized) ||
     /^electron\/[\w/-]+\.cjs$/.test(normalized) ||
     /^shared\/[\w/-]+\.json$/.test(normalized) ||
-    /^(?:public|dist)\/art\/[\w-]+\.png$/.test(normalized) ||
+    /^dist\/art\/[\w-]+\.png$/.test(normalized) ||
     /^dist\/assets\/[\w.-]+\.(?:js|css|woff2?|wasm|png|svg)$/.test(normalized) ||
     normalized.startsWith('node_modules/') ||
     normalized.startsWith('licenses/')
@@ -237,11 +237,14 @@ function auditPayload(payload, { live2d = true } = {}) {
     )
       throw new Error('Live2D Core or its original license notice is missing.');
   }
-  const art = fs.readdirSync(path.join(payload, 'dist/art'));
-  for (const file of art) {
-    const exportFile = path.join(payload, 'public/art', file);
-    if (!fs.existsSync(exportFile) || hashFile(exportFile) !== hashFile(path.join(payload, 'dist/art', file)))
-      throw new Error(`Character export artwork differs from the renderer resource: ${file}`);
+  // The example artwork ships once, in dist/art; character export reads it there
+  // (electron/artwork.cjs). A second copy would only make the download bigger.
+  if (fs.existsSync(path.join(payload, 'public/art')))
+    throw new Error('Artwork is bundled twice (public/art).');
+  for (const file of fs.readdirSync(path.join(root, 'public/art')).filter((name) => name.endsWith('.png'))) {
+    const bundled = path.join(payload, 'dist/art', file);
+    if (!fs.existsSync(bundled) || hashFile(bundled) !== hashFile(path.join(root, 'public/art', file)))
+      throw new Error(`Bundled artwork is missing or differs from the source: ${file}`);
   }
   return manifest;
 }
@@ -308,7 +311,6 @@ function writePayload(payload, info, platform, { live2d = true } = {}) {
       path.join(root, 'dist/vendor/live2dcubismcore.min.js'),
       path.join(payload, 'dist/vendor/live2dcubismcore.min.js'),
     );
-  copyDirectory(artwork, path.join(payload, 'public/art'), pngOnly);
   copyDirectory(path.join(root, 'LICENSE'), path.join(payload, 'LICENSE'));
   const runtime = installRuntimeDependencies(root, payload, imports);
   collectNotices(root, path.join(payload, 'licenses'), Object.keys(info.dependencies));
