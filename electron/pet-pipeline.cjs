@@ -679,10 +679,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       source.configDigest !== configDigest(settings)
     )
       throw new Error('角色参考或图像服务已变化，请恢复原配置后修正。');
-    const duplicate = (await list(character.id)).find(
-      (j) => !['ready', 'cancelled'].includes(j.status) && j.styles.includes(input.style),
-    );
-    if (duplicate) throw new Error('这套画风已有未完成任务，请先继续或结束它。');
+    if (await unfinished(source, input.style)) throw new Error('这套画风已有未完成任务，请先继续或结束它。');
     const master = await chosenMaster(source, input.style);
     const guide = await readStyleReference(source);
     const job = {
@@ -742,6 +739,16 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       throw error;
     }
   }
+  // An unfinished task of this style made from the same reference images. One made from earlier
+  // references can never continue, so it does not stand in the way of a revision or new motions.
+  async function unfinished(source, style) {
+    return (await list(source.characterId)).find(
+      (j) =>
+        j.referenceDigest === source.referenceDigest &&
+        !['ready', 'cancelled'].includes(j.status) &&
+        j.styles.includes(style),
+    );
+  }
   // Adds motions a finished task does not have yet (sitting and lying down on a window, say):
   // a new task that reuses the chosen master and every finished sheet as they are, draws only the
   // new motions, and packs them all together. The original task and its looks stay unchanged.
@@ -761,10 +768,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       source.configDigest !== configDigest(settings)
     )
       throw new Error('角色参考或图像服务已变化，请恢复原配置后补充动作。');
-    const duplicate = (await list(character.id)).find(
-      (j) => !['ready', 'cancelled'].includes(j.status) && j.styles.includes(input.style),
-    );
-    if (duplicate) throw new Error('这套画风已有未完成任务，请先继续或结束它。');
+    if (await unfinished(source, input.style)) throw new Error('这套画风已有未完成任务，请先继续或结束它。');
     const master = await chosenMaster(source, input.style);
     const guide = await readStyleReference(source);
     const kept = source.steps.filter((s) => s.kind === 'sheet' && s.style === input.style);

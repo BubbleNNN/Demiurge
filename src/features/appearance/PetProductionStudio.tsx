@@ -193,6 +193,8 @@ export function PetProductionStudio({
   const [busy, setBusy] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState('');
+  // Where a refusal is shown: beside the button that was pressed, until a new task exists.
+  const [errorAt, setErrorAt] = useState<'top' | 'revise' | 'add'>('top');
   const [notice, setNotice] = useState('');
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
   const running = useRef(false),
@@ -306,6 +308,7 @@ export function PetProductionStudio({
   }
   async function refresh() {
     const request = ++resultRequest.current;
+    setErrorAt('top');
     try {
       const items = await bridge.listPetJobs(character.id);
       if (!alive.current || request !== resultRequest.current) return;
@@ -422,13 +425,14 @@ export function PetProductionStudio({
                   : '本机结果已恢复。继续制作需要单独点击。',
       );
   }
-  async function run(operation: () => Promise<void>) {
+  async function run(operation: () => Promise<void>, at: 'top' | 'revise' | 'add' = 'top') {
     if (running.current) return;
     running.current = true;
     stop.current = false;
     setBusy(true);
     setStopping(false);
     setError('');
+    setErrorAt(at);
     setNotice('');
     onBusy(true);
     try {
@@ -523,6 +527,7 @@ export function PetProductionStudio({
       ...(revisionTarget !== 'base' ? { motion: revisionTarget } : {}),
       feedback: revisionFeedback.trim(),
     });
+    setErrorAt('top');
     updateJob(created);
     setSelectedJobId(created.id);
     setOutputs([]);
@@ -539,6 +544,7 @@ export function PetProductionStudio({
       style: candidate.style,
       motions: addedMotions,
     });
+    setErrorAt('top');
     updateJob(created);
     setSelectedJobId(created.id);
     setOutputs([]);
@@ -936,7 +942,7 @@ export function PetProductionStudio({
               : '开始自动制作'}
           </button>
         </div>
-        {error && (
+        {error && errorAt === 'top' && (
           <div className="inline-error" role="alert">
             {error}
           </div>
@@ -970,6 +976,7 @@ export function PetProductionStudio({
                   onClick={() => {
                     setSelectedJobId(item.id);
                     setError('');
+                    setErrorAt('top');
                     setNotice('');
                     void showResults(item.id).catch((e) => setError(userError(e)));
                   }}
@@ -1496,12 +1503,17 @@ export function PetProductionStudio({
                         className="button secondary"
                         aria-label="创建桌宠修正版"
                         disabled={busy || !imageReady || !revisionReady || !revisionFeedback.trim()}
-                        onClick={() => void run(revise)}
+                        onClick={() => void run(revise, 'revise')}
                       >
                         <WandSparkles size={15} />
                         制作修正版
                       </button>
                     </div>
+                    {error && errorAt === 'revise' && (
+                      <p className="inline-error" role="alert">
+                        {error}
+                      </p>
+                    )}
                   </section>
                 )}
                 {job?.status === 'ready' && missingMotions.length > 0 && (
@@ -1535,12 +1547,17 @@ export function PetProductionStudio({
                         className="button secondary"
                         aria-label="补充桌宠动作"
                         disabled={busy || !imageReady || !addedMotions.length}
-                        onClick={() => void run(addMotions)}
+                        onClick={() => void run(addMotions, 'add')}
                       >
                         <WandSparkles size={15} />
                         补充动作
                       </button>
                     </div>
+                    {error && errorAt === 'add' && (
+                      <p className="inline-error" role="alert">
+                        {error}
+                      </p>
+                    )}
                   </section>
                 )}
                 <div className="generation-checks">

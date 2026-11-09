@@ -463,5 +463,24 @@ test('new motions are added to a finished task: one request per new image, every
     p.extend(source.id, { style: '3d', motions: ['shake'] }, character, settings),
     /未完成任务/,
   );
-  await p.cancel(again.id);
+  // An unfinished task made from earlier reference images can never continue, so it does not
+  // stand in the way: neither of new motions nor of a revision.
+  const againFile = path.join(context.root, `${again.id}.json`);
+  await fs.writeFile(
+    againFile,
+    JSON.stringify({ ...JSON.parse(await fs.readFile(againFile, 'utf8')), referenceDigest: 'f'.repeat(64) }),
+  );
+  const fresh = createPetPipeline(context.options);
+  const shake = await fresh.extend(source.id, { style: '3d', motions: ['shake'] }, character, settings);
+  assert.deepEqual(shake.extension.motions, ['shake']);
+  await fresh.cancel(shake.id);
+  const revision = await fresh.revise(
+    source.id,
+    { style: '3d', motion: 'wave', feedback: '挥手更轻' },
+    character,
+    settings,
+  );
+  assert.ok(revision.revision);
+  await fresh.cancel(revision.id);
+  await fresh.cancel(again.id);
 });

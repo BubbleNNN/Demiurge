@@ -387,6 +387,31 @@ app.on('browser-window-created', (_event, created) => {
         /预计 \d+ 次图像请求，不调用对话模型/,
       );
       assert.equal(calls.length, 5, 'Offering new motions calls nothing');
+      // While another task of this style is still unfinished, adding motions is refused, and the
+      // refusal is shown beside the button, not at the top of the window out of sight.
+      const revisedFile = JSON.parse(
+        fs.readFileSync(path.join(dir, 'pet-jobs', revised.id + '.json'), 'utf8'),
+      );
+      const blocker = {
+        ...revisedFile,
+        id: randomUUID(),
+        status: 'queued',
+        createdAt: new Date().toISOString(),
+        steps: revisedFile.steps.map((s, i, all) => (i === all.length - 1 ? { ...s, status: 'queued' } : s)),
+      };
+      const blockerFile = path.join(dir, 'pet-jobs', blocker.id + '.json');
+      fs.writeFileSync(blockerFile, JSON.stringify(blocker));
+      await click('补充桌宠动作');
+      await wait(`!!document.querySelector('[aria-label="补充新动作"] .inline-error')`);
+      const refusal = await js(
+        `(()=>{const e=document.querySelector('[aria-label="补充新动作"] .inline-error');e.scrollIntoView({block:'center',behavior:'instant'});return {text:e.textContent,height:e.getBoundingClientRect().height,alerts:document.querySelectorAll('.inline-error[role="alert"]').length}})()`,
+      );
+      assert.match(refusal.text, /已有未完成任务/);
+      assert.ok(refusal.height > 0);
+      assert.equal(refusal.alerts, 1, 'shown once, beside the button');
+      await capture('add-motions-refused.png');
+      fs.unlinkSync(blockerFile);
+      assert.equal(calls.length, 5, 'A refused request calls nothing');
       win.setSize(900, 800);
       await new Promise((resolve) => setTimeout(resolve, 100));
       assert.equal(
