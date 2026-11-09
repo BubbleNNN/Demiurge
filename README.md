@@ -51,10 +51,10 @@ their own routine and moods, and each one behaves like _themselves_.
 ### Windows 10 / 11 (64-bit)
 
 > The Windows version is new and has not been tested on a Windows PC yet. If anything goes wrong,
-> please [open an issue](https://github.com/BubbleNNN/Mori/issues).
+> please [open an issue](https://github.com/BubbleNNN/Demiurge/issues).
 
 1. Download `Demiurge-<version>-windows-x64.zip` from the
-   [latest release](https://github.com/BubbleNNN/Mori/releases/latest).
+   [latest release](https://github.com/BubbleNNN/Demiurge/releases/latest).
 2. _Optional:_ check the download. In PowerShell, `Get-FileHash .\Demiurge-<version>-windows-x64.zip`
    should print the same SHA-256 as the `.sha256` file published next to it.
 3. Right-click the zip and choose **Extract All…**. Pick a folder you will keep, for example

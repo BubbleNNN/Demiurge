@@ -50,9 +50,9 @@
 
 ### Windows 10 / 11（64 位）
 
-> Windows 版本刚刚推出，还没有在 Windows 电脑上实际测试过。遇到问题请[提交 Issue](https://github.com/BubbleNNN/Mori/issues)。
+> Windows 版本刚刚推出，还没有在 Windows 电脑上实际测试过。遇到问题请[提交 Issue](https://github.com/BubbleNNN/Demiurge/issues)。
 
-1. 在[最新发布页](https://github.com/BubbleNNN/Mori/releases/latest)下载 `Demiurge-<版本>-windows-x64.zip`。
+1. 在[最新发布页](https://github.com/BubbleNNN/Demiurge/releases/latest)下载 `Demiurge-<版本>-windows-x64.zip`。
 2. _可选：_ 核对下载文件。在 PowerShell 里运行 `Get-FileHash .\Demiurge-<版本>-windows-x64.zip`，显示的 SHA-256 应与旁边一起发布的 `.sha256` 文件一致。
 3. 右键压缩包，选择「全部解压缩…」，解压到一个会长期保留的文件夹，例如 `%LOCALAPPDATA%\Programs\Demiurge`。不要直接在压缩包里运行。
 4. 打开解压出的文件夹，双击 **Demiurge.exe**。
