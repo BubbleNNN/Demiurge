@@ -373,7 +373,7 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(await js(`document.querySelector('[aria-label="角色图完成后暂停"]').checked`), false);
       await click('开始自动制作桌宠');
       await wait(
-        `document.querySelectorAll('.production-job-tabs button').length===2&&document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===2`,
+        `document.querySelector('.production-tabs small')?.textContent==='2'&&document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===2`,
       );
       await idle();
       assert.equal(calls.length, 6);

@@ -225,21 +225,23 @@ app.on('browser-window-created', (_event, created) => {
         `window.mori.startPetJob({characterId:'production-test',styles:['original'],motions:['wave'],autoCollect:false}).then(async j=>{await window.mori.advancePetJob(j.id);return j})`,
       );
       await click('刷新任务');
-      await wait(`document.querySelectorAll('.production-job-tabs button').length===2`);
-      await js(
-        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('原作')).click()`,
-      );
+      await wait(`document.querySelector('.production-tabs small')?.textContent==='2'`);
+      // Another task: back to 我的桌宠, then open it from the list.
+      const openTask = async (needle) => {
+        await js(`document.querySelector('.production-back')?.click(); true`);
+        await wait(`!!document.querySelector('.production-task-row')`);
+        await js(
+          `[...document.querySelectorAll('.production-task-row')].find(b=>b.textContent.includes(${JSON.stringify(needle)})).click()`,
+        );
+      };
+      await openTask('原作');
       await wait(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作')`);
       delayedMasterId = jobs[0].id;
-      await js(
-        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('Q版')).click()`,
-      );
+      await openTask('Q版');
       for (let n = 0; n < 100 && !releaseMasterReply; n++) await new Promise((r) => setTimeout(r, 20));
       assert.ok(releaseMasterReply);
       assert.equal(await js(`document.querySelectorAll('[aria-label="角色基准预览"] img').length`), 0);
-      await js(
-        `[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes('原作')).click()`,
-      );
+      await openTask('原作');
       await wait(`document.querySelector('[aria-label="角色基准预览"] img')?.alt.includes('原作')`);
       releaseMasterReply();
       await new Promise((r) => setTimeout(r, 200));

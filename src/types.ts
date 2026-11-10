@@ -436,6 +436,8 @@ export interface PetProductionOptions {
 }
 export interface PetJob extends PetProductionOptions {
   id: string;
+  /** Unfinished, but made from other reference images or another image service: it cannot continue. */
+  stale?: boolean;
   version: 1;
   provider: 'image-edits';
   characterId: string;

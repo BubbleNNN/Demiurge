@@ -5458,6 +5458,98 @@ select:focus {
 .production-start strong {
   font-size: 13px;
 }
+/* Two views of the studio: making a new pet, and her pets so far. */
+.production-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tint);
+  width: fit-content;
+}
+.production-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.production-tabs button[aria-selected='true'] {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1px 4px #49334214;
+}
+.production-tabs small {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+.production-task-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.production-task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: left;
+  color: var(--ink);
+}
+.production-task-row:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.production-task-row > span {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+.production-task-row strong {
+  font-size: 14px;
+}
+.production-task-row small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.production-in-use {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-style: normal;
+}
+.production-ended {
+  margin-top: 18px;
+}
+.production-ended summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.production-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
 .production-job-tabs,
 .production-output-tabs {
   display: flex;

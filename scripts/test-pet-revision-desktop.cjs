@@ -307,7 +307,7 @@ app.on('browser-window-created', (_event, created) => {
       );
       await click('创建桌宠修正版');
       await wait(
-        `document.querySelectorAll('.production-job-tabs button').length===2&&!!document.querySelector('[aria-label="修正桌宠成品"]')`,
+        `document.querySelector('.production-tabs small')?.textContent==='2'&&!!document.querySelector('[aria-label="修正桌宠成品"]')`,
       );
       await idle();
       assert.equal(calls.length, 5, 'A wave revision must make exactly one additional request');
@@ -323,7 +323,9 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(revised.revision.motion, 'wave');
       assert.equal(revised.selectedBases['chibi-pet'], candidates[1].id);
       assert.match(
-        await js(`document.querySelector('.production-job-tabs button[aria-pressed="true"]').textContent`),
+        await js(
+          `document.querySelector('[aria-label="桌宠制作任务"] .production-section-heading small').textContent`,
+        ),
         /修正招手/,
       );
       assert.match(
@@ -526,6 +528,40 @@ app.on('browser-window-created', (_event, created) => {
       );
       assert.equal(fits, true, 'toolbar inside the window');
       await js('window.mori.closePet()');
+      // Reopened with nothing in progress, the studio starts on making a new pet: no task in sight.
+      // Her pets are one tab away, the look in use marked; one opens at a time, with a way back.
+      await click('关闭弹窗');
+      await wait(`!document.querySelector('.pet-production')`);
+      await click('自动制作多画风桌宠');
+      await wait(`!!document.querySelector('.production-tabs')`);
+      assert.equal(
+        await js(`document.querySelector('.production-tabs [aria-selected="true"]').textContent`),
+        '制作新桌宠',
+      );
+      assert.equal(
+        await js(`!!document.querySelector('[aria-label="桌宠制作任务"]')`),
+        false,
+        'no task shown',
+      );
+      assert.equal(await js(`document.querySelector('.production-new').hidden`), false);
+      await js(`[...document.querySelectorAll('.production-tabs button')][1].click()`);
+      await wait(`document.querySelectorAll('.production-task-row').length>=2`);
+      assert.equal(
+        await js(`document.querySelector('.production-new').hidden`),
+        true,
+        'the setup steps aside',
+      );
+      const rows = await js(
+        `[...document.querySelectorAll('.production-task-row')].map((r) => r.textContent)`,
+      );
+      assert.equal(rows.filter((r) => r.includes('正在用')).length, 1, 'the look in use is marked once');
+      assert.ok(rows.find((r) => r.includes('正在用')).includes('补充转个圈'));
+      await js(`document.querySelector('.production-task-row').click()`);
+      await wait(`!!document.querySelector('[aria-label="桌宠制作任务"]')`);
+      assert.equal(await js(`!!document.querySelector('.production-task-row')`), false, 'one task at a time');
+      await capture('studio-task.png', '[aria-label="桌宠制作任务"]');
+      await js(`document.querySelector('.production-back').click()`);
+      await wait(`!!document.querySelector('.production-task-row')`);
       win.setSize(900, 800);
       await new Promise((resolve) => setTimeout(resolve, 100));
       assert.equal(
@@ -557,6 +593,7 @@ app.on('browser-window-created', (_event, created) => {
             sharedActionReplay: true,
             customMotionDesigned: true,
             customMotionOnToolbar: true,
+            studioOpensClean: true,
           },
           null,
           2,

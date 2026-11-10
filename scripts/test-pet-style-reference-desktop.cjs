@@ -223,10 +223,14 @@ app.on('browser-window-created', (_event, created) => {
     );
     await wait(`!!document.querySelector('[aria-label="添加画风参考图"]')`);
   };
-  const selectTask = (needle) =>
-    js(
-      `(()=>{const b=[...document.querySelectorAll('.production-job-tabs button')].find(b=>b.textContent.includes(${JSON.stringify(needle)}));if(!b)throw new Error('Missing task');b.click()})()`,
+  // Another task: back to 我的桌宠, then open it from the list.
+  const selectTask = async (needle) => {
+    await js(`document.querySelector('.production-back')?.click(); true`);
+    await wait(`!!document.querySelector('.production-task-row')`);
+    await js(
+      `(()=>{const b=[...document.querySelectorAll('.production-task-row')].find(b=>b.textContent.includes(${JSON.stringify(needle)}));if(!b)throw new Error('Missing task');b.click()})()`,
     );
+  };
   const capture = async (name) => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     fs.writeFileSync(path.join(dir, name), (await win.webContents.capturePage()).toPNG());
@@ -286,7 +290,7 @@ app.on('browser-window-created', (_event, created) => {
       await click('桌宠画风：3D');
       await click('开始自动制作桌宠');
       await wait(
-        `document.querySelectorAll('.production-job-tabs button').length===2&&document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===1`,
+        `document.querySelector('.production-tabs small')?.textContent==='2'&&document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===1`,
       );
       await idle();
       const mixed = (await tasks()).find((task) => task.styles.length === 2);
@@ -363,7 +367,7 @@ app.on('browser-window-created', (_event, created) => {
       expectedGuide = guideB;
       await click('开始自动制作桌宠');
       await wait(
-        `document.querySelectorAll('.production-job-tabs button').length===3&&document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===1`,
+        `document.querySelector('.production-tabs small')?.textContent==='3'&&document.querySelectorAll('[aria-label="角色基准预览"]>.production-base-grid>figure').length===1`,
       );
       await idle();
       assert.equal(calls.length, 7);
@@ -381,7 +385,9 @@ app.on('browser-window-created', (_event, created) => {
       await new Promise((resolve) => setTimeout(resolve, 150));
       assert.equal(await taskImage(), fixture.url(guideB));
       assert.match(
-        await js(`document.querySelector('.production-job-tabs button[aria-pressed="true"]').textContent`),
+        await js(
+          `document.querySelector('[aria-label="桌宠制作任务"] .production-section-heading small').textContent`,
+        ),
         /8bit/,
       );
       const loaded = new Promise((resolve) => win.webContents.once('did-finish-load', resolve));

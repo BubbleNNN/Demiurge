@@ -3597,6 +3597,7 @@ export default function App() {
             selectedSearchProvider(state.settings, keys) !== 'none'
           }
           chatReady={isDesktop && chatServiceReady(state.settings, keys)}
+          activeSkinId={state.activeSkinId}
           onClose={() => setPetProductionOpen(false)}
           onBusy={setJobBusy}
           onOpenSettings={() => {

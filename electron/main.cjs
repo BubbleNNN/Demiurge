@@ -861,7 +861,20 @@ app.whenReady().then(async () => {
   );
   handle('list-pet-jobs', async (_event, characterId) => {
     if (typeof characterId !== 'string' || characterId.length > 128) throw new Error('角色标识无效。');
-    return petPipeline.list(characterId);
+    const jobs = await petPipeline.list(characterId);
+    // An unfinished task made from other reference images or another image service can never
+    // continue as it is: the studio folds it away with the ended ones.
+    const state = await store.loadState();
+    const character = state?.characters.find((c) => c.id === characterId);
+    if (!character) return jobs;
+    const references = require('./references.cjs').referencePack(character).digest;
+    const config = require('./pet-pipeline.cjs').configDigest(state.settings);
+    return jobs.map((job) =>
+      ['ready', 'cancelled'].includes(job.status) ||
+      (job.referenceDigest === references && job.configDigest === config)
+        ? job
+        : { ...job, stale: true },
+    );
   });
   // Installed results come from the workspace, where their atlases are stored files; only results
   // not installed yet are sent with their embedded images.

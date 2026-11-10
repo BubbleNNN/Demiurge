@@ -1236,4 +1236,4 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     },
   };
 }
-module.exports = { createPetPipeline };
+module.exports = { createPetPipeline, configDigest };
