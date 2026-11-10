@@ -3045,8 +3045,9 @@ select:focus {
 }
 .pet-band {
   position: absolute;
-  left: 8px;
-  right: 8px;
+  /* Only the part of the window on screen: near a side of the screen it hangs past the edge. */
+  left: calc(8px + var(--off-left, 0px));
+  right: calc(8px + var(--off-right, 0px));
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -3098,7 +3099,9 @@ select:focus {
 .pet-speech::after {
   content: '';
   position: absolute;
-  left: 50%;
+  /* Toward her head: when part of the window is off screen, the bubble is moved onto the screen
+     and its pointer stays over her. */
+  left: clamp(16px, calc(50% + (var(--off-right, 0px) - var(--off-left, 0px)) / 2), calc(100% - 16px));
   bottom: -6px;
   width: 10px;
   height: 10px;
@@ -3358,8 +3361,8 @@ select:focus {
   position: absolute;
   top: calc(var(--band-top) - var(--room-above) + 4px);
   bottom: calc(var(--band-bottom) - var(--room-below) + 4px);
-  left: 7px;
-  right: 7px;
+  left: calc(7px + var(--off-left, 0px));
+  right: calc(7px + var(--off-right, 0px));
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--paper);

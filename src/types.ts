@@ -12,6 +12,14 @@ export type DesktopAction =
   | 'sit'
   | 'lie'
   | 'fly';
+/** Room above and below her figure on screen, and how far the pet window hangs past the left and
+ *  right edges of the screen (electron/pet-layout.cjs petRoom). */
+export interface PetRoom {
+  above: number;
+  below: number;
+  left?: number;
+  right?: number;
+}
 /** A motion the user described themselves ("add a swing motion"): custom_<word>. */
 export type CustomAction = `custom_${string}`;
 export type PetAction =
@@ -633,9 +641,9 @@ export interface MoriBridge {
   onKeysChanged(callback: (keys: KeyStatus) => void): () => void;
   onChatStatusChanged(callback: (status: ChatStatus) => void): () => void;
   /** Points of the pet window's bands above and below her figure that are on screen. */
-  onPetRoom?(callback: (room: { above: number; below: number }) => void): () => void;
-  /** The room above and below her now (null outside the pet window). */
-  petRoom?(): Promise<{ above: number; below: number } | null>;
+  onPetRoom?(callback: (room: PetRoom) => void): () => void;
+  /** The room around her now (null outside the pet window). */
+  petRoom?(): Promise<PetRoom | null>;
   /** The user moved to another Space or full-screen app (macOS), toward this side. */
   /** The user moved to another Space; `from` is the side they came from, where she runs in. */
   onSpaceChanged?(callback: (change: { from: 'left' | 'right' }) => void): () => void;

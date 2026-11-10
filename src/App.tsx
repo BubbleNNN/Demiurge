@@ -144,6 +144,7 @@ import type {
   KeyStatus,
   Memory,
   PetAction,
+  PetRoom,
   ProgressEvent,
   Skin,
   VisualReference,
@@ -223,7 +224,7 @@ export default function App() {
   const [petComposer, setPetComposer] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   // Points of the pet window's bands above and below her that are on screen (see pet-layout.cjs).
-  const [petRoom, setPetRoom] = useState({ above: petBands.top, below: petBands.bottom });
+  const [petRoom, setPetRoom] = useState<PetRoom>({ above: petBands.top, below: petBands.bottom });
   // The pointer is on her: a faint handle shows where the hidden toolbar is.
   const [figureHover, setFigureHover] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
@@ -2377,6 +2378,8 @@ export default function App() {
             '--band-side': `${petBands.side}px`,
             '--room-above': `${petRoom.above}px`,
             '--room-below': `${petRoom.below}px`,
+            '--off-left': `${petRoom.left || 0}px`,
+            '--off-right': `${petRoom.right || 0}px`,
           } as CSSProperties
         }
       >

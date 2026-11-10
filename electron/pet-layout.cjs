@@ -65,6 +65,10 @@ function petRoom(bounds, area) {
   return {
     above: Math.round(clamp(figureTop - area.y, 0, top)),
     below: Math.round(clamp(area.y + area.height - figureBottom, 0, bottom)),
+    // How much of the window hangs past each side of the screen (her figure stays on it): her
+    // speech and the controls keep to the part on screen.
+    left: Math.round(clamp(area.x - bounds.x, 0, bounds.width / 2)),
+    right: Math.round(clamp(bounds.x + bounds.width - (area.x + area.width), 0, bounds.width / 2)),
   };
 }
 

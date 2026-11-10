@@ -486,6 +486,37 @@ app.on('browser-window-created', (_e, win) => {
       );
       fs.writeFileSync(path.join(dir, 'pet-chat.png'), (await pet.webContents.capturePage()).toPNG());
       report.chat = { reply };
+      // 9a. At a side of the screen part of her window hangs past the edge; what she says and the
+      // message box stay on the part on screen.
+      const middle = pet.getBounds();
+      for (const far of [99999, -99999]) {
+        // As far as the clamp lets the window go for a figure of usual proportions.
+        const edge = require('../electron/pet-layout.cjs').clampPetPosition(
+          far,
+          middle.y,
+          middle,
+          area,
+          0.75,
+        );
+        pet.setPosition(edge.x, edge.y);
+        const hangs = far > 0 ? edge.x + middle.width - (area.x + area.width) : area.x - edge.x;
+        assert.ok(hangs > 10, 'the window hangs past the edge');
+        await wait(
+          async () => {
+            const w = pet.getBounds();
+            const [said, typed] = [await rect('.pet-speech'), await rect('.pet-composer')];
+            return (
+              said &&
+              typed &&
+              [said, typed].every(
+                (r) => w.x + r.left >= area.x - 1 && w.x + r.right <= area.x + area.width + 1,
+              )
+            );
+          },
+          `speech and message box on screen at the ${far > 0 ? 'right' : 'left'} edge`,
+        );
+      }
+      pet.setPosition(middle.x, middle.y);
 
       // 9b. A game on the desktop: a small bubble above her, never over her.
       await pj('document.querySelector(\'[aria-label="收起输入框"]\').click()');

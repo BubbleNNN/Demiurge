@@ -362,7 +362,7 @@ function reportPetRoom() {
   if (!pet || pet.isDestroyed()) return;
   const bounds = pet.getBounds();
   const room = require('./pet-layout.cjs').petRoom(bounds, petArea(bounds));
-  const key = `${room.above}:${room.below}`;
+  const key = `${room.above}:${room.below}:${room.left}:${room.right}`;
   if (key === lastRoom) return;
   lastRoom = key;
   pet.webContents.send('mori:pet-room', room);
