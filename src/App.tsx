@@ -581,6 +581,23 @@ export default function App() {
     }
     setLifeVersion((v) => v + 1);
   }
+  // The other window (desktop pet or main window) saved her day: take what it changed, so a chat in
+  // the main window is not undone by the desktop pet's next save. The pet runs her routine, so it
+  // takes only feelings newer than its own; the main window mirrors everything.
+  useEffect(() => {
+    const changed = (event: StorageEvent) => {
+      if (event.key !== lifeKey || !event.newValue) return;
+      const theirs = readLife(),
+        ours = lifeRef.current;
+      if (!petMode) lifeRef.current = theirs;
+      else if (theirs.mood && (!ours.mood || theirs.mood.updatedAt > ours.mood.updatedAt))
+        ours.mood = theirs.mood;
+      else return;
+      setLifeVersion((v) => v + 1);
+    };
+    window.addEventListener('storage', changed);
+    return () => window.removeEventListener('storage', changed);
+  }, [lifeKey, petMode]);
   function readLife() {
     let life: LifeState;
     try {
@@ -806,8 +823,14 @@ export default function App() {
     const now = Date.now(),
       attention = attentionRef.current;
     const context = contextRef.current;
-    // Time passes for her feelings too: alone, she grows lonely; anger cools down.
-    settleMood(moodOf(), now, context?.mode !== 'away');
+    // Time passes for her feelings too: alone, she grows lonely; anger cools down. Keeping the user
+    // company on the desktop, or on the home screen while they are on it, she is not alone.
+    settleMood(
+      moodOf(),
+      now,
+      context?.mode !== 'away',
+      petMode ? desktop.company : view === 'home' && document.hasFocus(),
+    );
     if (
       state.settings.proactiveEnabled !== false &&
       noticeReturn(attention, now, userIdleRef.current, openedAt.current) &&

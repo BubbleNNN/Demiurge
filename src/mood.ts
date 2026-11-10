@@ -10,7 +10,8 @@ export interface Mood {
   joy: number;
   lonely: number;
   anger: number;
-  /** Last time the user did something with her (touch, chat, a game). */
+  /** Last time she was with the user: they did something with her (touch, chat, a game), or she
+   *  was keeping them company. */
   lastContact: number;
   updatedAt: number;
   /** What she is cross about, for her lines and the chat model; empty when she is not. */
@@ -63,9 +64,12 @@ const GRUDGES: Partial<Record<MoodEvent, string>> = {
 /** Something happened between her and the user. Changes and returns the mood. */
 export function feel(m: Mood, event: MoodEvent, now = Date.now()): Mood {
   settle(m, now);
-  const contact = (joy: number, lonely: number, anger: number) => {
+  // `ends`: the user came to her, which is what she was missing: however lonely she had grown,
+  // that is over (one pat, not four).
+  const contact = (joy: number, lonely: number, anger: number, ends = true) => {
     m.joy = clamp(m.joy + joy);
     m.lonely = clamp(m.lonely - lonely);
+    if (ends) m.lonely = Math.min(m.lonely, LONELY - 20);
     m.anger = clamp(m.anger - anger);
     m.lastContact = now;
   };
@@ -82,7 +86,7 @@ export function feel(m: Mood, event: MoodEvent, now = Date.now()): Mood {
         m.anger = clamp(m.anger + 6);
         m.lonely = clamp(m.lonely - 10);
         m.lastContact = now;
-      } else contact(2, 15, 0);
+      } else contact(2, 15, 0, false);
       break;
     case 'chat':
       contact(6, 35, 10);
@@ -91,7 +95,8 @@ export function feel(m: Mood, event: MoodEvent, now = Date.now()): Mood {
       contact(18, 45, 20);
       break;
     case 'greet':
-      m.lonely = clamp(m.lonely - 5);
+      // Glad the user is back.
+      m.lonely = clamp(m.lonely - 20);
       break;
     case 'woken':
       m.anger = clamp(m.anger + 35);
@@ -118,13 +123,22 @@ export function feel(m: Mood, event: MoodEvent, now = Date.now()): Mood {
   return m;
 }
 
-/** Time passes. `present`: the user is at the computer (not away), so being left alone stings more. */
-export function settle(m: Mood, now = Date.now(), present = true): Mood {
-  const minutes = Math.min(120, Math.max(0, now - m.updatedAt) / MINUTE);
+/** Time passes. `present`: the user is at the computer (not away), so being left alone stings more.
+ *  `together`: she is with them (keeping them company at their window, or on the home screen
+ *  while they are there): that is not being alone, and slowly makes up for it. */
+export function settle(m: Mood, now = Date.now(), present = true, together = false): Mood {
+  const gap = Math.max(0, now - m.updatedAt) / MINUTE;
+  const minutes = Math.min(120, gap);
   m.updatedAt = now;
   if (!minutes) return m;
+  if (together) {
+    m.lastContact = now;
+    m.lonely = clamp(m.lonely - 0.5 * minutes);
+  }
+  // A long gap is time she was not running (the app closed, the Mac asleep): the user was away.
+  if (gap > 10) present = false;
   const alone = (now - m.lastContact) / MINUTE;
-  if (alone > 15) m.lonely = clamp(m.lonely + (present ? 0.9 : 0.5) * minutes);
+  if (alone > 15) m.lonely = clamp(m.lonely + (present ? 0.5 : 0.25) * minutes);
   m.anger = clamp(m.anger - 1.2 * minutes);
   m.joy = clamp(
     m.joy + (55 - m.joy) * Math.min(1, 0.03 * minutes) - (m.lonely >= LONELY ? 0.3 * minutes : 0),

@@ -26,7 +26,7 @@ test('left alone she grows lonely, faster while the user is at the computer; com
     away = m.createMood(0);
   m.settle(present, 15 * MIN, true);
   assert.equal(present.lonely, 15, 'a quarter of an hour alone is nothing yet');
-  for (let t = 20; t <= 90; t += 5) {
+  for (let t = 20; t <= 120; t += 5) {
     m.settle(present, t * MIN, true);
     m.settle(away, t * MIN, false);
   }
@@ -39,8 +39,8 @@ test('left alone she grows lonely, faster while the user is at the computer; com
     m.moodLine('greet', present, () => 0),
     /等了好久|寂寞/,
   );
-  m.feel(present, 'chat', 91 * MIN);
-  m.feel(present, 'play', 92 * MIN);
+  m.feel(present, 'chat', 121 * MIN);
+  m.feel(present, 'play', 122 * MIN);
   assert.notEqual(m.moodName(present), 'lonely');
   assert.equal(m.moodName(present), 'happy', 'a game makes her happy');
   assert.equal(m.moodMark('happy'), '♪');
@@ -169,4 +169,40 @@ test('how she feels changes what she does, not only her face', () => {
   assert.ok(angry.diary > calm.diary * 1.5, JSON.stringify({ calm, angry }));
   assert.ok((angry.gaming || 0) < calm.gaming / 2, JSON.stringify({ calm, angry }));
   assert.ok(happy.gaming + happy.music > calm.gaming + calm.music, JSON.stringify({ calm, happy }));
+});
+
+test('one pat, a chat or a game ends her loneliness; sitting with the user she is not alone', () => {
+  // However lonely she had grown, the user coming to her is what she was missing.
+  for (const event of ['headpat', 'chat', 'play', 'touch']) {
+    const lonely = { ...m.createMood(0), lonely: 100 };
+    m.feel(lonely, event, MIN);
+    assert.notEqual(m.moodName(lonely), 'lonely', event);
+    assert.ok(lonely.lonely < 75, `${event}: no sad face either`);
+  }
+  // A poke is attention of a sort, but not that.
+  const poked = { ...m.createMood(0), lonely: 100 };
+  m.feel(poked, 'poke', MIN);
+  assert.equal(m.moodName(poked), 'lonely');
+  // Welcomed back, she cheers up a good deal.
+  const back = { ...m.createMood(0), lonely: 70 };
+  m.feel(back, 'greet', MIN);
+  assert.notEqual(m.moodName(back), 'lonely');
+  // Three hours by the user's window while they work: never lonely, and she gets over it.
+  const company = { ...m.createMood(0), lonely: 65 };
+  for (let t = 1; t <= 180; t++) m.settle(company, t * MIN, true, true);
+  assert.equal(company.lonely, 0);
+  assert.equal(company.lastContact, 180 * MIN);
+  // Then on her own: the quarter of an hour's grace counts from when she was last with them.
+  m.settle(company, 194 * MIN, true, false);
+  assert.equal(company.lonely, 0);
+  // A working day at the computer without her: lonely, but not in under two hours.
+  const workday = m.createMood(0);
+  for (let t = 1; t <= 100; t++) m.settle(workday, t * MIN, true);
+  assert.notEqual(m.moodName(workday), 'lonely');
+  for (let t = 101; t <= 240; t++) m.settle(workday, t * MIN, true);
+  assert.equal(m.moodName(workday), 'lonely');
+  // Overnight with the app closed: she missed the user, but is not miserable when it opens.
+  const night = m.createMood(0);
+  m.settle(night, 10 * 60 * MIN, true);
+  assert.notEqual(m.moodName(night), 'lonely');
 });
