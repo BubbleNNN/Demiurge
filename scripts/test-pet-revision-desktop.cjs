@@ -471,15 +471,16 @@ app.on('browser-window-created', (_event, created) => {
       for (let i = 0; i < 300 && calls.length < 6; i++) await new Promise((r) => setTimeout(r, 100));
       assert.equal(calls.length, 6, 'exactly one image draws the new motion');
       assert.match(calls[5].prompt, /back turned to the viewer mid-spin|turn a quarter to the left/);
-      await wait(`!!document.querySelector('.production-review input[type="checkbox"]')`);
-      const boxes = await js(
-        `document.querySelectorAll('.production-review input[type="checkbox"]:not(.production-add-motions input)').length`,
-      );
-      for (let i = 0; i < boxes; i++)
-        await js(
-          `(()=>{const b=document.querySelectorAll('.production-review input[type="checkbox"]:not(.production-add-motions input)')[${i}];if(!b.checked)b.click()})()`,
+      // The new look's review replaces the previous one (and its ticks) when its results load:
+      // tick whatever is unticked until confirming is possible.
+      let confirmable = false;
+      for (let i = 0; i < 150 && !confirmable; i++) {
+        confirmable = await js(
+          `(()=>{for(const b of document.querySelectorAll('.production-review input[type="checkbox"]:not(.production-add-motions input)'))if(!b.checked)b.click();const c=document.querySelector('[aria-label="确认形象并启用桌宠"]');return !!c&&!c.disabled})()`,
         );
-      await wait(`!document.querySelector('[aria-label="确认形象并启用桌宠"]').disabled`);
+        if (!confirmable) await new Promise((r) => setTimeout(r, 100));
+      }
+      assert.ok(confirmable, 'the reviewed look can be confirmed');
       await click('确认形象并启用桌宠');
       await wait(
         `window.mori.load().then(r=>r.state.skins.find(s=>s.id===r.state.activeSkinId)?.customMotions?.[0]?.name==='转个圈')`,

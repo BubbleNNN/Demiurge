@@ -478,26 +478,26 @@
   {
     "id": "sit",
     "name": "坐下",
-    "description": "坐在窗口上沿或地面上，抱着膝盖看着你",
+    "description": "并拢膝盖侧坐在窗口上沿或地面上，看着你",
     "staged": true,
     "poses": [
       "neutral standing",
-      "crouch down, knees bending",
-      "sit down on the ground line, knees drawn up",
-      "sitting, arms around knees, looking at viewer",
-      "sitting, head tilted, small smile",
-      "sitting, chin resting on knees",
-      "rise to a crouch",
+      "lower down, knees bending and kept together",
+      "sit on the ground line with both legs folded to one side, knees together",
+      "side-sitting, knees together, hands on the lap, looking at viewer",
+      "side-sitting, head tilted, small smile",
+      "side-sitting, one hand raised to the cheek",
+      "rise onto the feet with knees together",
       "neutral standing"
     ],
     "poses8": [
       "neutral standing",
-      "crouch down, knees bending",
-      "sit down on the ground line, knees drawn up",
-      "sitting, arms around knees, looking at viewer",
-      "sitting, head tilted, small smile",
-      "sitting, chin resting on knees",
-      "rise to a crouch",
+      "lower down, knees bending and kept together",
+      "sit on the ground line with both legs folded to one side, knees together",
+      "side-sitting, knees together, hands on the lap, looking at viewer",
+      "side-sitting, head tilted, small smile",
+      "side-sitting, one hand raised to the cheek",
+      "rise onto the feet with knees together",
       "neutral standing"
     ]
   },
@@ -508,7 +508,7 @@
     "staged": true,
     "poses": [
       "neutral standing",
-      "kneel down on the ground line",
+      "kneel down on the ground line, knees together",
       "lie on the stomach, propped on elbows, chin in hands",
       "lying on the stomach, chin in hands, one foot raised behind",
       "same pose, the other foot raised, small smile",
@@ -518,7 +518,7 @@
     ],
     "poses8": [
       "neutral standing",
-      "kneel down on the ground line",
+      "kneel down on the ground line, knees together",
       "lie on the stomach, propped on elbows, chin in hands",
       "lying on the stomach, chin in hands, one foot raised behind",
       "same pose, the other foot raised, small smile",

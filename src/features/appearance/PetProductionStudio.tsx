@@ -42,7 +42,7 @@ import type {
 const checks = [
   '发型、脸部和标志性饰物与原图一致',
   '服装结构和配色一致，画风有明确区别',
-  '动作衔接自然，没有变脸、肢体缺失或边缘裁切（睡醒、跑停、收起道具逐帧核对）',
+  '动作衔接自然，没有变脸、肢体缺失或边缘裁切（睡醒、跑停、收起道具逐帧核对）；坐、蹲、跪的姿势得体，穿裙子时膝盖并拢、不走光',
 ];
 const candidateDirectionOrder = ['balanced', 'bold', 'soft'] as const;
 const stepName = (step: PetJob['steps'][number], job?: PetJob) =>

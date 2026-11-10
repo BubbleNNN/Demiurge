@@ -224,3 +224,24 @@ test('aligned prompt permits seated life, links separate motion references, and 
     if(motion==='office')assert.match(call.prompt,/sit on that chair/);
   }
 });
+
+test('every pose is dressed for her outfit: in a skirt she sits and squats with knees together', async () => {
+  const {services,calls}=transport();
+  const base=await services.generateSkin({character,style:'sticker'},settings,credentials);
+  for (const [motion,version] of [['sit',3],['sit',undefined],['lie',3],['bounce',undefined]]) {
+    await services.generatePetSheet({character,skin:base,motion,...(version?{transitionVersion:version}:{}),referenceDigest:referencePack(character).digest},settings,credentials);
+    const prompt=calls.at(-1).prompt;
+    assert.match(prompt,/Dress every pose for the outfit shown in image 1/,motion);
+    assert.match(prompt,/knees and thighs together whenever she squats, crouches, kneels, sits or lands/);
+    assert.match(prompt,/never looks up under it/);
+    assert.match(prompt,/draw the modest version instead/);
+  }
+  // The sitting recipe itself sits with legs folded to one side, never hugging raised knees.
+  const recipes=require('../electron/pet-recipes.cjs');
+  for (const options of [{transitionVersion:3},{frameCount:8},{}]) {
+    const poses=recipes.motionRecipe('sit',options).poses.join(' | ');
+    assert.doesNotMatch(poses,/knees drawn up|arms around knees|hugging knees|chin resting on knees|crouch/,JSON.stringify(options));
+    assert.match(poses,/legs folded to one side|side-sitting/);
+    assert.match(poses,/knees together/);
+  }
+});

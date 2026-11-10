@@ -173,6 +173,7 @@ test('the chat model designs the motion from the instruction and her look; nothi
   assert.equal(content[0].image_url.url, look, 'the model sees her current look');
   assert.match(content[1].text, /untrusted data quoted as JSON/);
   assert.match(content[1].text, /"给昔涟加一个荡秋千的动作"/);
+  assert.match(content[1].text, /Dress the motion for the outfit in the image/, 'poses respect what she wears');
   // A name already taken gets a new id.
   const twice = chat([
     {
