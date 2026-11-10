@@ -121,7 +121,12 @@ function personaContext(character, latest) {
 }
 function availableActions(skin) {
   if (!skin) return ['idle'];
-  if (skin.sprite) return ACTIONS.filter((name) => name === 'idle' || skin.sprite.clips?.[name]);
+  if (skin.sprite)
+    return [
+      ...ACTIONS.filter((name) => name === 'idle' || skin.sprite.clips?.[name]),
+      // Motions the user described themselves (custom-motion.cjs), when the pack has them.
+      ...Object.keys(skin.sprite.clips || {}).filter((name) => require('./custom-motion.cjs').ID.test(name)),
+    ];
   const authored =
     !skin.images?.neutral && motionPack.entries.find((entry) => entry.builtin === skin.builtin);
   if (authored) return ACTIONS.filter((name) => name === 'idle' || authored.animation.clips[name]);

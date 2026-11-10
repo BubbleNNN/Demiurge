@@ -3,7 +3,7 @@ import { Check, Copy, LoaderCircle, MessageCircle, Pencil, RotateCcw, Square, Vo
 import { bridge } from '../bridge';
 import { userError } from '../errors';
 import { AvatarStage } from './AvatarStage';
-import { previewActionNames, previewIssues, previewSummary, type PreviewTurn } from '../personaPreview';
+import { previewActionName, previewIssues, previewSummary, type PreviewTurn } from '../personaPreview';
 import type { Character, PersonaPreviewReply, Skin } from '../types';
 const scenes = [
   ['问候', '嗨，我回来了！今天你在做什么？'],
@@ -203,7 +203,7 @@ export function PersonaPreview({
               <div className="preview-words">
                 <span>
                   {character.name}
-                  <small>{previewActionNames[turn.reply.action]}</small>
+                  <small>{previewActionName(turn.reply.action)}</small>
                 </span>
                 <p>{turn.reply.text}</p>
               </div>

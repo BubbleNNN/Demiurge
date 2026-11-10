@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('mori', {
   retryPetBaseEdit: invoke('retry-pet-base-edit'),
   revisePetJob: invoke('revise-pet-job'),
   extendPetJob: invoke('extend-pet-job'),
+  planCustomMotion: invoke('plan-custom-motion'),
   getRecoveryStatus: invoke('get-recovery-status'),
   restorePreviousState: invoke('restore-previous-state'),
   resetCredentials: invoke('reset-credentials'),

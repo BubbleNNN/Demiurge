@@ -682,6 +682,7 @@ app.whenReady().then(async () => {
             memories: state.memories,
             availableActions: require('./persona.cjs').availableActions(skin),
             availableEmotions: require('./persona.cjs').availableEmotions(skin),
+            customMotions: skin?.customMotions || [],
           },
           settings,
           credentials,
@@ -727,6 +728,7 @@ app.whenReady().then(async () => {
             messages: session.messages,
             availableActions: require('./persona.cjs').availableActions(skin),
             availableEmotions: require('./persona.cjs').availableEmotions(skin),
+            customMotions: skin?.customMotions || [],
           },
           settings,
           credentials,
@@ -930,9 +932,31 @@ app.whenReady().then(async () => {
       return petPipeline.revise(input.jobId, input, character, state.settings);
     }),
   );
+  // A motion described in the user's own words, planned by the chat model against her look; the
+  // plan comes back for the user to check before anything is drawn (extend-pet-job draws it).
+  handle('plan-custom-motion', async (_event, input) => {
+    bound(input, 2000);
+    if (typeof input?.jobId !== 'string' || typeof input.style !== 'string') throw new Error('任务无效。');
+    const { job: task, look } = await petPipeline.chosenLook(input.jobId, input.style);
+    const state = await store.loadState();
+    const character = state?.characters.find((c) => c.id === task.characterId);
+    if (!character) throw new Error('角色不存在。');
+    return services.planCustomMotion(
+      {
+        character,
+        style: input.style,
+        image: look.images.neutral,
+        instruction: input.instruction,
+        existing: [...task.motions, ...(task.customMotions || []).map((m) => m.id)],
+      },
+      state.settings,
+      await store.getCredentials(),
+    );
+  });
   handle('extend-pet-job', (event, input) =>
     job(event, 'skin', async () => {
-      bound(input, 4000);
+      // A described motion carries its planned poses (up to 24 lines).
+      bound(input, 16000);
       const task = await petPipeline.load(input.jobId);
       const state = await store.loadState();
       const character = state?.characters.find((c) => c.id === task.characterId);

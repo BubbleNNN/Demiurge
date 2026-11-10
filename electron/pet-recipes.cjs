@@ -3,6 +3,7 @@ const motions = require('../shared/pet-motions.json');
 const stages = require('../shared/pet-motion-stages.json');
 const candidateDirections = require('../shared/pet-candidate-directions.json');
 const artStyles = require('../shared/art-styles.json');
+const { validateCustomMotions, PACES } = require('./custom-motion.cjs');
 const temperaments = {
   natural: { scale: 1, prompt: 'Natural restrained gestures, relaxed shoulders and a warm expression.' },
   gentle: {
@@ -36,6 +37,8 @@ function productionOptions(input = {}) {
   const quality = input.quality ?? 'standard';
   if (!['sharp', 'standard'].includes(quality)) throw new Error('动作清晰度选项无效。');
   if (quality === 'sharp' && input.transitionVersion !== 3) throw new Error('清晰动作需要新版动作流程。');
+  // Motions the user described themselves (custom-motion.cjs), drawn like the built-in ones.
+  const customMotions = validateCustomMotions(input.customMotions);
   return {
     candidateCount,
     candidateVariation,
@@ -44,6 +47,7 @@ function productionOptions(input = {}) {
     artDirection: artDirection.trim(),
     ...(input.transitionVersion !== undefined ? { transitionVersion: input.transitionVersion } : {}),
     ...(quality === 'sharp' ? { quality } : {}),
+    ...(customMotions.length ? { customMotions } : {}),
   };
 }
 
@@ -71,12 +75,14 @@ function candidateRecipe(style, index, input = {}) {
 
 function motionRecipe(id, input = {}) {
   const options = productionOptions(input);
-  const motion = motions.find((m) => m.id === id);
+  const custom = options.customMotions?.find((m) => m.id === id);
+  const motion = motions.find((m) => m.id === id) || (custom && { ...custom, staged: custom.kind === 'pose' });
   if (!motion) throw new Error('桌宠动作无效。');
   if (input.part !== undefined) return partRecipe(id, input, options);
   // Expressions are four independent portraits, never padded into eight frames.
   const staged = !!motion.staged && (id !== 'sleep' || options.transitionVersion >= 2);
-  const aligned = options.transitionVersion === 3 && !!stages[id];
+  const plan = custom ? custom.stages : stages[id];
+  const aligned = options.transitionVersion === 3 && !!plan;
   const count = aligned ? 12 : id === 'emotions' ? 4 : motion.activity || staged ? 8 : options.frameCount;
   return {
     ...motion,
@@ -87,14 +93,15 @@ function motionRecipe(id, input = {}) {
     rows: aligned ? 3 : 2,
     size: count === 8 ? '1536x1024' : '1024x1024',
     poses: aligned
-      ? stages[id]
+      ? plan
       : count === 8
         ? id === 'sleep' && !staged
           ? motion.legacyPoses8
           : motion.poses8
         : motion.poses,
     direction: temperaments[options.temperament].prompt,
-    tempo: temperaments[options.temperament].scale,
+    tempo: temperaments[options.temperament].scale * (custom ? PACES[custom.pace] : 1),
+    ...(custom ? { custom: true } : {}),
   };
 }
 
@@ -174,7 +181,11 @@ function motionClip(name, indices, input = {}, rest = 0) {
     shake: count === 8 ? [100, 90, 130, 80, 90, 130, 90, 100, 140] : [100, 170, 170, 130, 140],
     bounce: count === 8 ? [100, 80, 110, 65, 120, 65, 100, 120, 140] : [100, 130, 180, 120, 140],
   };
-  return { frames: [rest, ...indices.slice(1), rest], durations: time(timing[name]), loop: false };
+  // A gesture the user described: an even, readable pace (scaled by the recipe's own pace).
+  const durations =
+    timing[name] ||
+    (count === 8 ? [100, 120, 140, 160, 180, 160, 140, 120, 150] : [100, 200, 240, 200, 160]);
+  return { frames: [rest, ...indices.slice(1), rest], durations: time(durations), loop: false };
 }
 
 function activityTransitions(name, indices, input = {}) {

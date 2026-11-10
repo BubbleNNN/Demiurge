@@ -29,8 +29,8 @@ const character = {
   createdAt: stamp,
   visualReferences: [{ id: 'original', name: '角色原图', image: original, createdAt: stamp }],
 };
-function tinted(sheet, number) {
-  const image = fixture.decode(fixture.image(sheet));
+function tinted(sheet, number, frames) {
+  const image = fixture.decode(fixture.image(sheet, frames ? { frames } : {}));
   for (let i = 0; i < image.bitmap.length; i += 4)
     if (image.bitmap[i + 3]) image.bitmap[i] = (image.bitmap[i] + number * 13) % 255;
   return fixture.url(fixture.encode(image.bitmap, image.width, image.height));
@@ -83,8 +83,10 @@ async function setup(t, overrides = {}) {
       },
       async generatePetSheet(input) {
         calls.push({ kind: 'sheet', input: structuredClone(input) });
+        // As many poses as the motion asks for (a staged motion has eight).
+        const count = require('../electron/pet-recipes.cjs').motionRecipe(input.motion, input).count;
         return {
-          image: tinted(true, calls.length),
+          image: tinted(true, calls.length, count === 8 ? 8 : undefined),
           prompt: `Fixture sheet ${calls.length}`,
           model: settings.imageModel,
         };
@@ -483,4 +485,72 @@ test('new motions are added to a finished task: one request per new image, every
   assert.ok(revision.revision);
   await fresh.cancel(revision.id);
   await fresh.cancel(again.id);
+});
+
+test('a motion described in words is drawn and packed like a built-in one, and the look lists it by name', async (t) => {
+  const context = await setup(t),
+    source = await finished(context, ['wave', 'talk']),
+    p = context.pipeline;
+  const poses = (n, word) =>
+    Array.from({ length: n }, (_, i) => `${word} pose ${i + 1}, limbs placed differently`);
+  const swing = {
+    id: 'custom_swing',
+    name: '荡秋千',
+    description: '坐上小秋千来回荡',
+    kind: 'pose',
+    pace: 'normal',
+    poses: poses(4, 'swing'),
+    poses8: poses(8, 'swing'),
+    stages: poses(12, 'swing'),
+  };
+  const spin = { ...swing, id: 'custom_spin', name: '转个圈', description: '原地转一圈', kind: 'gesture' };
+  delete spin.stages;
+  await assert.rejects(
+    p.extend(
+      source.id,
+      { style: '3d', custom: { ...swing, poses8: swing.poses8.slice(0, 7) } },
+      character,
+      settings,
+    ),
+    /自定义动作记录无效/,
+  );
+  const before = context.calls.length;
+  let added = await p.extend(source.id, { style: '3d', custom: swing }, character, settings);
+  assert.deepEqual(added.motions, ['wave', 'talk', 'custom_swing']);
+  assert.deepEqual(added.extension, { sourceJobId: source.id, motions: ['custom_swing'] });
+  assert.match(added.customMotions[0].poses8[0], /exact neutral/);
+  assert.deepEqual(
+    added.steps.map((s) => `${s.kind}:${s.motion || ''}:${s.status}`),
+    ['base::done', 'sheet:wave:done', 'sheet:talk:done', 'sheet:custom_swing:queued', 'pack::queued'],
+  );
+  // A restart keeps the record valid; then one image request draws it.
+  added = await createPetPipeline(context.options).load(added.id);
+  added = await complete(p, added);
+  const requests = context.calls.slice(before);
+  assert.deepEqual(
+    requests.map((c) => `${c.kind}:${c.input.motion}`),
+    ['sheet:custom_swing'],
+  );
+  assert.equal(requests[0].input.customMotions[0].id, 'custom_swing', 'the recipe reaches the image service');
+  let [result] = await p.results(added.id);
+  assert.equal(result.sprite.clips.custom_swing.loop, true);
+  assert.ok(result.sprite.clips.enter_custom_swing && result.sprite.clips.exit_custom_swing);
+  assert.ok(result.sprite.clips.wave && result.sprite.clips.talk);
+  assert.deepEqual(result.customMotions, [
+    { id: 'custom_swing', name: '荡秋千', description: '坐上小秋千来回荡', kind: 'pose' },
+  ]);
+  // A second one on top keeps the first, and the same motion cannot be added twice.
+  let more = await p.extend(added.id, { style: '3d', custom: spin }, character, settings);
+  assert.deepEqual(
+    more.customMotions.map((m) => m.id),
+    ['custom_swing', 'custom_spin'],
+  );
+  more = await complete(p, more);
+  [result] = await p.results(more.id);
+  assert.equal(result.sprite.clips.custom_spin.loop, false);
+  assert.deepEqual(
+    result.customMotions.map((m) => m.name),
+    ['荡秋千', '转个圈'],
+  );
+  await assert.rejects(p.extend(more.id, { style: '3d', custom: spin }, character, settings), /还没有的动作/);
 });

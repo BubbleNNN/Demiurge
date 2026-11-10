@@ -486,6 +486,10 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
     ...(s.kind !== undefined
       ? { kind: enumValue(s.kind, ['image', 'live2d', 'vrm', 'glb'], `${label}.kind`) }
       : {}),
+    // Motions the user described themselves, by name (the clips are in the sprite).
+    ...(s.customMotions !== undefined && sprite
+      ? { customMotions: require('./custom-motion.cjs').motionLabels(s.customMotions) }
+      : {}),
     ...(s.builtin !== undefined
       ? {
           builtin: enumValue(
@@ -686,7 +690,10 @@ function validateMessage(value, label) {
     createdAt: date(m.createdAt, `${label}.createdAt`),
   };
   if (m.emotion !== undefined) result.emotion = enumValue(m.emotion, EMOTIONS, `${label}.emotion`);
-  if (m.action !== undefined) result.action = enumValue(m.action, ACTIONS, `${label}.action`);
+  if (m.action !== undefined)
+    result.action = require('./custom-motion.cjs').ID.test(m.action)
+      ? m.action
+      : enumValue(m.action, ACTIONS, `${label}.action`);
   if (m.origin !== undefined) {
     if (m.role !== 'assistant') invalid(label, 'only assistant replies have an origin');
     result.origin = enumValue(m.origin, ['model', 'script'], `${label}.origin`);

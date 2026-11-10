@@ -151,6 +151,8 @@ import type {
 const id = (): string => crypto.randomUUID();
 // The longest she stays sitting or lying down when nothing else gets her up.
 const POSE_STAY = 5 * 60000;
+// A motion the user described that she gets into and keeps doing (swinging): this long.
+const CUSTOM_STAY = 45000;
 const now = () => new Date().toISOString();
 const errorText = userError;
 const emotions: { id: Emotion; name: string; mark: string }[] = [
@@ -206,6 +208,8 @@ export default function App() {
   const [actionKey, setActionKey] = useState(0);
   // Bumped with an action that should start at once, skipping its lead-in turn.
   const [snap, setSnap] = useState(0);
+  // The toolbar's second row: her activities, or the motions the user described for her.
+  const [toolbarRow, setToolbarRow] = useState<'activities' | 'own'>('activities');
   const [tracking, setTracking] = useState(true);
   const [motionEnabled, setMotionEnabled] = useState(true);
   const [previewSpeech, setPreviewSpeech] = useState(false);
@@ -397,9 +401,11 @@ export default function App() {
         // nobody ends.
         (action === 'sit' || action === 'lie') && clip
         ? POSE_STAY
-        : animation && clip
-          ? Math.min(120000, clipDuration(animation, clip) + 80)
-          : 2600;
+        : (skin?.customMotions || []).some((m) => m.id === action && m.kind === 'pose') && clip
+          ? CUSTOM_STAY
+          : animation && clip
+            ? Math.min(120000, clipDuration(animation, clip) + 80)
+            : 2600;
     const timeout = setTimeout(() => setAction('idle'), duration);
     return () => clearTimeout(timeout);
   }, [action, actionKey, skin]);
@@ -769,6 +775,12 @@ export default function App() {
     current: () => actionNow.current,
     onSeek: () => seekAttention(),
     onTeleport: (phase) => setVanished(phase === 'out'),
+    // Now and then, idle, she does one of the motions the user described for her.
+    onOwnMotion: () => {
+      if (!ownMotions.length || !motionEnabled) return false;
+      move(ownMotions[Math.floor(Math.random() * ownMotions.length)].id, 'neutral', true);
+      return true;
+    },
     onHabit: (habit) => {
       if (habit !== 'hum') return;
       showMark('♪', 3200);
@@ -882,6 +894,7 @@ export default function App() {
         petComposer ||
         Boolean(drag.current) ||
         // Sitting or lying down is a stay: her routine waits until she gets up.
+        ownPose(action) ||
         action === 'sit' ||
         action === 'lie' ||
         (behavior.current.priority >= 100 && behavior.current.until > performance.now()),
@@ -1280,6 +1293,13 @@ export default function App() {
       setToast(`复制失败：${errorText(error)}`);
     }
   }
+  // Motions the user described for this look (and that it has frames for).
+  const ownMotions = (skin?.customMotions || []).filter((m) => supportsAction(skin, m.id));
+  const ownPose = (value: PetAction) => ownMotions.some((m) => m.id === value && m.kind === 'pose');
+  const hasActivities = activities.some(({ id }) => supportsAction(skin, id));
+  const showOwn = ownMotions.length > 0 && (!hasActivities || toolbarRow === 'own');
+  const actionLabel = (value: PetAction) =>
+    actionNames[value] || ownMotions.find((m) => m.id === value)?.name || '动作';
   function move(value: PetAction, face: Emotion = emotion, automatic = false) {
     if (!automatic) {
       if (desktop.active) desktop.stop();
@@ -1306,9 +1326,11 @@ export default function App() {
         : activityDuration
       : value === 'idle'
         ? 500
-        : animation && clip
-          ? clipDuration(animation, clip) + 80
-          : 2600;
+        : ownPose(value) && clip
+          ? CUSTOM_STAY
+          : animation && clip
+            ? clipDuration(animation, clip) + 80
+            : 2600;
   }
   function interact(event: CompanionEvent, automatic = false) {
     if (interactionBusy || talking || (automatic && (!motionEnabled || !state.settings.proactiveEnabled)))
@@ -2264,7 +2286,7 @@ export default function App() {
               <X size={16} />
             </button>
           </div>
-          {activities.some(({ id }) => supportsAction(skin, id)) && (
+          {activities.some(({ id }) => supportsAction(skin, id)) && !showOwn && (
             <div className="pet-toolbar-row" role="group" aria-label="活动">
               {activities
                 .filter(({ id }) => supportsAction(skin, id))
@@ -2286,6 +2308,43 @@ export default function App() {
               {isActivity(action) && (
                 <button aria-label="停止桌宠活动" title="停止活动" onClick={() => move('idle', 'neutral')}>
                   <Square size={14} />
+                </button>
+              )}
+              {ownMotions.length > 0 && (
+                <button
+                  aria-label="显示她的动作"
+                  title="她的动作（你为她添加的）"
+                  onClick={() => setToolbarRow('own')}
+                >
+                  <Sparkles size={15} />
+                </button>
+              )}
+            </div>
+          )}
+          {showOwn && (
+            // Motions the user described for her (外观动作 → 自定义新动作). They take the place of
+            // the activities row: the band under her has room for two rows and the size slider.
+            <div className="pet-toolbar-row own-motions" role="group" aria-label="她的动作">
+              {ownMotions.map((m) => (
+                <button
+                  key={m.id}
+                  aria-label={`桌宠${m.name}`}
+                  aria-pressed={action === m.id}
+                  disabled={interactionBusy || talking}
+                  title={m.description || m.name}
+                  onClick={() => move(m.id, 'neutral')}
+                >
+                  {m.name}
+                </button>
+              ))}
+              {ownPose(action) && (
+                <button aria-label="停止这个动作" title="停下" onClick={() => move('idle', 'neutral')}>
+                  <Square size={14} />
+                </button>
+              )}
+              {hasActivities && (
+                <button aria-label="显示活动" title="活动" onClick={() => setToolbarRow('activities')}>
+                  <BookOpen size={15} />
                 </button>
               )}
             </div>
@@ -2548,7 +2607,7 @@ export default function App() {
               (lifeRef.current.activity === 'sleep'
                 ? '在休息'
                 : activities.find((item) => item.id === lifeRef.current.activity)?.doing ||
-                  `${actionNames[action]} · ${emotions.find((e) => e.id === emotion)?.name}`) +
+                  `${actionLabel(action)} · ${emotions.find((e) => e.id === emotion)?.name}`) +
               (feelingLabel ? ` · ${feelingLabel}` : '')
             }
             invitation={invitation ? offerText(invitation).invite : ''}
@@ -3534,6 +3593,7 @@ export default function App() {
             chatServiceReady(state.settings, keys) &&
             selectedSearchProvider(state.settings, keys) !== 'none'
           }
+          chatReady={isDesktop && chatServiceReady(state.settings, keys)}
           onClose={() => setPetProductionOpen(false)}
           onBusy={setJobBusy}
           onOpenSettings={() => {

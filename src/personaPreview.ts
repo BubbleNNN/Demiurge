@@ -1,4 +1,4 @@
-import type { ChatReply, Character } from './types';
+import type { ChatReply, Character, PetAction } from './types';
 export interface PreviewTurn {
   id: string;
   question: string;
@@ -23,6 +23,9 @@ export const previewActionNames = {
   sleep: '休息',
   bounce: '跳跃',
 };
+/** A reply's action by name; a motion the user added is shown as such. */
+export const previewActionName = (action: PetAction) =>
+  action in previewActionNames ? previewActionNames[action as keyof typeof previewActionNames] : '自定义动作';
 export function previewSummary(character: Pick<Character, 'name' | 'work'>, turns: PreviewTurn[]) {
   const excerpt = (text: string, limit: number) => (text.length > limit ? text.slice(0, limit) + '…' : text);
   return [
@@ -35,7 +38,7 @@ export function previewSummary(character: Pick<Character, 'name' | 'work'>, turn
           `\n第 ${index + 1} 轮 · ${turn.feedback === 'fits' ? '贴合角色' : turn.feedback === 'adjust' ? '需要调整' : '尚未标记'}`,
           `问：${excerpt(turn.question, 120)}`,
           `答：${excerpt(turn.reply.text, 240)}`,
-          `动作：${previewActionNames[turn.reply.action]}`,
+          `动作：${previewActionName(turn.reply.action)}`,
           turn.feedback === 'adjust' && turn.issues.length ? `关注：${turn.issues.join('、')}` : '',
           turn.note ? `备注：${excerpt(turn.note, 100)}` : '',
         ]

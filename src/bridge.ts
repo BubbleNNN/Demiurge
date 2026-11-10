@@ -68,6 +68,7 @@ export const bridge: MoriBridge = window.mori ?? {
   retryPetBaseEdit: desktopRequired,
   revisePetJob: desktopRequired,
   extendPetJob: desktopRequired,
+  planCustomMotion: desktopRequired,
   importReferences: desktopRequired,
   importStyleReference: desktopRequired,
   discoverReferences: desktopRequired,

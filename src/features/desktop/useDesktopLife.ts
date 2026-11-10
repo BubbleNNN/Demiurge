@@ -87,6 +87,8 @@ interface Options {
   onTeleport?: (phase: 'out' | 'in') => void;
   /** A habit with no motion of its own (humming), shown by the app. */
   onHabit?: (habit: Habit) => void;
+  /** One of the motions the user described for her, played as a habit; false when she has none. */
+  onOwnMotion?: () => boolean;
   /** She has arrived after being summoned or after the user moved to another Space. */
   onEnter?: () => void;
 }
@@ -943,6 +945,8 @@ export function useDesktopLife(options: Options) {
     // One of her small habits, so she never just stands there.
     const habit = () => {
       const o = ref.current;
+      // Now and then one of the motions the user described for her instead.
+      if (Math.random() < 0.25 && o.onOwnMotion?.()) return;
       const usable = moodHabits(o.mood || 'calm', o.habits || ['lookAround']).filter((h) =>
         h === 'sit' || h === 'lie'
           ? o.supports(h)

@@ -69,7 +69,44 @@ const masters = [tinted(false, 1), tinted(false, 2)],
   calls = [];
 const wikiSearches = [];
 const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+// A motion described in words: the chat model's design, as this stand-in returns it.
+const designs = [];
+const design = {
+  problem: '',
+  name: '转个圈',
+  description: '原地轻快地转一圈',
+  summary: '抬手、转身到背面、转回正面、站好。',
+  slug: 'spin',
+  kind: 'gesture',
+  pace: 'quick',
+  poses: [
+    'rest',
+    'lift both arms and start turning to the left',
+    'back turned to the viewer mid-spin',
+    'turn back to face the viewer, arms lowering',
+  ],
+  poses8: [
+    'rest',
+    'bend the knees slightly and lift both arms to the sides',
+    'turn a quarter to the left, arms out',
+    'back turned to the viewer, skirt flaring',
+    'turn three quarters, right side toward the viewer',
+    'face the viewer again, arms still out',
+    'lower the arms halfway with a small smile',
+    'rest',
+  ],
+  stages: [],
+};
 global.fetch = async (url, init) => {
+  if (
+    String(url).endsWith('/chat/completions') &&
+    String(init.body).includes('You design one new animated motion')
+  ) {
+    designs.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(design) } }] }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const planned = await planner.handle(url, init);
   if (planned) return planned;
   if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
@@ -412,6 +449,82 @@ app.on('browser-window-created', (_event, created) => {
       await capture('add-motions-refused.png');
       fs.unlinkSync(blockerFile);
       assert.equal(calls.length, 5, 'A refused request calls nothing');
+      // A motion described in words: the chat model designs it against her look, the plan is
+      // shown, and only then is it drawn (one image) and packed with the rest.
+      await js(
+        `(()=>{const t=document.querySelector('textarea[aria-label="描述新动作"]');t.scrollIntoView({block:'center',behavior:'instant'});const set=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set;set.call(t,'给她加一个转圈的动作');t.dispatchEvent(new Event('input',{bubbles:true}));return true})()`,
+      );
+      await click('设计新动作');
+      await wait(`!!document.querySelector('.custom-motion-plan')`);
+      const shown = await js(`document.querySelector('[aria-label="自定义新动作"]').textContent`);
+      assert.match(shown, /转个圈/);
+      assert.match(shown, /做一次就回到站姿/);
+      assert.match(shown, /预计 1 次图像请求/);
+      assert.equal(designs.length, 1, 'one chat request designs it');
+      assert.match(JSON.stringify(designs[0]), /给她加一个转圈的动作/);
+      assert.equal(calls.length, 5, 'designing draws nothing');
+      await capture('custom-motion-plan.png', '[aria-label="自定义新动作"]');
+      await click('制作这个新动作');
+      await wait(
+        `window.mori.load().then(()=>document.querySelectorAll('[aria-label="确认形象并启用桌宠"]').length>0)`,
+      );
+      for (let i = 0; i < 300 && calls.length < 6; i++) await new Promise((r) => setTimeout(r, 100));
+      assert.equal(calls.length, 6, 'exactly one image draws the new motion');
+      assert.match(calls[5].prompt, /back turned to the viewer mid-spin|turn a quarter to the left/);
+      await wait(`!!document.querySelector('.production-review input[type="checkbox"]')`);
+      const boxes = await js(
+        `document.querySelectorAll('.production-review input[type="checkbox"]:not(.production-add-motions input)').length`,
+      );
+      for (let i = 0; i < boxes; i++)
+        await js(
+          `(()=>{const b=document.querySelectorAll('.production-review input[type="checkbox"]:not(.production-add-motions input)')[${i}];if(!b.checked)b.click()})()`,
+        );
+      await wait(`!document.querySelector('[aria-label="确认形象并启用桌宠"]').disabled`);
+      await click('确认形象并启用桌宠');
+      await wait(
+        `window.mori.load().then(r=>r.state.skins.find(s=>s.id===r.state.activeSkinId)?.customMotions?.[0]?.name==='转个圈')`,
+      );
+      const active = await js(
+        'window.mori.load().then(r=>{const s=r.state.skins.find(s=>s.id===r.state.activeSkinId);return {clip:s.sprite.clips.custom_spin,labels:s.customMotions}})',
+      );
+      assert.equal(active.clip.loop, false);
+      assert.deepEqual(active.labels, [
+        { id: 'custom_spin', name: '转个圈', description: '原地轻快地转一圈', kind: 'gesture' },
+      ]);
+      // On her toolbar, by name; she does it.
+      await js('window.mori.openPet()');
+      let pet;
+      for (let i = 0; i < 100 && !pet; i++) {
+        pet = require('electron')
+          .BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL().includes('pet=1'));
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      const pj = (code) => pet.webContents.executeJavaScript(code, true);
+      for (
+        let i = 0;
+        i < 100 && !(await pj('!!document.querySelector(\'[aria-label="她的动作"] button\')'));
+        i++
+      )
+        await new Promise((r) => setTimeout(r, 100));
+      assert.equal(
+        await pj('document.querySelector(\'[aria-label="她的动作"] button\').textContent'),
+        '转个圈',
+      );
+      await pj('document.querySelector(\'[aria-label="桌宠转个圈"]\').click()');
+      let played = false;
+      for (let i = 0; i < 60 && !played; i++) {
+        played =
+          (await pj('document.querySelector(".pet-draggable canvas")?.dataset.clip || ""')) === 'custom_spin';
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      assert.ok(played, 'the toolbar button plays the new motion');
+      // The toolbar still fits in the band under her, its row of motions inside the window.
+      const fits = await pj(
+        `(()=>{const t=document.querySelector('.pet-toolbar').getBoundingClientRect(),r=document.querySelector('[aria-label="她的动作"]').getBoundingClientRect();return t.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth})()`,
+      );
+      assert.equal(fits, true, 'toolbar inside the window');
+      await js('window.mori.closePet()');
       win.setSize(900, 800);
       await new Promise((resolve) => setTimeout(resolve, 100));
       assert.equal(
@@ -441,6 +554,8 @@ app.on('browser-window-created', (_event, created) => {
             transparentBackgroundInspection: true,
             originalAndRevisionPlayback: true,
             sharedActionReplay: true,
+            customMotionDesigned: true,
+            customMotionOnToolbar: true,
           },
           null,
           2,

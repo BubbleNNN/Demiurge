@@ -28,6 +28,7 @@ import candidateDirections from '../../../shared/pet-candidate-directions.json';
 import type {
   ArtStyle,
   Character,
+  CustomMotion,
   PetJob,
   PetMotion,
   ProgressEvent,
@@ -44,16 +45,17 @@ const checks = [
   '动作衔接自然，没有变脸、肢体缺失或边缘裁切（睡醒、跑停、收起道具逐帧核对）',
 ];
 const candidateDirectionOrder = ['balanced', 'bold', 'soft'] as const;
-const stepName = (step: PetJob['steps'][number]) =>
+const stepName = (step: PetJob['steps'][number], job?: PetJob) =>
   step.kind === 'base'
     ? '角色图'
     : step.kind === 'pack'
       ? '整理动画'
-      : `${motions.find((m) => m.id === step.motion)?.name || '动作'}${step.part !== undefined ? ` ${step.part + 1}` : ''}`;
+      : `${motions.find((m) => m.id === step.motion)?.name || job?.customMotions?.find((m) => m.id === step.motion)?.name || '动作'}${step.part !== undefined ? ` ${step.part + 1}` : ''}`;
 // Images one motion takes. Mirrors motionParts in electron/pet-recipes.cjs: sharp quality draws a
 // twelve-frame motion as three images of four poses and a four-frame motion as two of two.
-const motionImages = (id: string, quality: 'sharp' | 'standard') => {
+const motionImages = (id: string, quality: 'sharp' | 'standard', custom?: CustomMotion) => {
   if (quality !== 'sharp') return 1;
+  if (custom) return custom.kind === 'pose' ? 3 : 2;
   if (Object.hasOwn(motionStages, id)) return 3;
   const motion = motions.find((m) => m.id === id) as { activity?: boolean; staged?: boolean } | undefined;
   return motion && !motion.activity && !motion.staged ? 2 : 1;
@@ -127,6 +129,7 @@ export function PetProductionStudio({
   skins,
   imageReady,
   revisionReady,
+  chatReady = revisionReady,
   onClose,
   onBusy,
   onOpenSettings,
@@ -138,6 +141,8 @@ export function PetProductionStudio({
   imageReady: boolean;
   /** A chat model and a search service are configured: corrections are planned with them first. */
   revisionReady: boolean;
+  /** A chat model is configured: a motion described in words is designed with it first. */
+  chatReady?: boolean;
   onClose: () => void;
   onBusy: (busy: boolean) => void;
   onOpenSettings: () => void;
@@ -194,7 +199,10 @@ export function PetProductionStudio({
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState('');
   // Where a refusal is shown: beside the button that was pressed, until a new task exists.
-  const [errorAt, setErrorAt] = useState<'top' | 'revise' | 'add'>('top');
+  const [errorAt, setErrorAt] = useState<'top' | 'revise' | 'add' | 'custom'>('top');
+  // A motion described in words: the instruction, then the chat model's plan to check.
+  const [customInstruction, setCustomInstruction] = useState('');
+  const [customPlan, setCustomPlan] = useState<{ motion: CustomMotion; summary: string } | null>(null);
   const [notice, setNotice] = useState('');
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
   const running = useRef(false),
@@ -425,7 +433,7 @@ export function PetProductionStudio({
                   : '本机结果已恢复。继续制作需要单独点击。',
       );
   }
-  async function run(operation: () => Promise<void>, at: 'top' | 'revise' | 'add' = 'top') {
+  async function run(operation: () => Promise<void>, at: 'top' | 'revise' | 'add' | 'custom' = 'top') {
     if (running.current) return;
     running.current = true;
     stop.current = false;
@@ -551,6 +559,35 @@ export function PetProductionStudio({
     setMasters([]);
     setSelectedSkinId('');
     setAddChoice(null);
+    requestAnimationFrame(() => taskRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    await execute(created);
+  }
+  // The chat model designs the motion against her look; nothing is drawn until it is confirmed.
+  async function planCustom() {
+    if (!job || job.status !== 'ready' || !candidate || !customInstruction.trim()) return;
+    const planned = await bridge.planCustomMotion({
+      jobId: job.id,
+      style: candidate.style,
+      instruction: customInstruction.trim(),
+    });
+    if (alive.current) setCustomPlan({ motion: planned.motion, summary: planned.summary });
+  }
+  async function makeCustom() {
+    if (!job || job.status !== 'ready' || !candidate || !customPlan) return;
+    resultRequest.current++;
+    const created = await bridge.extendPetJob({
+      jobId: job.id,
+      style: candidate.style,
+      custom: customPlan.motion,
+    });
+    setErrorAt('top');
+    setCustomPlan(null);
+    setCustomInstruction('');
+    updateJob(created);
+    setSelectedJobId(created.id);
+    setOutputs([]);
+    setMasters([]);
+    setSelectedSkinId('');
     requestAnimationFrame(() => taskRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
     await execute(created);
   }
@@ -1293,7 +1330,7 @@ export function PetProductionStudio({
                         .map((step, index) => (
                           <span className={`production-step ${step.status}`} key={index}>
                             <i />
-                            {stepName(step)}
+                            {stepName(step, job)}
                             <small>
                               {statusName[step.status]}
                               {step.attempts ? ` · 自动重做 ${step.attempts}/3` : ''}
@@ -1315,7 +1352,7 @@ export function PetProductionStudio({
               )}
               {currentStep?.error && (
                 <div className="inline-error">
-                  {styleName(currentStep.style)} · {stepName(currentStep)}：{currentStep.error}
+                  {styleName(currentStep.style)} · {stepName(currentStep, job)}：{currentStep.error}
                 </div>
               )}
               <div className="toolbar production-task-actions">
@@ -1359,7 +1396,7 @@ export function PetProductionStudio({
                     >
                       {currentStep.kind === 'pack'
                         ? '重新整理图集（不调用模型）'
-                        : `重新生成${stepName(currentStep)}并继续（调用图像 API）`}
+                        : `重新生成${stepName(currentStep, job)}并继续（调用图像 API）`}
                     </button>
                   )}
                 {!busy && !['ready', 'cancelled'].includes(job.status) && (
@@ -1554,6 +1591,95 @@ export function PetProductionStudio({
                       </button>
                     </div>
                     {error && errorAt === 'add' && (
+                      <p className="inline-error" role="alert">
+                        {error}
+                      </p>
+                    )}
+                  </section>
+                )}
+                {job?.status === 'ready' && candidate && (
+                  <section className="production-revision" aria-label="自定义新动作">
+                    <div>
+                      <h4>自定义新动作</h4>
+                      <p>
+                        用一句话描述想让{character.name}
+                        做的动作，例如「荡秋千」「转个圈」「跳绳」。对话模型会看着她现在的样子设计成逐帧姿势，你确认后再按这套画风画出来，和已有动作一起整理成新成品；原成品保留。
+                      </p>
+                    </div>
+                    {!chatReady && (
+                      <p className="notice" role="status">
+                        新动作要先由对话模型设计成逐帧姿势：请先在「连接与设置」中配置对话模型。
+                      </p>
+                    )}
+                    <textarea
+                      aria-label="描述新动作"
+                      rows={2}
+                      maxLength={300}
+                      placeholder={`例如：给${character.name}加一个荡秋千的动作`}
+                      value={customInstruction}
+                      disabled={busy}
+                      onChange={(event) => {
+                        setCustomInstruction(event.target.value);
+                        setCustomPlan(null);
+                      }}
+                    />
+                    {customPlan && (
+                      <div className="custom-motion-plan" role="group" aria-label="新动作设计">
+                        <p>
+                          <strong>{customPlan.motion.name}</strong>
+                          <span className="muted">
+                            {' · '}
+                            {customPlan.motion.kind === 'pose'
+                              ? '进入、循环、退出（会持续一会儿）'
+                              : '做一次就回到站姿'}
+                            {' · '}
+                            {{ slow: '慢', normal: '适中', quick: '快' }[customPlan.motion.pace]}
+                          </span>
+                        </p>
+                        <p>{customPlan.motion.description}</p>
+                        {customPlan.summary && <p className="muted">{customPlan.summary}</p>}
+                        <details>
+                          <summary>逐帧姿势（交给图像模型）</summary>
+                          <ol>
+                            {(job.transitionVersion === 3 && customPlan.motion.stages
+                              ? customPlan.motion.stages
+                              : customPlan.motion.poses8
+                            ).map((pose, i) => (
+                              <li key={i}>{pose}</li>
+                            ))}
+                          </ol>
+                        </details>
+                      </div>
+                    )}
+                    <div className="production-revision-actions">
+                      <p>
+                        {customPlan
+                          ? `预计 ${motionImages(customPlan.motion.id, job.quality === 'sharp' ? 'sharp' : 'standard', customPlan.motion)} 次图像请求；已有动作不会重画。`
+                          : '设计需要 1 次对话模型请求，还不会画图。'}
+                      </p>
+                      {customPlan ? (
+                        <button
+                          className="button secondary"
+                          aria-label="制作这个新动作"
+                          disabled={busy || !imageReady}
+                          onClick={() => void run(makeCustom, 'custom')}
+                        >
+                          <WandSparkles size={15} />
+                          制作这个动作
+                        </button>
+                      ) : (
+                        <button
+                          className="button secondary"
+                          aria-label="设计新动作"
+                          disabled={busy || !chatReady || !customInstruction.trim()}
+                          onClick={() => void run(planCustom, 'custom')}
+                        >
+                          <WandSparkles size={15} />
+                          设计动作
+                        </button>
+                      )}
+                    </div>
+                    {error && errorAt === 'custom' && (
                       <p className="inline-error" role="alert">
                         {error}
                       </p>

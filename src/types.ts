@@ -12,7 +12,33 @@ export type DesktopAction =
   | 'sit'
   | 'lie'
   | 'fly';
-export type PetAction = DesktopAction | 'idle' | 'bounce' | 'nod' | 'shake' | 'sleep' | 'wave' | Activity;
+/** A motion the user described themselves ("add a swing motion"): custom_<word>. */
+export type CustomAction = `custom_${string}`;
+export type PetAction =
+  | DesktopAction
+  | 'idle'
+  | 'bounce'
+  | 'nod'
+  | 'shake'
+  | 'sleep'
+  | 'wave'
+  | Activity
+  | CustomAction;
+/** A custom motion as a finished look lists it. */
+export interface CustomMotionLabel {
+  id: CustomAction;
+  name: string;
+  description: string;
+  /** gesture: plays once; pose: she gets into it, it loops, she gets out. */
+  kind: 'gesture' | 'pose';
+}
+/** A custom motion as the chat model planned it: the poses the image model will draw. */
+export interface CustomMotion extends CustomMotionLabel {
+  pace: 'slow' | 'normal' | 'quick';
+  poses: string[];
+  poses8: string[];
+  stages?: string[];
+}
 export type CompanionEvent =
   | 'greet'
   | 'touch'
@@ -157,6 +183,8 @@ export interface Skin {
   kind?: 'image' | 'live2d' | 'vrm' | 'glb';
   model?: ModelAsset;
   sprite?: SpriteAnimation;
+  /** Motions the user described for this look (their clips are in the sprite). */
+  customMotions?: CustomMotionLabel[];
   drawing?: PixelDrawing;
   builtin?:
     | 'cyrene-original-v1'
@@ -384,7 +412,8 @@ export type PetMotion =
   | 'gaming'
   | 'snack'
   | 'music'
-  | 'diary';
+  | 'diary'
+  | CustomAction;
 export interface PetProductionOptions {
   transitionVersion?: 1 | 2 | 3;
   candidateCount?: 1 | 2 | 3;
@@ -394,6 +423,8 @@ export interface PetProductionOptions {
   artDirection?: string;
   /** Sharp draws fewer poses per image (more requests, much sharper motion frames). */
   quality?: 'sharp' | 'standard';
+  /** Motions the user described, drawn like the built-in ones. */
+  customMotions?: CustomMotion[];
 }
 export interface PetJob extends PetProductionOptions {
   id: string;
@@ -548,7 +579,15 @@ export interface MoriBridge {
     feedback: string;
   }): Promise<PetJob>;
   /** Adds motions a finished task does not have, reusing everything it already drew. */
-  extendPetJob(input: { jobId: string; style: ArtStyle; motions: PetMotion[] }): Promise<PetJob>;
+  extendPetJob(
+    input: { jobId: string; style: ArtStyle } & ({ motions: PetMotion[] } | { custom: CustomMotion }),
+  ): Promise<PetJob>;
+  /** The chat model's plan for a motion described in words; nothing is drawn yet. */
+  planCustomMotion(input: {
+    jobId: string;
+    style: ArtStyle;
+    instruction: string;
+  }): Promise<{ motion: CustomMotion; summary: string; instruction: string }>;
   importReferences(): Promise<VisualReference[]>;
   importStyleReference(): Promise<VisualReference | null>;
   discoverReferences(characterId: string): Promise<AppState>;

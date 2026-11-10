@@ -87,7 +87,9 @@ function validateAnimation(value, bounds) {
   });
   const clips = {};
   for (const [name, value] of Object.entries(object(a.clips))) {
-    if (!CLIPS.has(name)) throw new Error(`不支持的动画名称：${name}`);
+    // Motions the user described themselves are named custom_<word> (custom-motion.cjs).
+    if (!CLIPS.has(name) && !require('./custom-motion.cjs').CLIP.test(name))
+      throw new Error(`不支持的动画名称：${name}`);
     const c = object(value);
     if (!Array.isArray(c.frames) || !c.frames.length || c.frames.length > 512)
       throw new Error('动作帧序列无效。');

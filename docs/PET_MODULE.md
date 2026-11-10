@@ -41,6 +41,16 @@ motion recipes in [`shared/pet-motions.json`](../shared/pet-motions.json) and
 `electron/pet-frames.cjs`, review in `electron/pet-pipeline.cjs`. A finished pack can gain new
 motions later (补充新动作) without regenerating the old ones.
 
+**Custom motions** (自定义新动作): the user describes a motion in words and the chat model, shown
+her look, writes it as a recipe of the same shape as the built-in ones
+(`planCustomMotion` in `electron/services.cjs`, checked by `electron/custom-motion.cjs`): a
+`gesture` (4 and 8 poses, played once) or a `pose` (12 stages of entrance, loop and exit, plus 8
+poses for older tasks). Her rest poses at the ends are always the built-in wording. The recipe
+travels with the task (`customMotions`), so `motionRecipe` draws and packs it like any other
+motion; clips are named `custom_<word>` (and `enter_`/`exit_` for a pose), and the finished look
+lists them by name (`skin.customMotions`) for the pet toolbar, her idle habits and the chat model,
+which may pick them as an action.
+
 **Which motions to make** is decided per character by `motionPlan` in
 [`src/characterBehavior.ts`](../src/characterBehavior.ts), from her own behaviour profile (section
 3): every pet gets the motions the desktop needs (blink, talk, expressions, wave, nod, shake, a

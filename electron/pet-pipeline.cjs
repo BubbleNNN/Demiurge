@@ -154,7 +154,12 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       job.styles.some((s) => !recognizedStyles.includes(s)) ||
       !Array.isArray(job.motions) ||
       !job.motions.length ||
-      job.motions.some((m) => !motions.includes(m)) ||
+      // Built-in motions, or ones the user described (checked with the options below).
+      job.motions.some(
+        (m) =>
+          !motions.includes(m) &&
+          !(Array.isArray(job.customMotions) && job.customMotions.some((c) => c?.id === m)),
+      ) ||
       !Array.isArray(job.results) ||
       !/^[a-f0-9]{64}$/.test(job.referenceDigest) ||
       !/^[a-f0-9]{64}$/.test(job.configDigest)
@@ -494,7 +499,12 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
             feedback: revision.feedback,
             images,
             ...(revision.kind === 'motion'
-              ? { motion: revision.motion, motionName: motionNames[revision.motion] }
+              ? {
+                  motion: revision.motion,
+                  motionName:
+                    motionNames[revision.motion] ||
+                    job.customMotions?.find((m) => m.id === revision.motion)?.name,
+                }
               : {}),
           },
           settings,
@@ -752,16 +762,22 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
   // Adds motions a finished task does not have yet (sitting and lying down on a window, say):
   // a new task that reuses the chosen master and every finished sheet as they are, draws only the
   // new motions, and packs them all together. The original task and its looks stay unchanged.
+  // `input.custom`: one motion the user described, as the chat model planned it
+  // (custom-motion.cjs); it is drawn and packed like the built-in ones.
   async function extend(id, input, character, settings) {
     const source = await load(id);
-    const added = Array.isArray(input.motions) ? [...new Set(input.motions)] : [];
+    const custom =
+      input.custom === undefined ? null : require('./custom-motion.cjs').validateCustomMotion(input.custom);
+    const added = custom ? [custom.id] : Array.isArray(input.motions) ? [...new Set(input.motions)] : [];
     if (
       source.status !== 'ready' ||
       !source.styles.includes(input.style) ||
       !added.length ||
-      added.some((m) => !motions.includes(m) || source.motions.includes(m))
+      added.some((m) => (!custom && !motions.includes(m)) || source.motions.includes(m))
     )
       throw new Error('只能为已完成的任务补充它还没有的动作。');
+    const customMotions = [...(source.customMotions || []), ...(custom ? [custom] : [])];
+    if (customMotions.length > 12) throw new Error('一个角色最多 12 个自定义动作。');
     if (
       source.characterId !== character.id ||
       source.referenceDigest !== referencePack(character).digest ||
@@ -777,6 +793,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       id: randomUUID(),
       styles: [input.style],
       motions: [...source.motions, ...added],
+      ...(customMotions.length ? { customMotions } : {}),
       candidateCount: 1,
       status: 'queued',
       createdAt: stamp(),
@@ -793,7 +810,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
           ...(s.part !== undefined ? { part: s.part } : {}),
           status: 'done',
         })),
-        ...added.flatMap((motion) => sheetSteps(input.style, motion, source)),
+        ...added.flatMap((motion) => sheetSteps(input.style, motion, { ...source, customMotions })),
         { kind: 'pack', style: input.style, status: 'queued' },
       ],
     };
@@ -993,6 +1010,18 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
                 name: `${master.name} · 互动动画`,
                 images: { neutral: packed.image },
                 sprite: packed.sprite,
+                ...(job.customMotions?.length
+                  ? {
+                      customMotions: job.customMotions
+                        .filter((m) => job.motions.includes(m.id))
+                        .map(({ id: motion, name, description, kind }) => ({
+                          id: motion,
+                          name,
+                          description,
+                          kind,
+                        })),
+                    }
+                  : {}),
                 generation: {
                   ...master.generation,
                   prompt: `${master.generation.prompt} Automatic 2D frame atlas; job ${job.id}; clips ${job.motions.join(', ')}. Original reference bytes used for every request.${job.revision ? ` Revision of ${job.revision.sourceJobId}: ${job.revision.feedback}` : ''}`,
@@ -1198,6 +1227,13 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       serial(`char:${character.id}`, () => revise(id, input, character, settings)),
     extend: (id, input, character, settings) =>
       serial(`char:${character.id}`, () => extend(id, input, character, settings)),
+    /** Her look chosen for a style of a finished task, for planning a new motion against it. */
+    chosenLook: async (id, style) => {
+      const job = await load(id);
+      if (job.status !== 'ready' || !job.styles.includes(style))
+        throw new Error('只能为已完成的任务设计新动作。');
+      return { job, look: await chosenMaster(job, style) };
+    },
   };
 }
 module.exports = { createPetPipeline };
