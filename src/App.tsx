@@ -204,6 +204,8 @@ export default function App() {
   const [emotion, setEmotion] = useState<Emotion>('neutral');
   const [action, setAction] = useState<PetAction>('idle');
   const [actionKey, setActionKey] = useState(0);
+  // Bumped with an action that should start at once, skipping its lead-in turn.
+  const [snap, setSnap] = useState(0);
   const [tracking, setTracking] = useState(true);
   const [motionEnabled, setMotionEnabled] = useState(true);
   const [previewSpeech, setPreviewSpeech] = useState(false);
@@ -698,10 +700,12 @@ export default function App() {
     tired: lifeRef.current.activity === 'sleep' || lifeRef.current.energy < 18,
     occupied: isActivity(action),
     held: () => userHeld.current > performance.now(),
-    onAction: (a) =>
+    onAction: (a, sudden) => {
       setAction(
         supportsAction(skin, a) ? a : a === 'bounce' && supportsAction(skin, 'drag') ? 'drag' : 'idle',
-      ),
+      );
+      if (sudden) setSnap((n) => n + 1);
+    },
     onLine: (line) => {
       setInteractionLine(line);
       setBubbleHidden(false);
@@ -759,6 +763,8 @@ export default function App() {
       lifeRef.current.until = Math.min(lifeRef.current.until, Date.now() + 9000);
     },
     onFall: (cause) => {
+      // A fall ends whatever she was showing above her head (a hum's ♪): how she feels shows now.
+      setFlash(null);
       if (cause === 'gone') {
         say('诶？窗口不见了……');
         return false;
@@ -1919,6 +1925,7 @@ export default function App() {
         zoom={view === 'desktop' || view === 'home' ? 1 : zoom}
         compact={petMode}
         glance={petMode ? desktop.glance : null}
+        snap={snap}
       />
       {mark && (
         <span

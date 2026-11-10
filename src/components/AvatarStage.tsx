@@ -22,6 +22,8 @@ interface Props {
   compact?: boolean;
   /** A short look to one side (frame animation only). */
   glance?: { side: 'left' | 'right'; key: number } | null;
+  /** Start the action at once, without its lead-in turn (frame animation only). */
+  snap?: number;
 }
 let coreLoading: Promise<void> | null = null;
 function loadCore() {
@@ -57,6 +59,7 @@ export function AvatarStage({
   zoom = 1,
   compact = false,
   glance = null,
+  snap,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const runtime = useRef<any>(null);
@@ -334,6 +337,7 @@ export function AvatarStage({
             zoom={zoom}
             enabled={motionEnabled}
             glance={glance}
+            snap={snap}
           />
         ) : image ? (
           <div

@@ -52,6 +52,9 @@ interface Props {
   enabled: boolean;
   /** A short look to one side: the turn that starts her walk that way, held, then back. */
   glance?: { side: 'left' | 'right'; key: number } | null;
+  /** Changed together with the action: that action starts at once, without the turn or pose
+   *  change that would lead into it (she comes into view already running). */
+  snap?: number;
 }
 // How long a glance lasts, and the turn in and out of it, in milliseconds.
 const GLANCE = 1500,
@@ -110,6 +113,7 @@ export function AnimatedIllustration(props: Props) {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     const playback = newActivityPlayback();
     let glanceKey = 0,
+      snapKey = current.current.snap,
       glanceAt = -Infinity,
       glanceSide: 'left' | 'right' = 'left';
     const ensurePage = (page: number) => {
@@ -155,6 +159,8 @@ export function AnimatedIllustration(props: Props) {
       const speechInterrupt =
         p.talking && (isActivity(p.action) || isActivity(playback.current) || Boolean(playback.segment));
       const target = speechInterrupt ? 'idle' : p.action;
+      const snapped = p.snap !== snapKey;
+      snapKey = p.snap;
       const activity = advanceActivityPlayback(
         playback,
         animation,
@@ -162,7 +168,7 @@ export function AnimatedIllustration(props: Props) {
         time,
         p.actionKey,
         paused,
-        speechInterrupt,
+        speechInterrupt || snapped,
       );
       let selected =
         activity ||

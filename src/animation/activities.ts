@@ -20,6 +20,15 @@ export interface ActivityPlayback {
 }
 export const newActivityPlayback = (): ActivityPlayback => ({ current: 'idle', since: 0, key: -1 });
 
+// Setting off to walk, a look first plays its turn into the walk (enter_walk_*), or gets up from
+// sitting or lying (exit_*): she moves only once the walk itself is on screen. `clip` is the one
+// playing and `waited` the time since the walk was asked for. A look that cannot walk that way
+// plays something else instead, and a turn that never ends is not waited for.
+export function readyToMove(clip: string | undefined, action: PetAction, waited: number) {
+  if (!clip || clip === action) return true;
+  return waited > 5000 || (waited > 300 && !/^(enter|exit)_/.test(clip));
+}
+
 // Finish the authored segment before adopting the latest target. No fade, inferred
 // poses or unbounded click queue. A paused player skips transitions altogether.
 export function advanceActivityPlayback(

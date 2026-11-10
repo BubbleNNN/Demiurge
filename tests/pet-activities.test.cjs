@@ -135,3 +135,55 @@ test('Aseprite import preserves activity loops and one-shot transition tags', ()
   assert.equal(imported.clips.read.loop, true);
   assert.equal(imported.clips.enter_read.loop, false);
 });
+test('she turns into a walk before she moves, and comes in from off screen already walking', () => {
+  const { readyToMove } = load('src/animation/activities.ts');
+  // The shape of a generated pack: a turn into each walk (and back out), sitting with its own.
+  const turn = [280, 400, 400, 280];
+  const walking = {
+    width: 4,
+    height: 4,
+    frames: Array.from({ length: 24 }, () => ({ rect: [0, 0, 4, 4], duration: 140 })),
+    clips: {
+      idle: { frames: [0], loop: true },
+      walk_right: { frames: [1, 2, 3, 4], durations: [180, 180, 180, 180], loop: true },
+      enter_walk_right: { frames: [5, 6, 7, 8], durations: turn, loop: false },
+      exit_walk_right: { frames: [9, 10, 11, 12], durations: turn, loop: false },
+      sit: { frames: [13, 14], loop: true },
+      enter_sit: { frames: [15, 16, 17, 18], durations: turn, loop: false },
+      exit_sit: { frames: [19, 20, 21, 22], durations: turn, loop: false },
+    },
+  };
+  const at = (s, target, t, interrupt = false) =>
+    advanceActivityPlayback(s, walking, target, t, 0, false, interrupt)?.clip ?? 'idle';
+  // Standing: the turn plays for its whole length, and she may not move until the walk shows.
+  const s = newActivityPlayback();
+  for (let t = 0; t < 1360; t += 40) {
+    const clip = at(s, 'walk_right', t);
+    assert.equal(clip, 'enter_walk_right');
+    assert.equal(readyToMove(clip, 'walk_right', t), false, `still turning at ${t} ms`);
+  }
+  assert.equal(at(s, 'walk_right', 1360), 'walk_right');
+  assert.equal(readyToMove('walk_right', 'walk_right', 1360), true);
+  // Sitting: she gets up, then turns, and only then sets off.
+  const seated = newActivityPlayback();
+  at(seated, 'sit', 0);
+  at(seated, 'sit', 2000);
+  const order = [];
+  for (let t = 2000; t <= 2000 + 2800; t += 40) {
+    const clip = at(seated, 'walk_right', t);
+    if (order.at(-1) !== clip) order.push(clip);
+    if (clip !== 'walk_right') assert.equal(readyToMove(clip, 'walk_right', t - 2000), false);
+  }
+  assert.deepEqual(order, ['exit_sit', 'enter_walk_right', 'walk_right']);
+  // Out of sight, the walk starts at once.
+  const entering = newActivityPlayback();
+  at(entering, 'sit', 0);
+  assert.equal(at(entering, 'walk_right', 3000, true), 'walk_right');
+  assert.equal(at(entering, 'walk_right', 3040), 'walk_right');
+  // A look without that walk plays its rest pose: she goes after a moment rather than waiting.
+  assert.equal(readyToMove('idle', 'walk_left', 100), false);
+  assert.equal(readyToMove('idle', 'walk_left', 400), true);
+  assert.equal(readyToMove(undefined, 'walk_left', 0), true);
+  // A turn that never ends is not waited for.
+  assert.equal(readyToMove('enter_walk_left', 'walk_left', 6000), true);
+});

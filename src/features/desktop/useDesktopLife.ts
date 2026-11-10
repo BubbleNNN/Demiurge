@@ -26,6 +26,7 @@ import {
 import type { DesktopRect, DesktopScene, PetAction } from '../../types';
 import type { Habit, Travel } from '../../characterBehavior';
 import { moodConduct, moodHabits, within, type MoodName } from '../../mood';
+import { readyToMove } from '../../animation/activities';
 import {
   companySpot,
   coverage,
@@ -48,7 +49,8 @@ interface Options {
   /** Something the user just asked for is playing (an activity from the toolbar, a touch…):
    *  keeping company waits until it is over. */
   held?: () => boolean;
-  onAction: (a: PetAction) => void;
+  /** `sudden`: start it at once, without the turn that leads into it (she is out of sight). */
+  onAction: (a: PetAction, sudden?: boolean) => void;
   /** A line caused by the user (a drop, a failed search): always shown. */
   onLine: (line: string) => void;
   /** A line she says on her own: subject to the attention budget. */
@@ -117,6 +119,13 @@ const FLING_SPEED = 1100,
 // How long she sulks on the floor before getting over it by herself.
 const SULK = 4 * 60000;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// Setting off, she turns first and then speeds up over this long (milliseconds).
+const SET_OFF = 350;
+// Whether the walk she was asked for is on screen yet, from the playing canvas (see readyToMove).
+function turned(action: PetAction, waited: number) {
+  const canvas = document.querySelector<HTMLCanvasElement>('.pet-draggable canvas');
+  return !canvas || canvas.dataset.motion === 'paused' || readyToMove(canvas.dataset.clip, action, waited);
+}
 
 // Position of an element inside the window from layout alone: the swing and the landing squash
 // are transforms and must not move where her feet are taken to be.
@@ -229,7 +238,13 @@ export function useDesktopLife(options: Options) {
   // moment an activity starts; walking to a spot chosen for an activity does not.
   const canWalk = () => ref.current.supports('walk_left') || ref.current.supports('walk_right');
   const conduct = () => moodConduct(ref.current.mood || 'calm');
-  async function walkTo(to: Point, token: number, yieldable = false, pace = 1) {
+  // `sudden`: she starts already walking, without the turn (coming in from off screen).
+  // `jumping`: a jump follows, so she does not stop and turn back to the front at the end.
+  async function walkTo(
+    to: Point,
+    token: number,
+    { yieldable = false, pace = 1, sudden = false, jumping = false } = {},
+  ) {
     const body = measureBody();
     if (!body || !bounds.current) return false;
     // A pack without walking never slides along: it hops there, or vanishes and reappears.
@@ -249,23 +264,42 @@ export function useDesktopLife(options: Options) {
     }
     const speed = walkSpeed(ref.current.temperament) * pace * conduct().pace;
     const started = Date.now();
-    let last = performance.now();
+    let last = performance.now(),
+      facing: PetAction | null = null,
+      asked = 0,
+      // When she set off; 0 while she is still turning.
+      off = 0;
     for (;;) {
       if (!alive(token) || lifted.current || (yieldable && ref.current.occupied)) return false;
       const feet = feetOf(body, bounds.current);
       const dx = to.x - feet.x;
       if (Math.abs(dx) <= 2) break;
       if (Date.now() - started > 40000) return false;
-      const now = performance.now(),
-        step = Math.min(Math.abs(dx), speed * Math.min(0.1, (now - last) / 1000));
+      const way: PetAction = dx < 0 ? 'walk_left' : 'walk_right',
+        now = performance.now();
+      if (way !== facing) {
+        ref.current.onAction(way, sudden && !facing);
+        off = sudden && !facing ? now : 0;
+        facing = way;
+        asked = now;
+      } else ref.current.onAction(way);
+      if (!off) {
+        last = now;
+        if (!turned(way, now - asked)) {
+          await sleep(30);
+          continue;
+        }
+        off = now;
+      }
+      const ramp = sudden ? 1 : Math.min(1, 0.3 + (0.7 * (now - off)) / SET_OFF),
+        step = Math.min(Math.abs(dx), speed * ramp * Math.min(0.1, (now - last) / 1000));
       last = now;
-      ref.current.onAction(dx < 0 ? 'walk_left' : 'walk_right');
       const moved = await place2({ x: feet.x + Math.sign(dx) * Math.max(1, step), y: to.y }, body);
       // The window could not go further (screen edge): stop here.
       if (Math.abs(feetOf(body, moved).x - feet.x) < 0.5 && step >= 1) break;
       await sleep(30);
     }
-    if (!(yieldable && ref.current.occupied)) ref.current.onAction('idle');
+    if (!jumping && !(yieldable && ref.current.occupied)) ref.current.onAction('idle');
     return true;
   }
   // A jump along an arc to another ledge.
@@ -275,7 +309,8 @@ export function useDesktopLife(options: Options) {
     const from = feetOf(body, bounds.current),
       path = hopPath(from, to),
       start = performance.now();
-    ref.current.onAction(to.y < from.y ? 'bounce' : 'drag');
+    // She is in the air at once, so the jump shows at once (no turn back from a walk first).
+    ref.current.onAction(to.y < from.y ? 'bounce' : 'drag', true);
     setAirborne(true);
     try {
       for (;;) {
@@ -334,15 +369,22 @@ export function useDesktopLife(options: Options) {
     return alive(token);
   }
   // Through the air, in her own way (characterBehavior.ts travel 'fly' with a fly motion).
-  async function flyTo(to: Point, token: number) {
+  // `sudden`: out of sight, she is already flying when she comes into view.
+  async function flyTo(to: Point, token: number, sudden = false) {
     const body = measureBody();
     if (!body || !bounds.current) return false;
     const from = feetOf(body, bounds.current);
     const distance = Math.hypot(to.x - from.x, to.y - from.y);
     const duration = Math.max(0.7, Math.min(4, distance / 320));
     const lift = Math.min(120, 30 + distance * 0.12);
+    ref.current.onAction('fly', sudden);
+    // Her takeoff plays where she stands; she leaves the ground once she is flying.
+    const asked = performance.now();
+    while (!sudden && !turned('fly', performance.now() - asked)) {
+      if (!alive(token) || lifted.current) return false;
+      await sleep(30);
+    }
     const start = performance.now();
-    ref.current.onAction('fly');
     setAirborne(true);
     try {
       for (;;) {
@@ -379,9 +421,9 @@ export function useDesktopLife(options: Options) {
     const feet = feetOf(body, bounds.current);
     if (Math.abs(to.y - feet.y) > 6) {
       const lead = { x: to.x + Math.sign(feet.x - to.x) * Math.min(160, Math.abs(feet.x - to.x)), y: feet.y };
-      if (!(await walkTo(lead, token, false, pace))) return false;
+      if (!(await walkTo(lead, token, { pace, jumping: true }))) return false;
       if (!(await hopTo(to, token))) return false;
-    } else if (!(await walkTo(to, token, false, pace))) return false;
+    } else if (!(await walkTo(to, token, { pace }))) return false;
     return alive(token);
   }
   // Gravity, for when the window she stood on is gone from under her: down to the ground.
@@ -393,7 +435,7 @@ export function useDesktopLife(options: Options) {
     let y = from.y,
       v = 0,
       last = performance.now();
-    ref.current.onAction('drag');
+    ref.current.onAction('drag', true);
     setAirborne(true);
     try {
       while (y < ground) {
@@ -497,7 +539,11 @@ export function useDesktopLife(options: Options) {
       stamp = from,
       still = Date.now(),
       last = performance.now(),
-      ran = false;
+      ran = false,
+      // The window's left edge when she was last placed, and the way she turned to run.
+      under = win.x,
+      facing: PetAction | null = null,
+      asked = 0;
     for (;;) {
       if (!alive(token) || lifted.current) return;
       const value = await scene();
@@ -523,11 +569,19 @@ export function useDesktopLife(options: Options) {
         dt = Math.min(0.1, (t - last) / 1000);
       last = t;
       const dx = now.x + offset - feet.x;
-      const step = Math.sign(dx) * Math.min(Math.abs(dx), walkSpeed(ref.current.temperament) * RUN * dt);
+      let step = Math.sign(dx) * Math.min(Math.abs(dx), walkSpeed(ref.current.temperament) * RUN * dt);
       if (Math.abs(dx) > 3) {
-        ref.current.onAction(dx < 0 ? 'walk_left' : 'walk_right');
+        const way: PetAction = dx < 0 ? 'walk_left' : 'walk_right';
+        if (way !== facing) {
+          facing = way;
+          asked = t;
+        }
+        ref.current.onAction(way);
         ran = true;
+        // Still turning to run: the window carries her along meanwhile.
+        if (!turned(way, t - asked)) step = now.x - under;
       }
+      under = now.x;
       if (Math.abs(step) >= 0.5 || Math.abs(now.y - feet.y) >= 0.5)
         await place2({ x: feet.x + step, y: now.y }, body);
       if (Math.abs(dx) <= 3 && Date.now() - still > 500) break;
@@ -591,6 +645,7 @@ export function useDesktopLife(options: Options) {
             y: feet.y,
           },
           token,
+          { jumping: true },
         );
         if (!alive(token)) return;
         if (!(await hopTo(destination, token))) return;
@@ -680,7 +735,7 @@ export function useDesktopLife(options: Options) {
     try {
       const walkFirst = 'takeoff' in plan && plan.takeoff ? plan.takeoff : null;
       if (plan.kind === 'climb') {
-        if (walkFirst && !(await walkTo(walkFirst, token, true))) return;
+        if (walkFirst && !(await walkTo(walkFirst, token, { yieldable: true, jumping: true }))) return;
         if (!(await hopTo(plan.to, token, true))) return;
         setStatus(
           plan.ledge.kind === 'window'
@@ -695,10 +750,10 @@ export function useDesktopLife(options: Options) {
           );
       } else {
         if (walkFirst && plan.ledge) {
-          if (!(await walkTo(walkFirst, token, true))) return;
+          if (!(await walkTo(walkFirst, token, { yieldable: true, jumping: true }))) return;
           if (!(await hopTo({ x: walkFirst.x, y: plan.ledge.y }, token, true))) return;
         }
-        if (!(await walkTo(plan.to, token, true))) return;
+        if (!(await walkTo(plan.to, token, { yieldable: true }))) return;
       }
       if (!alive(token)) return;
       const value = await scene();
@@ -738,7 +793,7 @@ export function useDesktopLife(options: Options) {
           if (b2 && bounds.current) {
             const feet = feetOf(b2, bounds.current);
             const away = feet.x < cover.x + cover.width / 2 ? -b2.width * 0.7 : b2.width * 0.7;
-            await walkTo({ x: feet.x + away, y: feet.y }, token, true);
+            await walkTo({ x: feet.x + away, y: feet.y }, token, { yieldable: true });
           }
         }
       } else if (plan.kind === 'watch') {
@@ -1139,8 +1194,9 @@ export function useDesktopLife(options: Options) {
           free: true,
           jump: true,
         });
-        if (flies) await flyTo(home, token);
-        else await walkTo(home, token, false, RUN);
+        // Out of sight she has already turned or taken off: she comes into view on her way.
+        if (flies) await flyTo(home, token, true);
+        else await walkTo(home, token, { pace: RUN, sudden: true });
       } catch {
         /* She stays wherever she got to. */
       } finally {

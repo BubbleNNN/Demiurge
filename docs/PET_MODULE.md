@@ -82,7 +82,12 @@ optional in the overrides. Validation: `validateDesktopProfile` in `electron/sto
   beside or on top of the window you are using.
 - [`src/features/desktop/useDesktopLife.ts`](../src/features/desktop/useDesktopLife.ts): the
   engine: walking, running, hopping and flying; perching on a window and riding it; chasing a slow
-  window, falling off a fast one, sulking; entering from the side you swiped to.
+  window, falling off a fast one, sulking; entering from the side you swiped to. Movement keeps
+  pace with the clip on screen: setting off, she stays put while a pack's turn into the walk
+  (`enter_walk_*`), getting up (`exit_*`) or takeoff (`enter_fly`) plays, and only moves once the
+  loop shows (`readyToMove` in `src/animation/activities.ts`), then speeds up over a third of a
+  second. Out of sight (running in from off screen) she starts already moving, and a jump or fall
+  shows at once, cutting short any turn still playing.
 - The pet window keeps her feet on screen while her head may pass the top edge
   ([`shared/pet-window.json`](../shared/pet-window.json), `electron/pet-layout.cjs`).
 
