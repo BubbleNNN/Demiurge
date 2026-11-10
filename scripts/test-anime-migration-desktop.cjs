@@ -71,8 +71,9 @@ app.on('browser-window-created', (_e, win) => {
         y: actual.area.y + 520,
         width: 650,
         height: 180,
-        show: true,
+        show: false,
       });
+      fixture.showInactive();
       await fixture.loadURL('data:text/html,<p>Migration window fixture</p>');
       delete require.cache[require.resolve('../electron/desktop-surfaces.cjs')];
       // Same-process fixture is intentionally excluded by native detection; supply its exact geometry for deterministic behavior.

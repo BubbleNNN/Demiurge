@@ -16,7 +16,8 @@ const binary = path.join(appPath, 'Contents/MacOS/Demiurge');
 const payload = path.join(appPath, 'Contents/Resources/app');
 const output = path.join(root, `artifacts/macos-release-${process.arch}`);
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mori-packaged-smoke-'));
-const env = { ...process.env, MORI_DATA_DIR: dataDir };
+// Quiet: the packaged app stays in the background and invisible (see electron/main.cjs).
+const env = { ...process.env, MORI_DATA_DIR: dataDir, MORI_QUIET: process.env.MORI_QUIET || '1' };
 for (const key of [
   'MORI_DEV_URL',
   'MORI_DEV_VIEW',

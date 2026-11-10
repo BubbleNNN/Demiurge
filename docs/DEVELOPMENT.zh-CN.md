@@ -31,6 +31,7 @@ macOS 在完成依赖安装后可以双击 **Start Demiurge Dev.command**。它�
 - `pnpm build && pnpm start`：运行本地构建；默认使用系统应用数据目录。
 - `pnpm check`：TypeScript 与自动测试。
 - `MORI_DATA_DIR=/absolute/path pnpm desktop`：指定隔离数据目录。
+- `electron scripts/test-*-desktop.cjs`：真实窗口的界面验收（先取消 `ELECTRON_RUN_AS_NODE`）。它们默认**静默运行**，可以一边测试一边正常用电脑：应用作为纯后台程序运行，任何情况下都不会跳到前台（不抢键盘，也不会把你从全屏应用切走）；所有窗口完全透明，并且不接收真实鼠标，点击直接落到下面的窗口；测试里的桌宠不读取真实指针，也不理会你自己切换桌面；测试期间关闭 App Nap，避免看不见的窗口被系统暂停。画面照常绘制和截图。想看着测试跑时加 `MORI_QUIET=0`；`scripts/test-packaged-desktop.cjs` 用 `MORI_QUIET=1` 让打包后的应用同样静默。测试里自己建的窗口要用 `show: false` 再 `showInactive()`，构造时 `show: true` 仍会把应用带到前台。
 
 开发服务器只监听 `127.0.0.1:5173`，端口被占用会明确失败，不会连接其他服务器。关闭 Electron 会停止配套 Vite 进程。
 

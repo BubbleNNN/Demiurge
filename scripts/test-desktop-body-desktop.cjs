@@ -186,9 +186,10 @@ app.on('browser-window-created', (_e, win) => {
         y: area.y + 90,
         width: 620,
         height: 420,
-        show: true,
+        show: false,
         title: 'editor',
       });
+      editor.showInactive();
       await editor.loadURL('data:text/html,<p>Editor fixture window</p>');
       const eb = editor.getBounds();
       const typing = {
@@ -228,9 +229,10 @@ app.on('browser-window-created', (_e, win) => {
         y: area.y + 430,
         width: 640,
         height: 300,
-        show: true,
+        show: false,
         title: 'desk',
       });
+      desk.showInactive();
       await desk.loadURL('data:text/html,<p>Typing fixture window</p>');
       const deskFocus = () => ({ id: 'desk', ...desk.getBounds() });
       surfaces = () =>
@@ -366,9 +368,10 @@ app.on('browser-window-created', (_e, win) => {
         y: area.y + area.height - 330,
         width: 700,
         height: 260,
-        show: true,
+        show: false,
         title: 'fixture',
       });
+      fixture.showInactive();
       await fixture.loadURL('data:text/html,<p>Desktop body fixture window</p>');
       surfaces = () => (fixture.isDestroyed() ? [] : [{ ...fixture.getBounds(), id: 'fixture' }]);
       const top = fixture.getBounds();

@@ -57,6 +57,41 @@ const windowIcon = (() => {
   return require('node:fs').existsSync(file) ? file : undefined;
 })();
 if (process.env.MORI_DATA_DIR) app.setPath('userData', path.resolve(process.env.MORI_DATA_DIR));
+// Quiet, for automated checks that run while someone is working at the Mac: on when a test script
+// loads the app rather than starting it (or with MORI_QUIET=1; MORI_QUIET=0 to watch a test). The
+// app never comes to the front, so macOS neither switches away from a full-screen app nor takes
+// the keyboard; every window is fully transparent and ignores the real mouse; and the pet
+// ignores the real pointer and the user's own Space switches. Pages still draw, animate and take
+// screenshots as usual.
+const quiet = process.env.MORI_QUIET ? process.env.MORI_QUIET === '1' : require.main !== module;
+if (quiet) {
+  BrowserWindow.prototype.show = function () {
+    return this.showInactive();
+  };
+  BrowserWindow.prototype.focus = function () {};
+  app.focus = () => {};
+  // A transparent window still catches clicks, so the real mouse never reaches a quiet window. The
+  // pet's own click-through requests still go through the usual method (a check may record them).
+  const mouseOff = require('electron').BaseWindow.prototype.setIgnoreMouseEvents;
+  app.on('browser-window-created', (_event, win) => {
+    win.setOpacity(0);
+    mouseOff.call(win, true);
+    win.setIgnoreMouseEvents = function (enabled, options) {
+      BrowserWindow.prototype.setIgnoreMouseEvents.call(this, enabled, options);
+      mouseOff.call(this, true);
+    };
+  });
+  app.whenReady().then(() => {
+    // A background-only app: nothing can activate it, not even a page focusing a text box.
+    if (process.platform === 'darwin') app.setActivationPolicy('prohibited');
+    // With no window on screen macOS naps the app, stalling it for up to a minute at a time (the
+    // packaged app turns App Nap off in its Info.plist; the development Electron does not). Only
+    // for the length of a check: this also keeps the Mac from going to sleep meanwhile.
+    require('electron').powerSaveBlocker.start('prevent-app-suspension');
+    // A test that strokes her head supplies its own pointer.
+    screen.getCursorScreenPoint = () => ({ x: -10000, y: -10000 });
+  });
+}
 if (!require('./instance.cjs').acquireWorkspaceInstance(app, () => createWorkshop())) return;
 const devUrl = process.env.MORI_DEV_URL;
 if (devUrl && !/^http:\/\/127\.0\.0\.1:\d+\/?$/.test(devUrl))
@@ -429,9 +464,12 @@ async function createPet() {
   });
   // She is on every Space, full-screen apps included; moving to another one, she follows from
   // the side the user came from: switching to the Space on the right, she runs in from the left.
-  pet.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  // Electron makes this switch the app to a background app and back, which brings it to the front;
+  // quiet checks are a background app already and skip that.
+  pet.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: quiet });
   require('./desktop-surfaces.cjs').onSpaceChange(({ display, from }) => {
-    if (!pet || pet.isDestroyed()) return;
+    // Quiet checks send their own Space changes; the user's real ones are not part of the test.
+    if (!pet || pet.isDestroyed() || quiet) return;
     const shown = screen.getDisplayNearestPoint(require('./pet-layout.cjs').figureCentre(pet.getBounds()));
     if (shown.id === display) pet.webContents.send('mori:space-changed', { from });
   });
