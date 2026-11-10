@@ -83,6 +83,7 @@ contextBridge.exposeInMainWorld('mori', {
   onKeysChanged: subscribe('keys-changed'),
   onChatStatusChanged: subscribe('chat-status'),
   onPetRoom: subscribe('pet-room'),
+  petRoom: invoke('pet-room'),
   onSpaceChanged: subscribe('space-changed'),
   onPointer: subscribe('pointer'),
   // The main process asks before closing; the page replies once pending saves are written.

@@ -1030,7 +1030,20 @@ export default function App() {
   }, [petChat]);
   useEffect(() => {
     if (!petMode) return;
-    return bridge.onPetRoom?.(setPetRoom);
+    let reported = false;
+    const stop = bridge.onPetRoom?.((room) => {
+      reported = true;
+      setPetRoom(room);
+    });
+    // The first report can come before this page listens, and the next only when the room
+    // changes: ask for it as it is now, unless a report has arrived meanwhile.
+    void bridge
+      .petRoom?.()
+      .then((room) => {
+        if (room && !reported) setPetRoom(room);
+      })
+      .catch(() => {});
+    return stop;
   }, [petMode]);
   // Summoned: she runs in from the nearer side of the screen instead of just appearing. Moving to
   // another Space or full-screen app, she runs in from the side the user moved toward.

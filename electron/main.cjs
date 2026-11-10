@@ -1466,6 +1466,14 @@ app.whenReady().then(async () => {
   // Seconds since the last keyboard or mouse input anywhere, so the character asks for attention
   // at a pause rather than in the middle of the user's typing.
   handle('user-idle', () => powerMonitor.getSystemIdleTime());
+  // The room above and below her as it is now, for a pet page that starts listening only after
+  // the first report was sent (opened at the top of the screen, it would wait for a change that
+  // may never come, and put her speech off screen meanwhile).
+  handle('pet-room', (event) => {
+    if (!pet || pet.isDestroyed() || event.sender !== pet.webContents) return null;
+    const bounds = pet.getBounds();
+    return require('./pet-layout.cjs').petRoom(bounds, petArea(bounds));
+  });
   ipcMain.on('mori:pet-click-through', (event, enabled) => {
     if (isTrusted(event) && pet && event.sender === pet.webContents && typeof enabled === 'boolean')
       pet.setIgnoreMouseEvents(enabled, { forward: true });

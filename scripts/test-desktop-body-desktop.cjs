@@ -587,7 +587,10 @@ app.on('browser-window-created', (_e, win) => {
       assert.equal(await pj('document.querySelector(".pet-body").classList.contains("vanished")'), false);
       report.space = { home, back };
 
-      // 10. She reopens where she was left.
+      // 10. She reopens where she was left: here at the very top of the screen, where what she says
+      // goes below her from the start (the page used to miss the first report of its room and put
+      // her speech above her head, off screen, until she moved up or down).
+      pet.setPosition(pet.getBounds().x, area.y - bands.top);
       const left = pet.getBounds();
       await sleep(1000);
       await js('window.mori.closePet()');
@@ -600,6 +603,15 @@ app.on('browser-window-created', (_e, win) => {
         return !!pet;
       }, 'reopened');
       assert.deepEqual(pet.getBounds(), left);
+      await wait(
+        () =>
+          pet.webContents.executeJavaScript(
+            '!!document.querySelector(".desktop-pet-shell.speech-below")',
+            true,
+          ),
+        'speech below her at the top, right after reopening',
+        80,
+      );
       report.reopened = pet.getBounds();
       fs.writeFileSync(path.join(dir, 'pet.png'), (await pet.webContents.capturePage()).toPNG());
       assert.equal(networkCalls, 0);
