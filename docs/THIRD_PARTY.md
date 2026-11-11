@@ -59,3 +59,7 @@ SOFTWARE.
 ## 历史记录：Q版回退参考（2026-11-07，已在 0.1.6 移除）
 
 `public/art/chibi-fallback-furina.png` 取自本机 Anime Codex 工作树 `public/characters/furina/sticker/atlas.png` 的第一格（待机帧），裁出单个人物并清除 alpha 低于 24 的残留后保存。该图是 Anime Codex 用内置图像工具按原神官方「派蒙的画作」第 28 弹表情包画风生成的二创素材，不是官方素材；芙宁娜及原神的角色权利归 HoYoverse 与相关权利人。Demiurge 仅在没有找到并核对通过的同角色 Q 版参考时，把它作为**画风参考**附在图像请求末尾，提示词明确禁止借用芙宁娜的外形、服饰与配色；它不会出现在用户的角色成品里，也不随角色包导出。该文件同样不在 Demiurge 的 MIT 软件许可范围内。
+
+## 宣传片中的官方 PV 与音乐（不随应用分发）
+
+2026-11-11 的纯音乐宣传片剪入《崩坏：星穹铁道》昔涟角色 PV「再度和你」的三个短片段，共 7.5 秒，来自[崩坏星穹铁道官方发布](https://www.bilibili.com/video/BV1yZ1MB1Eej/)。保留原始比例与来源标识，不混入 PV 原声。伴奏为《心忆 / Remembrance of the Heart》— HOYO-MiX、林一凡。视频、角色形象和音乐均不适用本项目的软件 MIT 许可；完整来源与剪辑范围见 [媒体说明](media/README.md)。完整原视频和音乐不进入 Git 历史或应用安装包。

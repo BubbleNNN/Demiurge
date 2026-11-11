@@ -1,9 +1,5 @@
 {
-  "duration" : 67.200000000000003,
-  "width" : 1080,
-  "height" : 1920,
-  "fps" : 30,
-  "usedClips" : [
+  "usedClips": [
     "blink",
     "bounce",
     "diary",
@@ -58,5 +54,9 @@
     "walk_right",
     "walk_up",
     "wave"
-  ]
+  ],
+  "duration": 112.7,
+  "width": 1080,
+  "fps": 30,
+  "height": 1920
 }

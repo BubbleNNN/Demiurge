@@ -8,13 +8,13 @@
 
 **不止昔涟。** Demiurge 是一个开放的角色陪伴工具，可以创建、导入、制作和分享其他角色。0.1.6 只附带最新版 **大昔涟 · Q版**，让第一次体验直接开始；其他角色需要相应资料和素材，不是输入名字就能保证自动得到完整动画。
 
-## 67 秒，看看她的一天
+## 今天，我想续写她的故事
 
-[![点击观看带配音的介绍视频](docs/media/demiurge-landscape-cover.png)](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4)
+[![点击观看纯音乐版介绍视频](docs/media/demiurge-landscape-cover.png)](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4)
 
 [横屏视频 · 1920×1080](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4) · [竖屏视频 · 1080×1920](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-vertical.mp4)
 
-中文 AI 配音，伴奏《心忆 / Remembrance of the Heart》（HOYO-MiX、林一凡）。视频使用实际桌宠动作和真实社区界面，桌面场景为剪辑合成，聊天是示例台词；不是整段实时录屏。[媒体来源与复现](docs/media/README.md)。
+纯音乐与画面字幕，无 AI 配音。伴奏《心忆 / Remembrance of the Heart》（HOYO-MiX、林一凡）。112.7 秒新版以昔涟官方角色 PV 片段开场，介绍自动角色创作与桌面生活系统。视频使用实际桌宠动作和真实社区界面，桌面场景为剪辑合成，聊天是示例台词；不是整段实时录屏。[媒体来源与复现](docs/media/README.md)。
 
 <table><tr><th>各自忙碌，也彼此陪伴</th><th>她也有自己的小日子</th></tr><tr><td><img src="docs/media/cyrene-chibi-work.gif" alt="办公、阅读、写日记" width="460" /></td><td><img src="docs/media/cyrene-chibi-life.gif" alt="听歌、游戏、吃零食" width="460" /></td></tr></table>
 

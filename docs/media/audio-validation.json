@@ -1,91 +1,30 @@
 {
-  "duration": 67.2,
-  "samplesPerChannel": 3225600,
-  "peakDbFS": -1.6325283188605497,
-  "voice": "Microsoft zh-CN-XiaoxiaoNeural",
+  "duration": 112.7,
+  "samplesPerChannel": 5409600,
+  "peakDbFS": -1.5223448225891056,
+  "voice": null,
+  "musicOnly": true,
+  "originalPVAudio": false,
   "music": "心忆 / Remembrance of the Heart — HOYO-MiX, 林一凡",
   "musicExcerptStart": 12,
-  "ducking": true,
-  "segments": [
+  "fadeInSeconds": 1.25,
+  "fadeOutSeconds": 5.5,
+  "encodedOutputs": [
     {
-      "scene": 0,
-      "start": 0.12,
-      "actualEnd": 3.216,
-      "speed": 1,
-      "gain": 1.2953095878262129,
-      "text": "让你喜欢的角色，在桌面活过来。"
+      "file": "demiurge-desktop-life-vertical.mp4",
+      "decodedSeconds": 112.704,
+      "peakDbFS": -1.5242401325514714,
+      "clippedSamples": 0,
+      "pcmSha256": "05f4c9376aa720e8829e8c7a45d6d8a8893d78472a3aacd31b9e7a12dfb58cc2",
+      "sha256": "208c3eb8740f9c8461d506cd88d6443eb2d3028f47b981c152164fbe1dc9c327"
     },
     {
-      "scene": 1,
-      "start": 4.12,
-      "actualEnd": 8.152,
-      "speed": 1,
-      "gain": 1.3476782752615961,
-      "text": "这是昔涟。现在，她住进了我的桌面。"
-    },
-    {
-      "scene": 2,
-      "start": 10.12,
-      "actualEnd": 16.336,
-      "speed": 1,
-      "gain": 1.3435513288815772,
-      "text": "你工作，她也忙着自己的小日子。看书，写日记，安静地陪着你。"
-    },
-    {
-      "scene": 3,
-      "start": 17.32,
-      "actualEnd": 22.744,
-      "speed": 1,
-      "gain": 1.2660602081965675,
-      "text": "轻轻摸摸头，拖到身边。她会用小表情，回应你的靠近。"
-    },
-    {
-      "scene": 4,
-      "start": 24.52,
-      "actualEnd": 30.232,
-      "speed": 1,
-      "gain": 1.2510327957122667,
-      "text": "听歌，吃点零食，打会儿游戏。平凡的一天，也可以很可爱。"
-    },
-    {
-      "scene": 5,
-      "start": 31.720000000000002,
-      "actualEnd": 35.8,
-      "speed": 1,
-      "gain": 1.3372064247877944,
-      "text": "她会四处走走，也会停下来，待在你身边。"
-    },
-    {
-      "scene": 6,
-      "start": 38.919999999999995,
-      "actualEnd": 44.896,
-      "speed": 1,
-      "gain": 1.1883131962307139,
-      "text": "接入对话模型，就能聊聊今天。用熟悉的语气，记住你们的相处。"
-    },
-    {
-      "scene": 7,
-      "start": 46.12,
-      "actualEnd": 50.896,
-      "speed": 1,
-      "gain": 1.2670077084899831,
-      "text": "累了，就一起歇一会儿。有时候，陪伴不需要说话。"
-    },
-    {
-      "scene": 8,
-      "start": 53.32,
-      "actualEnd": 60.784,
-      "speed": 1,
-      "gain": 1.2219901900066477,
-      "text": "不止昔涟。你也能创建、导入喜欢的角色，在共享社区分享桌宠和生活插件。"
-    },
-    {
-      "scene": 9,
-      "start": 61.32,
-      "actualEnd": 66.24,
-      "speed": 1,
-      "gain": 1.1536176829288032,
-      "text": "给 Demiurge 点一颗星，和我们一起，让喜欢的角色活过来。"
+      "file": "demiurge-desktop-life-landscape.mp4",
+      "decodedSeconds": 112.704,
+      "peakDbFS": -1.5242401325514714,
+      "clippedSamples": 0,
+      "pcmSha256": "05f4c9376aa720e8829e8c7a45d6d8a8893d78472a3aacd31b9e7a12dfb58cc2",
+      "sha256": "b639bbc609f96489ddf0c3a4cb8678d8eecda230b17bb91e5ba30f53ed60d59f"
     }
   ]
 }

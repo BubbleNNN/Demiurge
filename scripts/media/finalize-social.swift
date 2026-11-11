@@ -3,6 +3,8 @@ import AVFoundation
 import AppKit
 import ImageIO
 let root=URL(fileURLWithPath:CommandLine.arguments[1]),assets=URL(fileURLWithPath:CommandLine.arguments[2]),out=root.appendingPathComponent("docs/media")
+let board=try JSONSerialization.jsonObject(with:Data(contentsOf:root.appendingPathComponent("scripts/media/storyboard.json"))) as! [String:Any]
+let duration=board["duration"] as! Double
 func export(_ asset:AVAsset,_ preset:String,_ url:URL,_ type:AVFileType)throws{
  try? FileManager.default.removeItem(at:url)
  let e=AVAssetExportSession(asset:asset,presetName:preset)!;e.outputURL=url;e.outputFileType=type;e.shouldOptimizeForNetworkUse=true
@@ -21,11 +23,11 @@ for layout in ["vertical","landscape"] {
  try export(composition,AVAssetExportPresetPassthrough,finalURL,.mp4)
  let final=AVURLAsset(url:finalURL),track=final.tracks(withMediaType:.video).first!
  let expected=layout=="vertical" ? CGSize(width:1080,height:1920):CGSize(width:1920,height:1080)
- precondition(track.naturalSize==expected);precondition(abs(final.duration.seconds-67.2)<0.05);precondition(abs(track.nominalFrameRate-30)<0.01);precondition(final.tracks(withMediaType:.audio).count==1)
+ precondition(track.naturalSize==expected);precondition(abs(final.duration.seconds-duration)<0.05);precondition(abs(track.nominalFrameRate-30)<0.01);precondition(final.tracks(withMediaType:.audio).count==1)
  let gen=AVAssetImageGenerator(asset:final);gen.appliesPreferredTrackTransform=true;gen.requestedTimeToleranceBefore = .zero;gen.requestedTimeToleranceAfter = .zero
- for (i,t) in [1.8,7.6,13.0,19.6,27.6,35.0,42.0,49.5,55.0,59.0,64.0].enumerated(){let img=try gen.copyCGImage(at:CMTime(seconds:t,preferredTimescale:600),actualTime:nil);let url=assets.appendingPathComponent("decoded-\(layout)-\(i).png");let dst=CGImageDestinationCreateWithURL(url as CFURL,"public.png" as CFString,1,nil)!;CGImageDestinationAddImage(dst,img,nil);precondition(CGImageDestinationFinalize(dst));if i==0{try? FileManager.default.removeItem(at:out.appendingPathComponent("demiurge-\(layout)-cover.png"));try FileManager.default.copyItem(at:url,to:out.appendingPathComponent("demiurge-\(layout)-cover.png"))}}
+ for (i,t) in [14.2,1.2,4.0,6.2,9.5,19.5,25.5,32.5,40.0,47.0,54.5,62.0,69.5,78.0,87.5,95.0,102.0,109.0].enumerated(){let img=try gen.copyCGImage(at:CMTime(seconds:t,preferredTimescale:600),actualTime:nil);let url=assets.appendingPathComponent("decoded-\(layout)-\(i).png");let dst=CGImageDestinationCreateWithURL(url as CFURL,"public.png" as CFString,1,nil)!;CGImageDestinationAddImage(dst,img,nil);precondition(CGImageDestinationFinalize(dst));if i==0{try? FileManager.default.removeItem(at:out.appendingPathComponent("demiurge-\(layout)-cover.png"));try FileManager.default.copyItem(at:url,to:out.appendingPathComponent("demiurge-\(layout)-cover.png"))}}
  // Decode the complete video track, not only container metadata.
- let reader=try AVAssetReader(asset:final),readerOutput=AVAssetReaderTrackOutput(track:track,outputSettings:[kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_32BGRA]);reader.add(readerOutput);reader.startReading();var count=0;while readerOutput.copyNextSampleBuffer() != nil{count+=1};precondition(reader.status == .completed);precondition(count==2016)
+ let reader=try AVAssetReader(asset:final),readerOutput=AVAssetReaderTrackOutput(track:track,outputSettings:[kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_32BGRA]);reader.add(readerOutput);reader.startReading();var count=0;while readerOutput.copyNextSampleBuffer() != nil{count+=1};precondition(reader.status == .completed);precondition(count==Int((duration*30).rounded()))
  let bytes=(try FileManager.default.attributesOfItem(atPath:finalURL.path)[.size] as! NSNumber).intValue
  report.append(["file":finalURL.lastPathComponent,"width":Int(expected.width),"height":Int(expected.height),"duration":final.duration.seconds,"fps":track.nominalFrameRate,"decodedFrames":count,"audioTracks":1,"bytes":bytes,"optimizedForNetwork":true]);print("Validated \(layout): \(count) frames, audio, \(bytes) bytes");fflush(stdout)
 }

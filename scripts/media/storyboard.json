@@ -1,0 +1,124 @@
+{
+  "version": 2,
+  "duration": 112.7,
+  "fps": 30,
+  "voice": null,
+  "musicOnly": true,
+  "opening": {
+    "source": "https://www.bilibili.com/video/BV1yZ1MB1Eej/",
+    "title": "《崩坏：星穹铁道》昔涟角色PV——「再度和你」",
+    "uploader": "崩坏星穹铁道",
+    "cuts": [
+      {
+        "start": 32.5,
+        "duration": 2.5
+      },
+      {
+        "start": 120,
+        "duration": 2.5
+      },
+      {
+        "start": 176.7,
+        "duration": 2.5
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "start": 0,
+      "end": 7.5,
+      "id": "memories",
+      "text": "昔涟 · 再度和你"
+    },
+    {
+      "start": 7.5,
+      "end": 11.5,
+      "id": "promise",
+      "text": "今天，我想续写她的故事。"
+    },
+    {
+      "start": 11.5,
+      "end": 16.5,
+      "id": "brand",
+      "text": "德谬歌 · DEMIURGE"
+    },
+    {
+      "start": 16.5,
+      "end": 22.5,
+      "id": "desktop",
+      "text": "你的桌面，多了一个她。"
+    },
+    {
+      "start": 22.5,
+      "end": 29.7,
+      "id": "work",
+      "text": "你在认真生活，她也一样。"
+    },
+    {
+      "start": 29.7,
+      "end": 36.9,
+      "id": "touch",
+      "text": "轻轻靠近，她会回应你。"
+    },
+    {
+      "start": 36.9,
+      "end": 44.1,
+      "id": "leisure",
+      "text": "听歌、吃点甜、再玩一小局。"
+    },
+    {
+      "start": 44.1,
+      "end": 51.3,
+      "id": "walk",
+      "text": "她会到处走走，也会回到你身边。"
+    },
+    {
+      "start": 51.3,
+      "end": 58.5,
+      "id": "chat",
+      "text": "用熟悉的语气，把相处留在记忆里。"
+    },
+    {
+      "start": 58.5,
+      "end": 65.7,
+      "id": "rest",
+      "text": "什么都不做，也可以一起待着。"
+    },
+    {
+      "start": 65.7,
+      "end": 73.7,
+      "id": "origin",
+      "text": "不止昔涟。\n借原作「深度学习智能体」的想象，\n让故事，走向屏幕之外。"
+    },
+    {
+      "start": 73.7,
+      "end": 83.7,
+      "id": "create",
+      "text": "从你喜欢的角色出发，\n收集设定与参考，生成不同画风的 ta。"
+    },
+    {
+      "start": 83.7,
+      "end": 91.7,
+      "id": "life",
+      "text": "让 ta 在桌面，拥有自己的生活。\n有喜欢做的事，也有与你共度的日常。"
+    },
+    {
+      "start": 91.7,
+      "end": 98.7,
+      "id": "community",
+      "text": "把你续写的故事，分享给更多人。"
+    },
+    {
+      "start": 98.7,
+      "end": 105.7,
+      "id": "star",
+      "text": "为德谬歌点一颗 Star，\n和我们一起，让喜欢的角色活过来。"
+    },
+    {
+      "start": 105.7,
+      "end": 112.7,
+      "id": "goodbye",
+      "text": "和你喜欢的角色，明天见"
+    }
+  ]
+}
