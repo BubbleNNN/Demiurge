@@ -14,7 +14,7 @@
 
 [Landscape · 1920×1080](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4) · [Portrait · 1080×1920](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-vertical.mp4)
 
-Music-only, with Chinese on-screen copy and no AI narration. Music: *Remembrance of the Heart / 心忆* by HOYO-MiX and 林一凡. The 112.7-second story edit opens with brief excerpts from the official Cyrene trailer and introduces automatic character creation and desktop life. Actual animation assets and community UI are used in an editorial desktop composition. Dialogue is illustrative; this is not an uninterrupted live recording. [Media credits and reproduction](docs/media/README.md).
+Music-only, with Chinese on-screen copy and no AI narration. Music: *Remembrance of the Heart / 心忆* by HOYO-MiX and 林一凡. [Media credits and reproduction](docs/media/README.md).
 
 <table><tr><th>Busy together</th><th>Her own little routine</th></tr><tr><td><img src="docs/media/cyrene-chibi-work.gif" alt="Working, reading and journaling" width="460" /></td><td><img src="docs/media/cyrene-chibi-life.gif" alt="Music, games and snacks" width="460" /></td></tr></table>
 
