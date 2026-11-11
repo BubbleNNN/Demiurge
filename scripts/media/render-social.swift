@@ -186,11 +186,11 @@ func render(_ c:CGContext,_ t:Double,_ w:CGFloat,_ h:CGFloat){
   txt(c,"让 喜 欢 的 角 色 ， 走 进 日 常",60,h*0.70,v ? 28:30,0xDCCBDD,false,w-120,true)
   filmFade(c,t,start,end,w,h,0x272139);return
  }
- if id=="origin" {
-  celestial(c,w,h,t);serif(c,"不止昔涟",50,h*(v ? 0.23:0.22),v ? 111:106,w-100)
-  serif(c,"借原作「深度学习智能体」的想象",60,h*(v ? 0.37:0.43),v ? 39:44,w-120,0xD7C4DC)
-  serif(c,"让故事，走向屏幕之外。",60,h*(v ? 0.45:0.54),v ? 53:59,w-120)
-  txt(c,"德谬歌 · 自动角色创作与桌面生活系统",70,h*(v ? 0.66:0.77),v ? 30:29,0xCDB3CE,false,w-140,true)
+ if id=="new_story" || id=="i_can" {
+  celestial(c,w,h,t)
+  let words=scene["text"] as! String
+  let display=(v && id=="new_story") ? words.replacingOccurrences(of:"角色",with:"角色\n"):words
+  serif(c,display,60,h*(v && id=="new_story" ? 0.405:0.43),id=="i_can" ? (v ? 90:104):(v ? 72:81),w-120)
   filmFade(c,t,start,end,w,h,0x272139);return
  }
  if id=="create" {
@@ -228,7 +228,7 @@ func render(_ c:CGContext,_ t:Double,_ w:CGFloat,_ h:CGFloat){
 func context(_ w:Int,_ h:Int)->CGContext{let c=CGContext(data:nil,width:w,height:h,bitsPerComponent:8,bytesPerRow:w*4,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue)!;c.translateBy(x:0,y:CGFloat(h));c.scaleBy(x:1,y:-1);return c}
 func png(_ img:CGImage,_ url:URL){let d=CGImageDestinationCreateWithURL(url as CFURL,"public.png" as CFString,1,nil)!;CGImageDestinationAddImage(d,img,nil);precondition(CGImageDestinationFinalize(d))}
 if mode=="preview" {
- for(v,w,h) in [(true,1080,1920),(false,1920,1080)]{for(i,t) in [1.2,4.0,6.2,9.5,14.2,19.5,25.5,32.5,40.0,47.0,54.5,62.0,69.5,78.0,87.5,95.0,102.0,109.0].enumerated(){let c=context(w,h);render(c,t,CGFloat(w),CGFloat(h));png(c.makeImage()!,assets.appendingPathComponent("preview-\(v ? "v":"h")-\(i).png"))}}
+ for(v,w,h) in [(true,1080,1920),(false,1920,1080)]{for(i,t) in [1.2,4.0,6.2,9.5,14.2,19.5,25.5,32.5,40.0,47.0,54.5,62.0,67.8,71.9,78.0,87.5,95.0,102.0,109.0].enumerated(){let c=context(w,h);render(c,t,CGFloat(w),CGFloat(h));png(c.makeImage()!,assets.appendingPathComponent("preview-\(v ? "v":"h")-\(i).png"))}}
  print("Storyboard previews written")
 } else if mode=="qa" {
  for page in 0..<4 {let indices=Array((page*54)..<min(frames.count,(page+1)*54));let c=context(1440,1800);fill(c,CGRect(x:0,y:0,width:1440,height:1800),0xF9F5FA);for(j,i) in indices.enumerated(){let x=CGFloat(j%6)*240,y=CGFloat(j/6)*200;petFrame(c,i,CGRect(x:x+30,y:y-5,width:180,height:190));txt(c,"\(i)",x+12,y+170,14,ink,false,100)};png(c.makeImage()!,assets.appendingPathComponent("frames-\(page).png"))};print("All 201 frames contact sheets written")

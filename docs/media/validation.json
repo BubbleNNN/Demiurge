@@ -1,7 +1,7 @@
 [
   {
     "audioTracks" : 1,
-    "bytes" : 60457590,
+    "bytes" : 56403907,
     "decodedFrames" : 3381,
     "duration" : 112.7,
     "file" : "demiurge-desktop-life-vertical.mp4",
@@ -12,7 +12,7 @@
   },
   {
     "audioTracks" : 1,
-    "bytes" : 59580532,
+    "bytes" : 56554620,
     "decodedFrames" : 3381,
     "duration" : 112.7,
     "file" : "demiurge-desktop-life-landscape.mp4",

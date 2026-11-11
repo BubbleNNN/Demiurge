@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "duration": 112.7,
   "fps": 30,
   "voice": null,
@@ -86,9 +86,15 @@
     },
     {
       "start": 65.7,
+      "end": 70.2,
+      "id": "new_story",
+      "text": "想给其他角色一个全新的故事？"
+    },
+    {
+      "start": 70.2,
       "end": 73.7,
-      "id": "origin",
-      "text": "不止昔涟。\n借原作「深度学习智能体」的想象，\n让故事，走向屏幕之外。"
+      "id": "i_can",
+      "text": "简单，我会，我学！"
     },
     {
       "start": 73.7,
