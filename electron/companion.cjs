@@ -30,11 +30,21 @@ function localReply({ character, messages, availableActions = ['idle'], availabl
     intent === 'touch' && character.behavior.energy >= 65 && character.behavior.affection >= 50;
   const baseActions = character.behavior.energy < 35 ? rule.quietActions : rule.actions;
   const actions = energeticTouch ? ['wave', ...baseActions] : baseActions;
-  const face = character.behavior.affection < 35 ? rule.reservedEmotion : rule.emotion;
+  let face = character.behavior.affection < 35 ? rule.reservedEmotion : rule.emotion;
+  let touchActions;
+  if (intent === 'headpat' || intent === 'poke') {
+    const traits = [character.summary, ...(character.personality || []), character.speakingStyle].join(' ');
+    const manner = character.desktopProfile?.manner;
+    const reserved = character.behavior.affection < 35 || /害羞|内向|冷静|沉稳|shy|calm/iu.test(traits) ||
+      (manner && Math.max(manner.calm || 0, manner.shy || 0) >= Math.max(0.5, manner.playful || 0, manner.teasing || 0));
+    face = reserved ? 'neutral' : 'happy';
+    touchActions = reserved ? ['idle'] : intent === 'poke' && /活泼|元气|playful/iu.test(traits)
+      ? ['wave', 'nod', 'idle'] : ['nod', 'idle'];
+  }
   return {
     text: lines[turns % lines.length],
     emotion: !availableEmotions || availableEmotions.includes(face) ? face : 'neutral',
-    action: actions.find((action) => availableActions.includes(action)) || 'idle',
+    action: (touchActions || actions).find((action) => availableActions.includes(action)) || 'idle',
     memory: null,
     origin: 'script',
     interaction: intent,

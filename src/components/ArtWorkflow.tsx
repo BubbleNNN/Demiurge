@@ -12,17 +12,23 @@ export function ArtWorkflow({
   initialStyle,
   onSaveSkin,
   onClose,
+  onBusy,
 }: {
   character: Character;
   initialStyle: ArtStyle;
   onSaveSkin: (skin: Skin, activate: boolean) => Promise<void>;
   onClose: () => void;
+  onBusy?: (busy: boolean) => void;
 }) {
   const [style, setStyle] = useState<ArtStyle>(styles.some(s => s.id === initialStyle) ? initialStyle : 'original');
   const [pending, setPending] = useState<Skin | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  useEffect(() => {
+    onBusy?.(busy || Boolean(pending));
+    return () => onBusy?.(false);
+  }, [busy || Boolean(pending), onBusy]);
   const running = useRef(false);
   const preview = useRef<HTMLElement>(null);
   const guide = guides[style as keyof typeof guides];

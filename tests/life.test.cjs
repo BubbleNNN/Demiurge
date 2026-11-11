@@ -125,7 +125,7 @@ test('what the user is doing shapes her routine: alongside their work, her own f
   const all = ['read', 'gaming', 'snack', 'music', 'diary', 'office'];
   const temperament = { energy: 50, affection: 50, curiosity: 50 };
   const coding = { mode: 'typing', key: 'com.microsoft.VSCode', companion: 'office', idleMinutes: 0 };
-  // The user opens their editor while she is playing: she wraps up and works beside them.
+  // Opening an editor does not cut off her current game; she joins after finishing it.
   let s = life.createLife(0);
   s.activity = 'gaming';
   s.until = 10 * 60000;
@@ -139,8 +139,10 @@ test('what the user is doing shapes her routine: alongside their work, her own f
     context: coding,
     random: () => 0.1,
   });
-  assert.equal(step.activity, 'office');
-  assert.equal(step.changed, true);
+  assert.equal(step.activity, 'gaming');
+  assert.equal(step.changed, false);
+  s.until = 5000;
+  assert.equal(life.advanceLife(s, { now: 5000, hour: 15, available: all, temperament, context: coding, random: () => 0.1 }).activity, 'office');
   // Once per change of app: the next ticks do not restart it.
   const until = s.until;
   life.advanceLife(s, { now: 10000, hour: 15, available: all, temperament, context: coding, random });

@@ -6844,3 +6844,62 @@ select:focus {
   color: var(--muted);
   margin-bottom: 9px;
 }
+
+/* A single creation workspace; tools share its navigation and dialog. */
+.creation-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel, #f7f4f1);
+}
+.creation-navigation button {
+  flex: 1 1 140px;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.creation-navigation button[aria-current="page"] {
+  color: var(--ink, #302c30);
+  background: var(--surface, #fff);
+  box-shadow: 0 2px 8px #302c3010;
+  font-weight: 700;
+}
+.creation-tool-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.creation-tool-navigation [aria-current="page"] { text-decoration: underline; text-underline-offset: 5px; }
+.expression-completion {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel, #f7f4f1);
+}
+.expression-completion h4 { margin: 6px 0; font-size: 18px; }
+.expression-completion p { margin: 0; color: var(--muted); line-height: 1.7; }
+.expression-completion .toolbar { flex-wrap: wrap; }
+
+.creation-content [aria-label="表情预览与使用"] { scroll-margin-top: 84px; }
+
+.room-gesture-hint {
+  position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  white-space: nowrap; pointer-events: none; font-size: 11px; color: var(--muted);
+  opacity: 0; transition: opacity 180ms;
+}
+.room-figure:hover .room-gesture-hint, .room-figure:focus-within .room-gesture-hint { opacity: .8; }

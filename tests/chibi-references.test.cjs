@@ -291,3 +291,17 @@ test('WebP candidates are measured from their header when the desktop decoder ca
   assert.deepEqual(await services.inspectReferenceImage(vp8x), { width: 320, height: 328, mime: 'image/webp' });
   await assert.rejects(services.inspectReferenceImage(Buffer.from('not an image at all, really')), /有效 PNG/);
 });
+
+test('direct image search hits and direct image pages reach verification instead of falling through to fallback', async () => {
+  for (const result of [
+    { sources: [], images: [{ imageUrl: 'https://cdn.example/image.png', url: 'https://cdn.example/image.png', title: '', name: '', searchImage: true }] },
+    { sources: [{ title: '小森', url: 'https://cdn.example/image.png', snippet: '' }] },
+  ]) {
+    const { references, log } = harness({ search: async () => ({ ...result, warnings: [] }) });
+    const found = await references.discover(character, settings, credentials);
+    assert.equal(found.summary.status, 'found');
+    assert.equal(found.image, `data:image/png;base64,${candidatePng.toString('base64')}`);
+    assert.equal(log.verified, 1);
+    assert.equal(log.reads.length, 1, 'a direct response is reused without a second download');
+  }
+});

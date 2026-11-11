@@ -132,10 +132,11 @@ app.on('browser-window-created', (_event, created) => {
       // The current 8-bit pack has an authored nod clip, unlike the original fixture.
       await wait(`document.querySelector('.room-figure canvas').dataset.clip==='nod'`);
       await physicalClick('戳一戳角色');
-      assert.equal(
+      await wait(`!!document.querySelector('.touch-feedback.poke')`);
+      assert.notEqual(
         await js(`document.querySelector('.room-bubble .room-line').textContent`),
         pat,
-        'Rapid taps share a cooldown',
+        'A different gesture has its own cooldown',
       );
       await delay(1850);
       await physicalClick('戳一戳角色');

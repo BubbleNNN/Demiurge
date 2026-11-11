@@ -18,11 +18,13 @@ export function ModelStudio({
   skins,
   onSaveSkin,
   onClose,
+  onBusy,
 }: {
   character: Character;
   skins: Skin[];
   onSaveSkin: (skin: Skin, activate: boolean) => Promise<void>;
   onClose: () => void;
+  onBusy?: (busy: boolean) => void;
 }) {
   const [jobs, setJobs] = useState<ModelJob[]>([]);
   const [busy, setBusy] = useState(false);
@@ -30,6 +32,10 @@ export function ModelStudio({
   const [polling, setPolling] = useState(false);
   const [recoveryId, setRecoveryId] = useState('');
   const mounted = useRef(true);
+  useEffect(() => {
+    onBusy?.(busy);
+    return () => onBusy?.(false);
+  }, [busy, onBusy]);
   useEffect(() => {
     mounted.current = true;
     void bridge

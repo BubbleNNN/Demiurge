@@ -383,13 +383,19 @@ test('Codex image mode keeps only the image tool and its host, collects the sess
   fs.mkdirSync(path.join(root, thread));
   fs.writeFileSync(path.join(root, thread, 'exec-1.png'), Buffer.from('fixture-generated-png'));
   fs.writeFileSync(path.join(root, thread, 'notes.txt'), 'ignored');
+  const imageCalls = [];
   const codex = createCodex({
-    spawnFn: fakeSpawn([{ type: 'thread.started', thread_id: thread }, message('done'), done]),
+    spawnFn: fakeSpawn([{ type: 'thread.started', thread_id: thread }, message('done'), done], { calls: imageCalls }),
     environment: async () => ({ HOME: os.homedir() }),
     resolve: async () => '/fixture/codex',
     imagesRoot: () => root,
   });
-  const result = await codex.run({ prompt: 'draw', generateImage: true });
+  const reference = require('./fixtures/pet-images.cjs').url(require('./fixtures/pet-images.cjs').image());
+  const result = await codex.run({ prompt: 'draw', generateImage: true, images: [reference, reference] });
+  const imagePaths = imageCalls[0].args.flatMap((arg, i, args) => args[i - 1] === '--image' ? [arg] : []);
+  assert.equal(imagePaths.length, 2);
+  for (const file of imagePaths) assert.ok(imageCalls[0].prompt.includes(file));
+  assert.match(imageCalls[0].prompt, /referenced_image_paths/);
   assert.deepEqual(
     result.images.map((image) => image.toString()),
     ['fixture-generated-png'],
@@ -411,6 +417,32 @@ test('Codex image mode keeps only the image tool and its host, collects the sess
     /没有生成图像.*I could not draw that/,
   );
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('Codex image transport sends only five files for six references, with all source numbers mapped', async () => {
+  const fixture = require('./fixtures/pet-images.cjs');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mori-budget-'));
+  const thread = '01a1b59d-e030-7473-8cba-814825cefa0f';
+  fs.mkdirSync(path.join(root, thread));
+  fs.writeFileSync(path.join(root, thread, 'image.png'), fixture.image());
+  const calls = [];
+  const codex = createCodex({
+    spawnFn: fakeSpawn([{ type: 'thread.started', thread_id: thread }, message('done'), done], { calls }),
+    environment: async () => ({ HOME: os.homedir() }), resolve: async () => '/fixture/codex',
+    imagesRoot: () => root,
+    referenceCodec: { fit: bytes => fixture.decode(bytes), encode: fixture.encode },
+  });
+  try {
+    const originals = Array.from({ length: 6 }, () => fixture.url(fixture.image()));
+    await codex.run({ prompt: 'Images 5 through 6 are continuity references.', generateImage: true, images: originals });
+    const paths = calls[0].args.filter((_, i, args) => args[i - 1] === '--image');
+    assert.equal(paths.length, 5);
+    assert.match(calls[0].prompt, /source image 6 = attachment 5, row 1, column 2/);
+    assert.match(calls[0].prompt, /Images 5 through 6 are continuity references/);
+    assert.match(calls[0].prompt, /at most five reference paths/);
+    assert.ok(calls[0].files['reference-board-5.png'].length > 0);
+    assert.equal(fs.existsSync(calls[0].options.cwd), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test('Image candidates can be drawn by local Codex with the original references and no image key', async () => {

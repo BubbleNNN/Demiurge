@@ -1,3 +1,4 @@
+import { createTouchGestures } from './touchGestures';
 import { useDesktopLife } from './features/desktop/useDesktopLife';
 import { CommunityPanel } from './features/community/CommunityPanel';
 import { desktopProfile, pickLine, touchMark } from './characterBehavior';
@@ -55,7 +56,6 @@ import {
   Layers3,
   LoaderCircle,
   MessageCircle,
-  Palette,
   Pencil,
   Plus,
   ShieldCheck,
@@ -64,7 +64,6 @@ import {
   Compass,
   History,
   Send,
-  Upload,
   WandSparkles,
   X,
   BookOpen,
@@ -93,11 +92,11 @@ import {
   styleName,
   engineName,
   availableStyle,
-  styles,
 } from './theme';
 import { AvatarStage } from './components/AvatarStage';
 import { Modal } from './components/Modal';
 import { SettingsPanel } from './components/SettingsPanel';
+import { CreationWorkbench, type CreationSection } from './features/appearance/CreationWorkbench';
 import { GenerationStudio } from './components/GenerationStudio';
 import { ReferencePanel } from './components/ReferencePanel';
 import { ModelStudio } from './components/ModelStudio';
@@ -306,15 +305,27 @@ export default function App() {
   const [updateUrls, setUpdateUrls] = useState('');
   const [updateError, setUpdateError] = useState('');
   const updateResult = useRef<{ characterId: string; character: Character } | null>(null);
-  const [generateOpen, setGenerateOpen] = useState(false);
-  const [petProductionOpen, setPetProductionOpen] = useState(false);
-  const [modelStudioOpen, setModelStudioOpen] = useState(false);
-  const [artWorkflowOpen, setArtWorkflowOpen] = useState(false);
-  const [packsOpen, setPacksOpen] = useState(false);
+  const [creationSection, setCreationSection] = useState<CreationSection | null>(null);
+  const [creationSkinId, setCreationSkinId] = useState('');
+  const generateOpen = creationSection === 'expressions' || creationSection === 'pixel';
+  const petProductionOpen = creationSection === 'create';
+  const modelStudioOpen = creationSection === 'model';
+  const artWorkflowOpen = creationSection === 'assets';
+  const packsOpen = creationSection === 'packs';
+  const setGenerateOpen = (open: boolean) => setCreationSection(open ? 'expressions' : null);
+  const setPetProductionOpen = (open: boolean) => setCreationSection(open ? 'create' : null);
+  const setModelStudioOpen = (open: boolean) => setCreationSection(open ? 'model' : null);
+  const setArtWorkflowOpen = (open: boolean) => setCreationSection(open ? 'assets' : null);
+  const setPacksOpen = (open: boolean) => setCreationSection(open ? 'packs' : null);
   const [setupCharacterId, setSetupCharacterId] = useState('');
   const behavior = useRef(freshBehavior());
   // Until when something the user asked for (a toolbar activity, a touch) keeps her where she is.
   const userHeld = useRef(0);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(holdTimer.current), []);
+  const hoverWatch = useRef<() => void>(() => {});
+  const finishTouch = useRef<() => void>(() => {});
+  const touchReturn = useRef<{ action: PetAction; life: string; token: number } | null>(null);
   const interactionCounts = useRef<Record<string, number>>({});
   const [interactionLine, setInteractionLine] = useState('');
   const [resting, setResting] = useState(false);
@@ -335,7 +346,7 @@ export default function App() {
   const memoryBase = useRef<AppState | null>(null);
   const [draftSaving, setDraftSaving] = useState(false);
   const petMode = new URLSearchParams(location.search).get('pet') === '1';
-  const drag = useRef<{ x: number; y: number; moved: boolean; hit: 'headpat' | 'poke' } | null>(null);
+  const drag = useRef<{ x: number; y: number; moved: boolean; patted?: boolean; hit: 'headpat' | 'poke' } | null>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const failedChat = useRef<Parameters<typeof bridge.chat>[0] | null>(null);
   const completedReplies = useRef(new Map<string, CompletedReply>());
@@ -894,6 +905,7 @@ export default function App() {
         petChat ||
         petComposer ||
         Boolean(drag.current) ||
+        userHeld.current > performance.now() ||
         // Sitting or lying down is a stay: her routine waits until she gets up.
         ownPose(action) ||
         action === 'sit' ||
@@ -1023,6 +1035,8 @@ export default function App() {
   useEffect(() => {
     behavior.current = freshBehavior();
     interactionCounts.current = {};
+    clearTimeout(holdTimer.current);
+    touchReturn.current = null;
     setResting(false);
     setInteractionLine('');
     setTouchFeedback(null);
@@ -1114,35 +1128,12 @@ export default function App() {
     if (!petMode || !isDesktop) return;
     let ignore = false;
     let over = false;
-    // A head pat without clicking: the pointer moving back and forth over her head. Three turns
-    // of at least 4 points within 2 seconds count, at an ordinary stroking speed; then a pause
+    // A head pat without clicking: the pointer moving back and forth over her head. Two turns
+    // of at least 5 points within 2.2 seconds count, at an ordinary stroking speed; then a pause
     // before the next one. Over her head means the top of her figure, gaps in her hair included.
     // Strokes are read from where the pointer is (the main process reports it whichever app is in
     // front), since the page gets no mouse moves while another app is active.
-    let strokes: { x: number; at: number; dir: number }[] = [],
-      patAt = 0;
-    const stroke = (x: number, onHead: boolean) => {
-      const now = performance.now();
-      if (!onHead || drag.current || now - patAt < 2500) {
-        strokes = [];
-        return;
-      }
-      const last = strokes.at(-1);
-      if (!last) return void strokes.push({ x, at: now, dir: 0 });
-      const dx = x - last.x;
-      if (Math.abs(dx) < 4) return;
-      const dir = Math.sign(dx);
-      strokes.push({ x, at: now, dir });
-      strokes = strokes.filter((s) => now - s.at < 2000);
-      let turns = 0;
-      for (let i = 1; i < strokes.length; i++)
-        if (strokes[i].dir && strokes[i - 1].dir && strokes[i].dir !== strokes[i - 1].dir) turns++;
-      if (turns >= 3) {
-        patAt = now;
-        strokes = [];
-        hoverPat.current();
-      }
-    };
+    const gestures = createTouchGestures();
     // Where the pointer is: over her, over her controls, or over nothing (clicks pass through).
     const pointAt = (x: number, y: number, target: EventTarget | null, reported: boolean) => {
       const controls =
@@ -1153,7 +1144,12 @@ export default function App() {
       const figure = document.querySelector('.pet-draggable');
       const hit = figure ? hitCharacter(figure, x, y) : null;
       const onFigure = Boolean(hit);
-      if (reported) stroke(x, !controls && !!figure && overHead(figure, x, y));
+      if (reported) {
+        const head = !controls && !!figure && overHead(figure, x, y);
+        const result = gestures.sample(x, performance.now(), head, !controls && (onFigure || head), Boolean(drag.current));
+        if (result === 'headpat') hoverPat.current();
+        else if (result === 'watch') hoverWatch.current();
+      }
       const next = !drag.current && !controls && !onFigure;
       if (next !== ignore) {
         ignore = next;
@@ -1168,7 +1164,7 @@ export default function App() {
     const unsubscribe = bridge.onPointer?.((point) => {
       if (point) pointAt(point.x, point.y, document.elementFromPoint(point.x, point.y), true);
       else {
-        strokes = [];
+        gestures.reset();
         if (!drag.current) pointAt(-1, -1, null, false);
       }
     });
@@ -1343,9 +1339,10 @@ export default function App() {
       (Object.keys(actionNames) as PetAction[]).filter((action) => supportsAction(skin, action)),
       emotions.map((face) => face.id).filter((face) => supportsEmotion(skin, face)),
       interactionCounts.current[event] || 0,
+      petProfile,
     );
     const admitted = admitBehavior(behavior.current, {
-      event: automatic ? 'proactive' : ['touch', 'headpat', 'poke'].includes(event) ? 'touch' : event,
+      event: automatic ? 'proactive' : event,
       now: performance.now(),
       duration: actionDuration(plan.action),
       priority: automatic ? 10 : event === 'wake' ? 100 : event === 'rest' ? 90 : event === 'drag' ? 80 : 40,
@@ -1380,18 +1377,39 @@ export default function App() {
     }
     return true;
   }
+  hoverWatch.current = () => {
+    if (interactionBusy || talking || resting || drag.current) return;
+    showMark(touchMark(petProfile, 'poke'), 1300);
+    if (!interactionLine) say(pickLine(petProfile, 'peek'));
+  };
+  finishTouch.current = () => {
+    const previous = touchReturn.current;
+    touchReturn.current = null;
+    if (!previous || behavior.current.until !== previous.token || interactionBusy || talking || resting || drag.current) return;
+    setEmotion('neutral');
+    if (lifeRef.current.activity === previous.life && supportsAction(skin, previous.action)) {
+      setAction(previous.action);
+      setActionKey((key) => key + 1);
+    }
+  };
+  useEffect(() => {
+    if (!touchFeedback) return;
+    const timer = setTimeout(() => finishTouch.current(), 1100);
+    return () => clearTimeout(timer);
+  }, [touchFeedback?.key]);
   function touchCharacter(kind: 'headpat' | 'poke') {
     // Touched while napping on the desktop: she wakes up, grumpy if she was really asleep.
     const napping = action === 'sleep' && !resting && Date.now() - asleepSince.current > 60000;
+    const prior = action;
     if (!interact(kind)) return;
+    touchReturn.current = { action: isActivity(prior) || prior === 'sit' || prior === 'lie' ? prior : 'idle', life: lifeRef.current.activity, token: behavior.current.until };
     setTouchFeedback({ kind, key: performance.now() });
-    if (napping) return say(feelNow('woken'));
-    const asked = kind === 'headpat' && awaitingPat.current > Date.now();
-    if (asked) awaitingPat.current = 0;
+    if (napping) { touchReturn.current = null; return say(feelNow('woken')); }
+    if (kind === 'headpat' && awaitingPat.current > Date.now()) awaitingPat.current = 0;
     const line = feelNow(kind === 'headpat' ? 'headpat' : 'poke');
     // Her own way of taking it: a blush, a tease, a giggle (characterBehavior.ts).
     showMark(touchMark(petProfile, kind));
-    say(line || (asked ? '嘿嘿……谢谢你。' : Math.random() < 0.6 ? pickLine(petProfile, kind) : null));
+    if (line) say(line);
   }
   // She would like some attention: she asks for a chat, a pat or a game, in her own words, unless
   // the user is busy (typing, in a meeting) or she has asked recently.
@@ -1823,6 +1841,7 @@ export default function App() {
   }
   function chooseSkin(item: Skin) {
     if (!usableCharacterSkin(item, character)) {
+      setCreationSkinId(item.id);
       setGenerateOpen(true);
       return;
     }
@@ -1854,25 +1873,6 @@ export default function App() {
                       ? '需要重做'
                       : '待对照原图'
                   : '';
-  async function importAsset(kind: 'image' | 'sprite' | 'live2d' | 'vrm') {
-    setJobBusy(true);
-    try {
-      const result =
-        kind === 'sprite'
-          ? await bridge.importSprite(character.id, skin?.style || 'anime')
-          : kind === 'image'
-            ? await bridge.importImage(character.id, skin?.style || 'anime')
-            : await bridge.importModel(character.id, kind);
-      if (result) {
-        await save((s) => ({ ...s, skins: [...s.skins, result], activeSkinId: result.id }));
-        setToast(`${engineName(result)} 已导入。`);
-      }
-    } catch (e) {
-      setToast(errorText(e));
-    } finally {
-      setJobBusy(false);
-    }
-  }
   async function refreshProfile() {
     setUpdateError('');
     setJobBusy(true);
@@ -2420,6 +2420,13 @@ export default function App() {
             if (!hit) return;
             desktop.stop(true);
             drag.current = { x: e.screenX, y: e.screenY, moved: false, hit };
+            clearTimeout(holdTimer.current);
+            holdTimer.current = setTimeout(() => {
+              if (drag.current && !drag.current.moved) {
+                drag.current.patted = true;
+                hoverPat.current();
+              }
+            }, 650);
             // She swings from wherever she was grabbed.
             const body = bodyRef.current?.getBoundingClientRect();
             if (body) swing.current.origin = `${e.clientX - body.left}px ${e.clientY - body.top}px`;
@@ -2432,6 +2439,7 @@ export default function App() {
             const x = e.screenX - drag.current.x,
               y = e.screenY - drag.current.y;
             if (Math.abs(x) + Math.abs(y) > 2) {
+              clearTimeout(holdTimer.current);
               if (!drag.current.moved) {
                 drag.current.moved = true;
                 // Picked up in the middle of something, or out of her sleep.
@@ -2453,6 +2461,7 @@ export default function App() {
             }
           }}
           onPointerUp={(event) => {
+            clearTimeout(holdTimer.current);
             if (!drag.current) return;
             const moved = drag.current.moved;
             if (moved) {
@@ -2467,12 +2476,13 @@ export default function App() {
                 }
               });
             } else if (resting) wakeUp();
-            else touchCharacter(drag.current.hit);
+            else if (!drag.current.patted) touchCharacter(drag.current.hit);
             drag.current = null;
             if (event.currentTarget.hasPointerCapture(event.pointerId))
               event.currentTarget.releasePointerCapture(event.pointerId);
           }}
           onLostPointerCapture={() => {
+            clearTimeout(holdTimer.current);
             if (action === 'drag') setAction('idle');
             drag.current = null;
           }}
@@ -2590,7 +2600,7 @@ export default function App() {
                 onSetup={() => setSetupCharacterId(character.id)}
                 onVoice={openProfile}
                 onInteraction={() => setPacksOpen(true)}
-                onAnimation={() => setArtWorkflowOpen(true)}
+                onAnimation={() => setPetProductionOpen(true)}
               />
             }
             drawer={historyDrawer}
@@ -2629,6 +2639,7 @@ export default function App() {
                 />
               ) : undefined
             }
+            onWatch={() => hoverWatch.current()}
             touchCharacter={touchCharacter}
             interact={interact}
             copyMessage={copyMessage}
@@ -2660,84 +2671,22 @@ export default function App() {
               <>
                 <button
                   className="production-entry"
-                  aria-label="自动制作多画风桌宠"
+                  aria-label="打开桌宠工作台"
                   onClick={() => setPetProductionOpen(true)}
                 >
                   <span className="production-icon">
                     <WandSparkles size={26} />
                   </span>
                   <span>
-                    <small>CREATE A COMPANION · 自动制作</small>
-                    <strong>从一张角色原图，开始制作。</strong>
-                    <p>选画风 → 确认角色图 → 制作动作 → 核对并启用</p>
+                    <small>CREATE A COMPANION · 桌宠工作台</small>
+                    <strong>形象、表情和动作，都在这里完成。</strong>
+                    <p>制作与任务 · 已有形象与表情 · 导入与工具</p>
                   </span>
                   <span className="production-entry-action">
-                    开始制作
+                    打开工作台
                     <ArrowUpRight size={17} />
                   </span>
                 </button>
-                <details className="creation-tools">
-                  <summary>
-                    <span>
-                      <Layers3 size={18} /> 已有素材，或需要其他制作方式？
-                    </span>
-                    <span>
-                      角色包 · 导入 · 3D <ChevronRight size={16} />
-                    </span>
-                  </summary>
-                  <div className="engine-grid">
-                    <button aria-label="使用预制角色包" onClick={() => setPacksOpen(true)}>
-                      <FolderHeart />
-                      <strong>角色包与本地互动</strong>
-                      <span>预制外观 / 真实动作 / 无图像 API</span>
-                      <ArrowUpRight size={17} />
-                    </button>
-                    <button aria-label="画风与素材制作" onClick={() => setArtWorkflowOpen(true)}>
-                      <Palette />
-                      <strong>画风与素材制作</strong>
-                      <span>{styles.length} 种制作说明 / 现成素材 / 动作预览</span>
-                      <ArrowUpRight size={17} />
-                    </button>
-                    <button aria-label="制作 3D 模型" onClick={() => setModelStudioOpen(true)}>
-                      <Box />
-                      <strong>制作 3D 模型</strong>
-                      <span>主参考原图 / 图生模型 / 骨骼绑定</span>
-                      <ArrowUpRight size={17} />
-                    </button>
-                    <button
-                      aria-label="制作立绘与像素动画"
-                      onClick={() => {
-                        pending.current = {};
-                        setJobError('');
-                        setGenerateOpen(true);
-                      }}
-                    >
-                      <WandSparkles />
-                      <strong>制作立绘与像素动画</strong>
-                      <span>原图编辑 / 可选像素绘图 / 候选核对</span>
-                      <ArrowUpRight size={17} />
-                    </button>
-                    <p className="tool-group-title">导入已有素材</p>
-                    <button disabled={jobBusy} onClick={() => importAsset('live2d')}>
-                      <Layers3 />
-                      <strong>导入 Live2D</strong>
-                      <span>model3.json / ZIP 模型包</span>
-                      <Upload size={17} />
-                    </button>
-                    <button disabled={jobBusy} onClick={() => importAsset('vrm')}>
-                      <Box />
-                      <strong>导入 VRM 3D</strong>
-                      <span>VRM 0.x / 1.0</span>
-                      <Upload size={17} />
-                    </button>
-                    <button disabled={jobBusy} onClick={() => importAsset('sprite')}>
-                      <Film />
-                      <strong>导入逐帧动画</strong>
-                      <span>Aseprite JSON + PNG / Demiurge 动画包</span>
-                      <Upload size={17} />
-                    </button>
-                  </div>
-                </details>
                 <section className="saved-appearances" aria-label="已保存的角色外观">
                   <div className="section-heading">
                     <div>
@@ -2746,9 +2695,9 @@ export default function App() {
                       </h2>
                       <p>点击切换当前角色的外观。</p>
                     </div>
-                    <button className="text-button" onClick={() => importAsset('image')}>
+                    <button className="text-button" onClick={() => setArtWorkflowOpen(true)}>
                       <ImagePlus size={15} />
-                      导入现有立绘
+                      在工作台管理素材
                     </button>
                   </div>
                   {allSkins.some(earlierArt) && (
@@ -3452,17 +3401,9 @@ export default function App() {
             }));
             setToast('已使用核对过的原图作为静态桌宠，无需图像模型。');
           }}
-          onAssets={() => {
-            setSetupCharacterId('');
-            setArtWorkflowOpen(true);
-          }}
-          onPacks={() => {
-            setSetupCharacterId('');
-            setPacksOpen(true);
-          }}
           onGenerate={() => {
             setSetupCharacterId('');
-            setGenerateOpen(true);
+            setPetProductionOpen(true);
           }}
           onDone={() => {
             setSetupCharacterId('');
@@ -3562,9 +3503,15 @@ export default function App() {
           </form>
         </Modal>
       )}
+      {creationSection && (
+        <CreationWorkbench section={creationSection} busy={jobBusy} name={character.name}
+          onSection={setCreationSection} onClose={() => { if (!jobBusy) setCreationSection(null); }}>
       {generateOpen && (
         <GenerationStudio
-          key={character.id}
+          key={`${character.id}:${creationSection}`}
+          manageOnly={creationSection === 'expressions'}
+          startWithProgram={creationSection === 'pixel'}
+          initialSkinId={creationSkinId}
           character={character}
           skins={skins}
           imageReady={imageServiceReady(state.settings, keys)}
@@ -3616,6 +3563,7 @@ export default function App() {
       )}
       {packsOpen && (
         <CharacterPacks
+          onBusy={setJobBusy}
           key={character.id}
           character={character}
           skins={skins}
@@ -3655,6 +3603,7 @@ export default function App() {
       )}
       {artWorkflowOpen && (
         <ArtWorkflow
+          onBusy={setJobBusy}
           key={character.id}
           character={character}
           initialStyle={skin?.style || 'anime'}
@@ -3670,6 +3619,7 @@ export default function App() {
       )}
       {modelStudioOpen && (
         <ModelStudio
+          onBusy={setJobBusy}
           key={character.id}
           character={character}
           skins={skins}
@@ -3682,6 +3632,8 @@ export default function App() {
             }));
           }}
         />
+      )}
+        </CreationWorkbench>
       )}
       {themeOpen && (
         <Modal

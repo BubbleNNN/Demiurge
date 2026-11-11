@@ -68,6 +68,9 @@ function tinted(sheet, number) {
 const masters = [tinted(false, 1), tinted(false, 2)],
   calls = [];
 const wikiSearches = [];
+const webReference = tinted(false, 9);
+// The only public resource in this fixture is supplied below, including DNS; no network.
+require('node:dns/promises').lookup = async () => [{ address: '93.184.216.34', family: 4 }];
 const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
 // A motion described in words: the chat model's design, as this stand-in returns it.
 const designs = [];
@@ -98,6 +101,15 @@ const design = {
   stages: [],
 };
 global.fetch = async (url, init) => {
+  if (String(url) === 'https://reference.mori.example/detail.png')
+    return new Response(webReference, { headers: { 'Content-Type': 'image/png' } });
+  if (String(url).endsWith('/chat/completions') &&
+      String(init.body).includes('Verify that it is the same character')) {
+    assert.ok(String(init.body).includes(fixture.url(webReference)));
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      sameCharacter: true, compatibleOutfit: true, useful: true, confidence: 0.95,
+    }) } }] }), { headers: { 'Content-Type': 'application/json' } });
+  }
   if (
     String(url).endsWith('/chat/completions') &&
     String(init.body).includes('You design one new animated motion')
@@ -112,7 +124,7 @@ global.fetch = async (url, init) => {
   if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
     // The chibi look first looks for an existing design; this isolated wiki has none.
     wikiSearches.push(new URL(url).searchParams.get('gsrsearch'));
-    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: {} } }), {
+    return new Response(JSON.stringify({ batchcomplete: '', query: { pages: calls.length >= 4 ? { 1: { title: character.name, fullurl: 'https://reference.mori.example/detail.png' } } : {} } }), {
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -124,7 +136,9 @@ global.fetch = async (url, init) => {
   const images = form.getAll('image[]').length ? form.getAll('image[]') : [form.get('image')];
   // A chibi base carries the Furina sticker last, as a style guide only.
   assert.deepEqual(Buffer.from(await images[isSheet ? 1 : 0].arrayBuffer()), originalBytes);
-  assert.equal(images.length, 2);
+  const hasWebReference = prompt.includes('downloaded, visually checked web references');
+  assert.equal(images.length, hasWebReference ? 3 : 2);
+  if (hasWebReference) assert.deepEqual(Buffer.from(await images[2].arrayBuffer()), webReference);
   if (!isSheet) assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), furina);
   if (isSheet)
     assert.deepEqual(
@@ -185,7 +199,7 @@ app.on('browser-window-created', (_event, created) => {
     await click('Demiurge 首页');
     await click('角色工作室');
     await click('外观与动作');
-    await click('自动制作多画风桌宠');
+    await click('打开桌宠工作台');
     // These tests cover the standard flow; sharp quality (the default) has its own test.
     await js(
       `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
@@ -300,6 +314,7 @@ app.on('browser-window-created', (_event, created) => {
       const originalOutput = (await js(`window.mori.petJobResults(${JSON.stringify(originalJobId)})`))[0];
       const originalTaskBytes = fs.readFileSync(path.join(dir, 'pet-jobs', originalJobId + '.json'));
       await change('桌宠修正范围', 'wave');
+      await change('桌宠成品修正方式', 'researched');
       await change('桌宠修正要求', '手掌保持五指，招手幅度更轻柔。', true);
       assert.match(
         await js(`document.querySelector('[aria-label="修正桌宠成品"]').textContent`),
@@ -314,13 +329,16 @@ app.on('browser-window-created', (_event, created) => {
       assert.equal(calls.at(-1).isSheet, true);
       // The image model received the chat model's instruction for this request, not the user's words.
       assert.ok(calls.at(-1).prompt.includes(planner.plannedPrompt('手掌保持五指，招手幅度更轻柔。')));
-      assert.doesNotMatch(calls.at(-1).prompt, /手掌保持五指/);
+      assert.match(calls.at(-1).prompt, /手掌保持五指/);
       assert.equal(planner.calls.at(-1).feedback, '手掌保持五指，招手幅度更轻柔。');
       assert.ok(planner.calls.at(-1).images >= 2, 'the planner saw the current motion and the master');
       jobs = await js(`window.mori.listPetJobs('revision-desktop')`);
       const revised = jobs.find((job) => job.id !== originalJobId);
       assert.equal(revised.status, 'ready');
       assert.equal(revised.revision.motion, 'wave');
+      assert.equal(revised.revision.plan.visualReferences.length, 1);
+      assert.match(await js(`document.querySelector('[aria-label="修正说明的整理结果"]').textContent`), /1 张已下载并核对/);
+      assert.ok(calls.at(-1).prompt.includes('downloaded, visually checked web references'));
       assert.equal(revised.selectedBases['chibi-pet'], candidates[1].id);
       assert.match(
         await js(
@@ -532,7 +550,7 @@ app.on('browser-window-created', (_event, created) => {
       // Her pets are one tab away, the look in use marked; one opens at a time, with a way back.
       await click('关闭弹窗');
       await wait(`!document.querySelector('.pet-production')`);
-      await click('自动制作多画风桌宠');
+      await click('打开桌宠工作台');
       await wait(`!!document.querySelector('.production-tabs')`);
       assert.equal(
         await js(`document.querySelector('.production-tabs [aria-selected="true"]').textContent`),

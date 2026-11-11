@@ -220,9 +220,10 @@ app.on('browser-window-created', (_event, win) => {
       await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
-      await wait(`!!document.querySelector('[aria-label="制作 3D 模型"]')`);
-      await click('制作 3D 模型');
-      await wait(`!!document.querySelector('[aria-label="为昔涟制作 3D 模型"]')`);
+      await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('3D 模型');
+      await wait(`!!document.querySelector('.model-source')`);
       await click('开始建模并绑定');
       await wait(`document.body.textContent.includes('mesh-fixture')`);
       // Query explicitly rather than waiting for the timed polling loop.
@@ -237,7 +238,7 @@ app.on('browser-window-created', (_event, win) => {
       assert.equal(downloads, 2);
       fs.writeFileSync(path.join(dir, 'model-ready.png'), (await win.webContents.capturePage()).toPNG());
       await click('保存模型并预览');
-      await wait(`!document.querySelector('[aria-label="为昔涟制作 3D 模型"]')`);
+      await wait(`!document.querySelector('.model-source')`);
       await wait(
         `document.querySelector('.avatar-stage.glb canvas') && !document.querySelector('.avatar-stage.glb .model-status')`,
       );
@@ -265,7 +266,9 @@ app.on('browser-window-created', (_event, win) => {
         path.join(dir, 'generated-glb-pet.png'),
         (await pet.webContents.capturePage()).toPNG(),
       );
-      await click('制作 3D 模型');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('3D 模型');
       await wait(`document.body.textContent.includes('模型已就绪')`);
       assert.equal(modelPosts, 1);
       assert.equal(rigPosts, 1);

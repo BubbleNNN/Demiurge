@@ -1,4 +1,4 @@
-import { Check, Film, FolderHeart, ImagePlus, MessageCircle, Palette } from 'lucide-react';
+import { Check, Film, ImagePlus, MessageCircle, Palette } from 'lucide-react';
 import { Modal } from './Modal';
 import { ReferencePanel } from './ReferencePanel';
 import { supportsAction } from '../artwork';
@@ -10,8 +10,6 @@ export function CharacterSetup({
   activeSkinId,
   onReferences,
   onUseOriginal,
-  onAssets,
-  onPacks,
   onGenerate,
   onDone,
 }: {
@@ -20,8 +18,6 @@ export function CharacterSetup({
   activeSkinId: string;
   onReferences: (references: VisualReference[]) => Promise<void>;
   onUseOriginal: () => Promise<void>;
-  onAssets: () => void;
-  onPacks: () => void;
   onGenerate: () => void;
   onDone: () => void;
 }) {
@@ -62,20 +58,10 @@ export function CharacterSetup({
           onUseOriginal={onUseOriginal}
         />
         <div className="setup-routes">
-          <button onClick={onAssets} aria-label="为新角色导入外观与动作">
-            <Film size={22} />
-            <strong>导入现成外观与动作</strong>
-            <p>立绘、PNG 动画帧、Aseprite 精灵图、Live2D 或 VRM。导入后试播，再保存。</p>
-          </button>
-          <button onClick={onPacks} aria-label="为新角色导入角色包">
-            <FolderHeart size={22} />
-            <strong>导入或编辑角色包</strong>
-            <p>导入包含人物设定和素材的完整角色包；也可以编写这个角色的本地互动台词。</p>
-          </button>
-          <button onClick={onGenerate} aria-label="为新角色生成其他画风">
+          <button onClick={onGenerate} aria-label="打开桌宠工作台">
             <Palette size={22} />
-            <strong>制作其他画风</strong>
-            <p>查看各画风的制作方式。图像服务可以选用；一张原图本身不包含其他画风或新的肢体动作。</p>
+            <strong>进入桌宠工作台</strong>
+            <p>制作角色形象、表情与动作，或导入已有素材，核对后直接使用。</p>
           </button>
         </div>
         <div className="notice">

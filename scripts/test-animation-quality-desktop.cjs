@@ -135,7 +135,9 @@ app.on('browser-window-created', (_, win) => {
         `window.mori.reviewSkin({characterId:${JSON.stringify(character.id)},skinId:'native-candidate',decision:'approved'}).then(()=>false,e=>e.message)`,
       );
       assert.match(blocked, /逐帧|变化/, 'Calling IPC directly cannot skip the gate');
-      await click('制作立绘与像素动画');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('绘图实验');
       await wait(
         `document.querySelectorAll('.frame-review-grid input').length===2 && !!document.querySelector('.frame-review-grid canvas')`,
       );

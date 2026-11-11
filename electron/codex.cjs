@@ -210,6 +210,7 @@ function createCodex({
   resolve = resolveCodex,
   tmpdir = os.tmpdir,
   imagesRoot = generatedImagesRoot,
+  referenceCodec,
 } = {}) {
   if (typeof codexHome !== 'string' || (codexHome && !path.isAbsolute(codexHome)))
     throw new Error('Codex 账号目录必须是绝对路径。');
@@ -253,9 +254,12 @@ function createCodex({
         schemaFile = path.join(directory, 'result-schema.json');
         await fs.writeFile(schemaFile, JSON.stringify(schema));
       }
+      const inputImages = images.map(imageFile);
+      const references = generateImage
+        ? require('./image-reference-budget.cjs').fitImageReferenceBudget(inputImages, referenceCodec)
+        : { sources: inputImages, mapping: '' };
       const imageFiles = [];
-      for (const [index, image] of images.entries()) {
-        const { name, bytes } = imageFile(image, index);
+      for (const { name, bytes } of references.sources) {
         const file = path.join(directory, name);
         await fs.writeFile(file, bytes);
         imageFiles.push(file);
@@ -348,6 +352,8 @@ function createCodex({
                   title: String(hit.title || '').slice(0, 300),
                   url: hit.url,
                   snippet: String(hit.snippet || '').slice(0, 2000),
+                  ...(typeof hit.image_url === 'string' ? { image_url: hit.image_url } : {}),
+                  ...(typeof hit.img_src === 'string' ? { img_src: hit.img_src } : {}),
                 });
           }
         });
@@ -366,7 +372,9 @@ function createCodex({
             );
           finish(null, { text, results, queries, images: generated });
         });
-        child.stdin.end(prompt);
+        child.stdin.end(generateImage && imageFiles.length
+          ? `${prompt}\n\n${references.mapping}\nImage tool reference contract: the ${imageFiles.length} reference attachments are already saved at these local paths, in order: ${JSON.stringify(imageFiles)}. The image tool accepts at most five reference paths; this list already fits that limit. Pass ALL of these paths to the image generation tool as referenced_image_paths (or its equivalent reference-image input). Looking at the attachments and describing them in text is not sufficient. Do not generate an unreferenced image or omit any listed attachment.`
+          : prompt);
       });
     } finally {
       await fs.rm(directory, { recursive: true, force: true }).catch(() => {});

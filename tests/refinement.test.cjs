@@ -348,7 +348,7 @@ test('quiet reserved characters use restrained gestures without changing their a
   for (const event of ['greet', 'headpat', 'poke', 'thanks']) {
     const result = interactionPlan(event, quiet, actions, emotions);
     assert.equal(result.emotion, 'neutral');
-    assert.equal(result.action, 'nod');
+    assert.equal(result.action, ['headpat', 'poke'].includes(event) ? 'idle' : 'nod');
     const backend = localReply({
       character: quiet,
       event,

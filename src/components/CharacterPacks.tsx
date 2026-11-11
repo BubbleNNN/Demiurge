@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Download, FolderHeart, LoaderCircle, MessageCircle, Upload } from 'lucide-react';
 import { Modal } from './Modal';
 import { AnimationPreview } from './AnimationPreview';
@@ -29,6 +29,7 @@ export function CharacterPacks({
   onAssets,
   onSetup,
   onClose,
+  onBusy,
 }: {
   character: Character;
   skins: Skin[];
@@ -39,6 +40,7 @@ export function CharacterPacks({
   onAssets: () => void;
   onSetup: () => void;
   onClose: () => void;
+  onBusy?: (busy: boolean) => void;
 }) {
   const [tab, setTab] = useState<'current' | 'library' | 'lines'>(
     character.id === starterPack.character.id ? 'library' : 'current',
@@ -51,6 +53,10 @@ export function CharacterPacks({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  useEffect(() => {
+    onBusy?.(busy);
+    return () => onBusy?.(false);
+  }, [busy, onBusy]);
   async function run(task: () => Promise<void>) {
     setBusy(true);
     setError('');

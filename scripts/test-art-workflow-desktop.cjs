@@ -123,7 +123,8 @@ app.on('browser-window-created', (_event, created) => {
       await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
-      await click('画风与素材制作');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
       await wait(`document.querySelectorAll('.art-style-picker button').length===4`);
       for (const name of ['原作', '8bit', '3D', 'Q版']) {
         await click('素材画风：' + name);
@@ -186,7 +187,8 @@ app.on('browser-window-created', (_event, created) => {
       }
       assert.deepEqual(skin.sprite.clips.wave.frames, [1, 2, 3]);
       assert.deepEqual(skin.sprite.clips.wave.durations, [100, 300, 100]);
-      await click('画风与素材制作');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
       await click('素材画风：原作');
       await click('PNG 动作文件夹');
       await wait(`!!document.querySelector('.art-import-preview canvas[data-frame]')`);

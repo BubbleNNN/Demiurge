@@ -39,7 +39,7 @@ fs.writeFileSync(
   JSON.stringify({
     settings: {
       llmBaseUrl: planner.llmBaseUrl,
-      llmModel: planner.llmModel,
+      llmModel: '',
       chatMode: 'local',
       imageBaseUrl: 'https://base-edit.mori.example/v1',
       searchProvider: 'wiki',
@@ -208,7 +208,7 @@ app.on('browser-window-created', (_event, created) => {
     await click('Demiurge 首页');
     await click('角色工作室');
     await click('外观与动作');
-    await click('自动制作多画风桌宠');
+    await click('打开桌宠工作台');
     // These tests cover the standard flow; sharp quality (the default) has its own test.
     await js(
       `new Promise((done)=>{const start=Date.now();const pick=()=>{const e=document.querySelector('[aria-label="动作清晰度"]');if(!e){if(Date.now()-start<3000)return setTimeout(pick,30);return done(false)}if(e.value!=='standard'){Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'standard');e.dispatchEvent(new Event('change',{bubbles:true}))}done(true)};pick()})`,
@@ -271,13 +271,14 @@ app.on('browser-window-created', (_event, created) => {
       await wait(`!!document.querySelector('[aria-label="角色参考原图放大视图"]')`);
       await click('修正Q版候选 1');
       assert.equal(await js(`document.querySelector('[aria-label="角色候选修正要求"]').maxLength`), 600);
+      assert.equal(await js(`document.querySelector('[aria-label="角色候选修正方式"]').value`), 'direct');
       assert.equal(await js(`document.querySelector('[aria-label="生成角色候选修正版"]').disabled`), true);
       await change('角色候选修正要求', '   ', 'textarea');
       assert.equal(await js(`document.querySelector('[aria-label="生成角色候选修正版"]').disabled`), true);
-      await change('角色候选修正要求', '眼睛更清楚，保留衣服与发饰。', 'textarea');
+      await change('角色候选修正要求', '虹膜改为紫红色（#B85686），中央瞳孔保持深色；画面左侧发饰改成两片叶形，不要花朵。保留衣服。', 'textarea');
       assert.match(
         await js(`document.querySelector('[aria-label="修正角色候选"]').textContent`),
-        /约 2 次对话请求、1 次搜索和 1 次图像编辑请求/,
+        /1 次图像编辑请求，不调用对话或搜索/,
       );
       holdEdit = true;
       await click('生成角色候选修正版');
@@ -301,21 +302,15 @@ app.on('browser-window-created', (_event, created) => {
         original,
       );
       assert.equal(corrected.generation.parentSkinId, original.id);
-      // The image model received the chat model's instruction for this request, not the user's words.
-      assert.ok(calls[1].prompt.includes(planner.plannedPrompt('眼睛更清楚，保留衣服与发饰。')));
-      assert.doesNotMatch(calls[1].prompt, /眼睛更清楚/);
-      assert.deepEqual(
-        planner.calls.slice(-2).map((call) => [call.stage, call.feedback]),
-        [
-          ['search', '眼睛更清楚，保留衣服与发饰。'],
-          ['prompt', '眼睛更清楚，保留衣服与发饰。'],
-        ],
-      );
-      // What the chat model understood is shown with the correction.
+      // Exact user color, side and ornament instructions reach the image model.
+      assert.match(calls[1].prompt, /虹膜改为紫红色（#B85686）/);
+      assert.match(calls[1].prompt, /画面左侧发饰改成两片叶形/);
+      assert.equal(planner.calls.length, 0, 'direct correction works without any chat model');
+      // The exact correction is shown for review.
       await wait(`!!document.querySelector('[aria-label="修正说明的整理结果"]')`);
       assert.match(
         await js(`document.querySelector('[aria-label="修正说明的整理结果"]').textContent`),
-        /对话模型的理解：修正：眼睛更清楚.*搜索「costume detail」，没有找到相关资料/,
+        /直接按你的描述修正.*虹膜改为紫红色/,
       );
       await js(
         `document.querySelector('[aria-label="修正说明的整理结果"]').scrollIntoView({block:'center',behavior:'instant'})`,

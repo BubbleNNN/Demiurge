@@ -380,7 +380,10 @@ test('a motion revision plans once: planning failures stop before the image requ
   services.planRevision = async (input) => {
     plans++;
     if (failPlan) throw new Error('修正资料搜索未完成：fixture');
-    return plan(input);
+    return { ...await plan(input), visualReferences: [{
+      image: original, digest: imageDigest(original), checkedAt: stamp,
+      url: 'https://wiki.example/source', imageUrl: 'https://cdn.example/reference.png', title: '搜索原图',
+    }] };
   };
   services.generatePetSheet = async (input) => {
     if (failSheet) {
@@ -406,10 +409,13 @@ test('a motion revision plans once: planning failures stop before the image requ
   assert.equal(revision.revision.plan.summary, '理解：挥手更轻');
   failSheet = false;
   revision = await p.retry(revision.id, index);
-  revision = await complete(p, revision);
-  assert.equal(plans, 2, 'the saved plan is reused');
+  const restarted = createPetPipeline(context.options);
+  revision = await complete(restarted, revision);
+  assert.equal(plans, 2, 'the saved plan is reused after restart');
   const drawn = context.calls.filter((call) => call.kind === 'sheet').at(-1);
   assert.equal(drawn.input.correction, 'Planned correction for: 挥手更轻');
+  assert.equal(drawn.input.plan.visualReferences[0].image, original);
+  assert.equal(drawn.input.plan.visualReferences[0].digest, imageDigest(original));
 });
 
 test('new motions are added to a finished task: one request per new image, every finished sheet reused, the original kept', async (t) => {

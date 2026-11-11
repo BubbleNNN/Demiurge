@@ -33,6 +33,8 @@ export interface LifeState {
   desktopEvents?: { at: number; text: string }[];
   /** The app the user was working in when she last chose something to do alongside them. */
   contextKey?: string;
+  /** A chosen task survives its short breaks; a segment is not a new random task. */
+  task?: { activity: Activity; remaining: number };
   /** How she feels (mood.ts); restored and checked by the app. */
   mood?: Mood;
 }
@@ -107,6 +109,16 @@ export function restoreLife(value: unknown, now = Date.now()): LifeState {
       ...fresh,
       ...needs,
       activity: saved.activity || 'idle',
+      ...(saved.task &&
+      ['office', 'read', 'gaming', 'snack', 'music', 'diary'].includes(saved.task.activity) &&
+      Number.isFinite(saved.task.remaining)
+        ? {
+            task: {
+              activity: saved.task.activity,
+              remaining: Math.max(0, Math.min(1200000, saved.task.remaining)),
+            },
+          }
+        : {}),
       until: number(saved.until, fresh.until),
       reason: typeof saved.reason === 'string' ? saved.reason : '',
       chapter: number(saved.chapter, 0),
@@ -166,6 +178,11 @@ const REASONS: Record<string, string[]> = {
   sleep: ['夜深了，我先眯一会儿……有事叫我就好。', '有点困了，先休息一下下。'],
   hungry: ['肚子有点饿了，先吃点东西，待会儿接着做。', '嘴有点馋了，吃块点心再继续。'],
   resume: ['休息好了，接着刚才那一段。', '回来啦，继续刚刚没做完的事。'],
+  continue_read: ['接着看这一章，读完再休息。'],
+  continue_diary: ['刚才的事还没记完，再写几行。'],
+  continue_office: ['手头还有一点，做完这一段再休息。'],
+  continue_gaming: ['这一局还没结束，接着玩完。'],
+  continue_music: ['这首还没听完，继续安静听一会儿。'],
   stretch: ['专心太久啦，起来活动一下。', '眼睛有点累了，先放松一会儿。'],
   company: ['你在忙，我就在旁边陪你一起做点事。', '我也找点事情做，陪着你。'],
   alone: ['你不在，我先自己玩一会儿。', '等你回来之前，做点自己喜欢的事。'],
@@ -264,6 +281,8 @@ export function advanceLife(
   // While the user is talking or touching her, the fictional clock pauses; no catch-up bursts.
   if (blocked) return null;
   const minutes = Math.min(60, elapsed / 1000) / 60;
+  if (s.task && s.activity === s.task.activity)
+    s.task.remaining = Math.max(0, s.task.remaining - minutes * 60000);
   s.hunger = clamp(s.hunger + (s.activity === 'snack' ? -25 : 2.2) * minutes);
   s.energy = clamp(
     s.energy + (s.activity === 'sleep' ? 14 : s.activity === 'gaming' ? -1.6 : -0.8) * minutes,
@@ -274,55 +293,70 @@ export function advanceLife(
     s.focus + (['read', 'diary', 'office', 'gaming'].includes(s.activity) ? 12 : -15) * minutes,
   );
 
-  // The user turned to something she can do alongside them (writing, coding, reading…): she
-  // finishes up and joins in, once per change of app rather than every few seconds.
+  // A new foreground app can guide the next task, after the current project or break ends.
   const working = context && (context.mode === 'typing' || context.mode === 'active');
   const away = context?.mode === 'away';
   if (working && context.companion && context.key !== s.contextKey) {
     s.contextKey = context.key;
-    if (s.activity !== context.companion && s.activity !== 'sleep' && s.hunger <= 62)
-      s.until = Math.min(s.until, now);
+    // A changed foreground app is a suggestion for the next task, not an interruption.
+    if (s.activity === 'idle' && !s.resume) s.until = Math.min(s.until, now);
   }
   let changed = false;
   let announce = false;
   if (now >= s.until) {
     const previous = s.activity;
-    const resumable = (a: LifeActivity) => (['read', 'diary', 'office'].includes(a) ? (a as Activity) : null);
+    const resumable = (a: LifeActivity) =>
+      ['read', 'diary', 'office', 'gaming'].includes(a) ? (a as Activity) : null;
     let key: string;
     if (s.energy < 25 && quiet(hour)) {
       s.activity = 'sleep';
       key = 'sleep';
-    } else if (s.hunger > 62) {
+    } else if (s.hunger > 62 && available.includes('snack')) {
       s.resume = resumable(previous) || s.resume;
       s.activity = 'snack';
       key = 'hungry';
-    } else if (s.resume && available.includes(s.resume)) {
+    } else if (s.resume && available.includes(s.resume) && (s.activity !== 'idle' || s.focus < 18)) {
       s.activity = s.resume;
       s.resume = null;
       key = 'resume';
-    } else if (s.focus >= 40) {
-      s.resume = resumable(previous);
+    } else if (s.focus >= 40 || (s.activity === 'idle' && s.resume && s.focus >= 18)) {
+      s.resume = resumable(previous) || s.resume;
       s.activity = 'idle';
       key = 'stretch';
-    } else if (working && context.companion && available.includes(context.companion) && random() < 0.8) {
+    } else if (
+      (!s.task || s.task.remaining <= 0 || !available.includes(s.task.activity)) &&
+      working &&
+      context.companion &&
+      available.includes(context.companion) &&
+      random() < 0.8
+    ) {
       s.activity = context.companion;
       key = 'company';
     } else if (away && context.idleMinutes >= 20 && (s.energy < 70 || quiet(hour))) {
       // A long while alone: she naps until the user comes back.
       s.activity = 'sleep';
       key = 'sleep';
+    } else if (s.task && s.task.remaining > 0 && available.includes(s.task.activity)) {
+      s.activity = s.task.activity;
+      key = previous === s.activity ? `continue_${s.activity}` : 'resume';
     } else {
-      s.activity = chooseActivity(
-        previous,
-        available.length ? available : ['read'],
-        temperament,
-        hour,
-        random,
-        away,
-        hobbies,
-        leanings,
-      );
+      s.activity = available.length
+        ? chooseActivity(previous, available, temperament, hour, random, away, hobbies, leanings)
+        : 'idle';
       key = away && random() < 0.5 ? 'alone' : s.activity;
+    }
+    if (
+      available.includes(s.activity as Activity) &&
+      s.activity !== 'snack' &&
+      (!s.task ||
+        s.task.remaining <= 0 ||
+        !available.includes(s.task.activity) ||
+        (key === 'company' && s.task.activity !== s.activity))
+    ) {
+      s.task = {
+        activity: s.activity as Activity,
+        remaining: (5 + (100 - temperament.energy) / 25 + random() * 3) * 60000,
+      };
     }
     s.reason = reasonFor(key, random);
     s.chapter++;

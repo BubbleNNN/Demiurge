@@ -49,7 +49,7 @@
     "reservedEmotion": "neutral"
   },
   "poke": {
-    "emotion": "surprised",
+    "emotion": "neutral",
     "actions": [
       "shake",
       "nod",

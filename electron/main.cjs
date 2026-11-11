@@ -866,7 +866,7 @@ app.whenReady().then(async () => {
     // continue as it is: the studio folds it away with the ended ones.
     const state = await store.loadState();
     const character = state?.characters.find((c) => c.id === characterId);
-    if (!character) return jobs;
+    if (!character || jobs.length === 0) return jobs;
     const references = require('./references.cjs').referencePack(character).digest;
     const config = require('./pet-pipeline.cjs').configDigest(state.settings);
     return jobs.map((job) =>

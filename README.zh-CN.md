@@ -19,17 +19,36 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-0.1.0-8c72d6" />
+  <img alt="version" src="https://img.shields.io/badge/version-0.1.4-8c72d6" />
   <img alt="platforms" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-5a3f8f" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-c0668d" />
   <img alt="local first" src="https://img.shields.io/badge/local--first-no%20account%20needed-3a2d63" />
 </p>
 
 <p align="center">
-  <img src="docs/media/banner.svg" alt="一个小小的方块精灵坐在代码编辑器窗口上，说陪你一起写代码" width="100%" />
+  <img src="docs/media/cyrene-styles.gif" alt="昔涟的原作、8-bit、低多边形与卡通画风动作展示" width="100%" />
 </p>
 
-**当前代码版本：0.1.0。** Demiurge 原名 Mori，数据目录、已保存的密钥和 macOS 权限都原样沿用。
+**当前代码版本：0.1.4。** Demiurge 原名 Mori，数据目录、已保存的密钥和 macOS 权限都原样沿用。
+
+## 看看昔涟动起来
+
+<table>
+  <tr><th>原作画风</th><th>8-bit</th><th>卡通画风</th></tr>
+  <tr>
+    <td><img src="docs/media/cyrene-original.gif" alt="昔涟招手、眨眼、点头、说话和休息" width="280" /></td>
+    <td><img src="docs/media/cyrene-8bit.gif" alt="8-bit 昔涟逐帧动作" width="280" /></td>
+    <td><img src="docs/media/cyrene-cartoon.gif" alt="卡通昔涟逐帧动作" width="280" /></td>
+  </tr>
+</table>
+
+GIF 直接使用随附昔涟图集中的动作帧，保留招手、眨眼、点头、口型和休息时序。当前触摸会按角色性格选择短暂回应；生活活动会保留当前目标，休息后续做。[本轮交互与生活改进](docs/INTERACTION_AND_LIFE_2026_11_11.md)。
+
+**32 秒介绍视频**：多画风、细小动作、安静陪伴与桌宠制作流程。点击封面查看／下载 MP4。
+
+[![Demiurge 介绍视频封面](docs/media/demiurge-intro-poster.png)](docs/media/demiurge-intro.mp4)
+
+<sub>视频为无声的动作与功能介绍，使用现有图集离屏渲染。昔涟示例为 AI 同人素材，角色权利归原权利方；示例媒体不属于代码的 MIT 授权。[素材与复现说明](docs/media/README.md)。</sub>
 
 ## 为什么是 Demiurge
 
@@ -42,7 +61,7 @@
 | 💗 **心情是真的**           | 陪她玩会开心，冷落她会寂寞，把她吵醒或从窗口上甩下来会生气。她会闹别扭，直到你摸摸她的头；聊天模型也知道她此刻的心情。                                                                  |
 | 🖱️ **有实感**               | 拖动她会晃；拖动她坐着的窗口，她会跑着跟上；猛地拽开窗口，她会掉下去。用指针在她头上来回蹭就是摸头。切换桌面空间或进入全屏应用时，她会从切换的方向跑进来跟着你。                        |
 | 💬 **不用打开主窗口也能聊** | 她脚下有输入框，回复出现在她头顶。可以接你自己的聊天模型，也可以不登录任何账号，只用写好的台词。                                                                                        |
-| 🎨 **自己做桌宠**           | 给几张参考图，Demiurge 会用几种画风起草角色形象，再逐个生成动作（眨眼、说话、挥手、坐、趴、飞、读书、写字、玩游戏……），逐张核对后打包成经过审核的图集。修正时先经过聊天模型和联网检索。 |
+| 🎨 **自己做桌宠**           | 给几张参考图，Demiurge 会用几种画风起草角色形象，再逐个生成动作（眨眼、说话、挥手、坐、趴、飞、读书、写字、玩游戏……），逐张核对后打包成经过审核的图集。可直接按描述修正，也可选择搜索辅助修正。 |
 | 🌐 **分享与下载**           | 社区目录里有大家分享的桌宠和纯数据插件，一键安装，每个文件都按记录的校验值核对。                                                                                                        |
 | 🔒 **隐私优先**             | 她只知道窗口的位置、最前面的应用、以及距离你上次按键过了几秒，不读取窗口标题、内容或按键。密钥存在系统钥匙串里，所有处理都在你的电脑上完成。                                            |
 

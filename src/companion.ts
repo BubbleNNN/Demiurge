@@ -1,3 +1,4 @@
+import { desktopProfile, leadingManner, pickLine, type DesktopProfile } from './characterBehavior';
 import * as rules from '../shared/companion-events.json';
 import type { Character, CompanionEvent, Emotion, PetAction } from './types';
 
@@ -21,8 +22,34 @@ export function interactionPlan(
   actions: PetAction[],
   emotions: Emotion[],
   count = 0,
+  resolvedProfile?: DesktopProfile,
 ) {
   const rule = rules[event];
+  if (event === 'headpat' || event === 'poke') {
+    const profile = resolvedProfile || desktopProfile(character);
+    const manner = leadingManner(profile);
+    const reserved = character.behavior.affection < 35 || manner === 'calm' || manner === 'shy';
+    const candidates: PetAction[] = reserved
+      ? ['idle']
+      : manner === 'playful' && event === 'poke'
+        ? ['wave', 'nod', 'idle']
+        : ['nod', 'idle'];
+    const face: Emotion = reserved ? 'neutral' : 'happy';
+    const authored = character.companion?.replies[event];
+    return {
+      action: candidates.find((action) => actions.includes(action)) || 'idle',
+      emotion: emotions.includes(face) ? face : ('neutral' as Emotion),
+      text: authored?.length
+        ? authored[count % authored.length]
+        : pickLine(
+            profile,
+            event,
+            () =>
+              (count % Math.max(1, profile.lines[event]?.length || 1)) /
+              Math.max(1, profile.lines[event]?.length || 1),
+          ) || rule.lines[count % rule.lines.length],
+    };
+  }
   const energeticTouch =
     event === 'touch' && character.behavior.energy >= 65 && character.behavior.affection >= 50;
   const baseActions = character.behavior.energy < 35 ? rule.quietActions : rule.actions;

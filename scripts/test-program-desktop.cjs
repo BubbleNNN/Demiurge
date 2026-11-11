@@ -116,7 +116,9 @@ app.on('browser-window-created', (_event, created) => {
       await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
-      await click('制作立绘与像素动画');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('绘图实验');
       await click('聊天模型 · 程序像素动画');
       await wait(`document.querySelectorAll('.style-option').length===2`);
       assert.ok(

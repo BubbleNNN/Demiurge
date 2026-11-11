@@ -45,7 +45,13 @@ export function GenerationStudio({
   onClose,
   onBusy,
   onOpenAssets,
+  manageOnly = false,
+  initialSkinId = '',
+  startWithProgram = false,
 }: {
+  manageOnly?: boolean;
+  initialSkinId?: string;
+  startWithProgram?: boolean;
   character: Character;
   skins: Skin[];
   imageReady: boolean;
@@ -58,10 +64,10 @@ export function GenerationStudio({
 }) {
   const references = character.visualReferences || [];
   const candidates = skins.filter((s) => s.generation);
-  const [selectedId, setSelectedId] = useState(candidates.at(-1)?.id || '');
+  const [selectedId, setSelectedId] = useState(candidates.some(s => s.id === initialSkinId) ? initialSkinId : candidates.at(-1)?.id || '');
   const candidate = candidates.find((s) => s.id === selectedId);
-  const [mode, setMode] = useState<'image' | 'program'>('image');
-  const [selectedStyles, setSelectedStyles] = useState<ArtStyle[]>(['chibi-pet']);
+  const [mode, setMode] = useState<'image' | 'program'>(startWithProgram ? 'program' : 'image');
+  const [selectedStyles, setSelectedStyles] = useState<ArtStyle[]>([startWithProgram ? 'pixel' : 'chibi-pet']);
   const availableStyles =
     mode === 'program' ? styles.filter((s) => s.id === 'pixel' || s.id === '8bit') : styles;
   const [sourceId, setSourceId] = useState('');
@@ -74,6 +80,7 @@ export function GenerationStudio({
   const [frameReview, setFrameReview] = useState<FrameReviewInput | null>(null);
   const [refIndex, setRefIndex] = useState(0);
   const comparisonRef = useRef<HTMLDivElement>(null);
+  const expressionsRef = useRef<HTMLElement>(null);
   const [unsaved, setUnsaved] = useState<{ skin: Skin; activate: boolean } | null>(null);
   const [batch, setBatch] = useState<GenerationItem[]>([]);
   const batchRef = useRef<GenerationItem[]>([]);
@@ -89,11 +96,17 @@ export function GenerationStudio({
   const [stopping, setStopping] = useState(false);
   const matching = candidate && currentReferences(candidate, references);
   const approved = matching && candidate?.review?.status === 'approved';
+  const expressionCount = Object.keys(faces).slice(1).filter((key) => candidate?.images[key as keyof typeof faces]).length;
+  const missingExpressions = 5 - expressionCount;
   const sources = candidates.filter(
     (s) => !s.sprite && s.review?.status === 'approved' && currentReferences(s, references),
   );
   const locked = busy || Boolean(unsaved);
   useEffect(() => bridge.onProgress(setProgress), []);
+  useEffect(() => {
+    onBusy(locked);
+    return () => onBusy(false);
+  }, [locked, onBusy]);
   useEffect(() => {
     setChecked([false, false, false]);
     setFrameReview(null);
@@ -101,9 +114,12 @@ export function GenerationStudio({
   }, [selectedId, character.visualReferences]);
   useEffect(() => {
     if (!selectedId || busy) return;
-    const frame = requestAnimationFrame(() => comparisonRef.current?.scrollIntoView({ block: 'center' }));
+    const frame = requestAnimationFrame(() => {
+      const target = approved && !candidate?.sprite ? expressionsRef.current : comparisonRef.current;
+      target?.scrollIntoView({ block: 'start' });
+    });
     return () => cancelAnimationFrame(frame);
-  }, [selectedId, busy]);
+  }, [selectedId, busy, approved, candidate?.sprite]);
   useEffect(() => {
     if (sourceId && !sources.some((s) => s.id === sourceId)) setSourceId('');
   }, [sourceId, sources]);
@@ -111,7 +127,6 @@ export function GenerationStudio({
     if (running.current) return;
     running.current = true;
     setBusy(true);
-    onBusy(true);
     setError('');
     setNotice('');
     setProgress(null);
@@ -122,7 +137,6 @@ export function GenerationStudio({
     } finally {
       running.current = false;
       setBusy(false);
-      onBusy(false);
       setProgress(null);
     }
   }
@@ -203,6 +217,7 @@ export function GenerationStudio({
       }}
     >
       <div className="generation-studio">
+        {!manageOnly && <>
         <div className="generation-asset-entry">
           <div>
             <strong>已有素材，也能直接做桌宠</strong>
@@ -515,11 +530,14 @@ export function GenerationStudio({
             </section>
           )}
         </section>
+        </>}
+        {manageOnly && <div className="notice"><p>在这里核对已保存的形象、补齐表情并使用。新角色图和动作统一在“制作与任务”中完成。</p></div>}
+        {manageOnly && candidates.length === 0 && <p className="notice">还没有生成的形象。请先到“制作与任务”开始制作；已有文件可以在“导入与工具”中添加。</p>}
         {candidates.length > 0 && (
           <section className="generation-step">
             <div className="section-heading">
               <div>
-                <span className="page-kicker">02 · 对照原图</span>
+                <span className="page-kicker">{manageOnly ? '形象核对' : '02 · 对照原图'}</span>
                 <h3>确认她还是她</h3>
               </div>
               <select
@@ -697,10 +715,10 @@ export function GenerationStudio({
           </section>
         )}
         {approved && candidate && !candidate.sprite && (
-          <section className="generation-step">
+          <section ref={expressionsRef} className="generation-step" aria-label="表情预览与使用">
             <div className="section-heading">
               <div>
-                <span className="page-kicker">03 · 表情扩展</span>
+                <span className="page-kicker">{manageOnly ? '表情与使用' : '03 · 表情扩展'}</span>
                 <h3>让同一个她，有更多表情</h3>
               </div>
             </div>
@@ -716,12 +734,10 @@ export function GenerationStudio({
                 </figure>
               ))}
             </div>
-            <button
+            {missingExpressions > 0 && <button
               type="button"
               className="button primary full"
-              disabled={
-                locked || Object.keys(faces).every((key) => candidate.images[key as keyof typeof faces])
-              }
+              disabled={locked || !imageReady}
               onClick={() =>
                 void run(async () => {
                   const result = await bridge.generateExpressions({
@@ -730,16 +746,41 @@ export function GenerationStudio({
                   });
                   await persist(result.skin);
                   if (result.warning) setError(result.warning);
-                  else setNotice('表情已保存，请检查每张图是否保持角色一致。');
+                  else setNotice('表情已保存。核对上方预览后，点击“使用这套表情并来到桌面”即可完成。');
                 })
               }
             >
               <ImagePlus size={16} />
-              生成缺失表情（最多 5 次请求）
-            </button>
-            <p className="fine-print">
-              每次同时传入已确认的基准图与全部原图。中断后保留已完成图片，继续时只补缺失项。
-            </p>
+              生成缺失表情（{missingExpressions} 张）
+            </button>}
+            {missingExpressions > 0 && <p className="fine-print">
+              预计 {missingExpressions} 次图像请求。已有表情会保留，只补缺失项；也可以先使用已有形象，之后回来补齐。
+              {!imageReady && ' 请先在设置中配置图像服务，才能继续生成。'}
+            </p>}
+            <div className="expression-completion" aria-label="完成表情制作">
+              <div>
+                <span className="page-kicker">下一步 · 使用桌宠</span>
+                <h4>{missingExpressions === 0 ? '5 张表情已齐，可以使用了' : `已保存 ${expressionCount} / 5 张表情`}</h4>
+                <p>核对上方的瞳色、发饰和服装是否一致。满意后选择下方按钮；使用和打开桌宠不会再次生成图片。</p>
+              </div>
+              <div className="toolbar">
+                <button type="button" className="button primary" disabled={locked}
+                  onClick={() => void run(async () => {
+                    await persist(candidate, true);
+                    await bridge.openPet();
+                    onClose();
+                  })}>
+                  使用这套表情并来到桌面
+                </button>
+                <button type="button" className="button secondary" disabled={locked}
+                  onClick={() => void run(async () => {
+                    await persist(candidate, true);
+                    onClose();
+                  })}>
+                  使用这套表情并返回
+                </button>
+              </div>
+            </div>
           </section>
         )}
         {busy && (

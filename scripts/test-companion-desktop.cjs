@@ -103,7 +103,9 @@ app.on('browser-window-created', (_event, created) => {
       await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
-      await click('使用预制角色包');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('角色包与互动');
       await click('精选角色包');
       await wait(`document.querySelectorAll('.pack-outfits button').length===7`);
       assert.equal((await state()).activeCharacterId, previous.id);
@@ -165,7 +167,9 @@ app.on('browser-window-created', (_event, created) => {
       await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
-      await click('使用预制角色包');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('角色包与互动');
       await click('昔涟的互动台词');
       await setText('互动台词：轻轻点一下', '我们先慢慢做眼前的小事。');
       await click('保存互动台词');

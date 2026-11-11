@@ -1,6 +1,7 @@
 'use strict';
 const { randomUUID } = require('node:crypto');
 const { sourceUrl, normalizeSources } = require('./sources.cjs');
+const { searchImages, searchPages } = require('./web-image-references.cjs');
 const text = (value, max = 2000) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 const list = (value, max = 16) =>
   Array.isArray(value)
@@ -99,12 +100,14 @@ function createResearch({
             search_depth: 'advanced',
             include_answer: false,
             include_raw_content: false,
+            ...(chibi || revision ? { include_images: true, include_image_descriptions: true } : {}),
           }),
         },
         credentials,
         'Tavily 搜索',
       );
-      return { sources: normalizeSources(data?.results), warnings: [], provider };
+      return { sources: normalizeSources(data?.results), warnings: [], provider,
+        ...(chibi || revision ? { images: searchImages(data), visualSources: searchPages(data?.results) } : {}) };
     }
     if (provider === 'searxng') {
       const url = new URL(endpoint(settings.searxngBaseUrl, 'search'));
@@ -116,7 +119,8 @@ function createResearch({
         {},
         'SearXNG 搜索（需启用 JSON 格式）',
       );
-      return { sources: normalizeSources(data?.results), warnings: [], provider };
+      return { sources: normalizeSources(data?.results), warnings: [], provider,
+        ...(chibi || revision ? { images: searchImages(data), visualSources: searchPages(data?.results) } : {}) };
     }
     if (provider === 'wiki') {
       const url = new URL(endpoint(settings.wikiApiUrl || 'https://zh.wikipedia.org/w/api.php', '', true));
@@ -148,7 +152,8 @@ function createResearch({
           }
         }
       }
-      return { sources: normalizeSources(items), warnings: [], provider };
+      return { sources: normalizeSources(items), warnings: [], provider,
+        ...(chibi || revision ? { visualSources: searchPages(Object.values(data.query?.pages || {}).map((page) => ({ url: page.fullurl, title: page.title, snippet: page.extract }))) } : {}) };
     }
     if (provider === 'codex') {
       if (!codexSearch) throw new Error('当前环境不支持本机 Codex 搜索。');
@@ -161,6 +166,7 @@ function createResearch({
       );
       // Only URLs returned by the search tool itself are evidence; model-written links are ignored.
       const found = new Map();
+      const foundImages = searchImages({ results: result.results || [] });
       for (const hit of result.results || []) {
         try {
           const url = sourceUrl(hit.url);
@@ -225,7 +231,7 @@ function createResearch({
         .map((url) => found.get(url))
         .sort((a, b) => Number(mentionsCharacter(b, input)) - Number(mentionsCharacter(a, input)))
         .sort((a, b) => (chibi ? Number(isWikiPage(b.url)) - Number(isWikiPage(a.url)) : 0));
-      if (chibi) return {sources:ranked.slice(0,6),warnings:[],provider,aliases};
+      if (chibi) return {sources:ranked.slice(0,6),warnings:[],provider,aliases,images:foundImages};
       // Many character pages are script-rendered or block non-browser readers. Read more candidates
       // in parallel, keep the first six readable pages in rank order, and only then fall back to the
       // search tool's own snippets.
@@ -239,7 +245,8 @@ function createResearch({
         unread.length && items.length < 6
           ? ['部分搜索结果无法读取正文（动态页面或访问限制），已用搜索摘要补充，请核对。']
           : [];
-      return { sources: normalizeSources(items), warnings, provider };
+      return { sources: normalizeSources(items), warnings, provider,
+        ...(revision ? { visualSources: ranked.slice(0, 6), images: foundImages } : {}) };
     }
     if (settings.llmProtocol !== 'anthropic')
       throw new Error('Claude 原生搜索需要先选择 Claude / Anthropic 接口协议。');
@@ -304,7 +311,8 @@ function createResearch({
       response.stop_reason === 'pause_turn' || response.stop_reason === 'max_tokens'
         ? ['搜索只取得部分结果，本次仅使用已读取的证据。']
         : [];
-    return { sources: normalizeSources(items), warnings, provider };
+    return { sources: normalizeSources(items), warnings, provider,
+      ...(revision || chibi ? { visualSources: ranked.slice(0, 6) } : {}) };
   }
 
   async function search(input, settings, credentials) {
@@ -483,8 +491,12 @@ function createResearch({
     const sources = result.sources.filter((source) => mentionsCharacter(source, input)).slice(0, 6);
     const warnings = [...result.warnings];
     if (sources.length < result.sources.length) warnings.push('已剔除未提到这个角色的搜索结果。');
-    return { sources, warnings, provider: result.provider };
+    return { sources, warnings, provider: result.provider,
+      visualSources: result.visualSources || result.sources, images: result.images || [] };
   }
-  return { researchCharacter, testSearchConnection, searchRevisionSources, searchChibiSources: (input, settings, credentials) => retrieve({name:input.name,work:input.work,purpose:'chibi'},settings,credentials) };
+  return { researchCharacter, testSearchConnection, searchRevisionSources, searchChibiSources: async (input, settings, credentials) => {
+    const result=await retrieve({name:input.name,work:input.work,purpose:'chibi'},settings,credentials);
+    return {...result,sources:result.visualSources||result.sources};
+  } };
 }
 module.exports = { createResearch, searchProvider, characterAliases, matchText };

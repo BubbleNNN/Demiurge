@@ -167,8 +167,8 @@ test('headpat and poke have separate authored lines and fall back to actual asse
   assert.equal(pat.action, 'idle');
   assert.equal(pat.emotion, 'happy');
   assert.equal(pat.text, cyrene.companion.replies.headpat[0]);
-  assert.equal(poke.action, 'shake');
-  assert.equal(poke.emotion, 'surprised');
+  assert.equal(poke.action, 'idle');
+  assert.equal(poke.emotion, 'neutral');
   assert.notEqual(pat.text, poke.text);
   const blank = { ...cyrene, companion: { version: 1, replies: { headpat: [] } } };
   assert.ok(interactionPlan('headpat', blank, ['idle'], ['neutral']).text);

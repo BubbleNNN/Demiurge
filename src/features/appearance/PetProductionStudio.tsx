@@ -39,6 +39,7 @@ import type {
   VisualReference,
   FrameReviewInput,
   RevisionPlanSummary,
+  RevisionMode,
 } from '../../types';
 
 const checks = [
@@ -85,17 +86,52 @@ const revisionName = (job: PetJob) =>
       ? '修正形象'
       : `修正${motionName(job.revision?.motion || '动作')}`;
 
+function CorrectionOptions({ label, mode, onMode, value, onChange, disabled }: {
+  label: string; mode: RevisionMode; onMode: (mode: RevisionMode) => void;
+  value: string; onChange: (text: string) => void; disabled: boolean;
+}) {
+  const suggestions = [
+    ['发饰', '发饰画错了：请按角色原图修正发饰的数量、形状、颜色和佩戴位置，不要把它替换成通用花朵；其余部分保持不变。'],
+    ['瞳色', '眼睛颜色画错了：请恢复角色原图中的虹膜颜色，区分虹膜、中央瞳孔和高光；左右眼分别核对，不要根据头发或背景颜色猜测；其余部分保持不变。'],
+  ];
+  return <>
+    <label className="production-master-select">修正方式
+      <select aria-label={label} value={mode} disabled={disabled} onChange={(e) => onMode(e.target.value as RevisionMode)}>
+        <option value="direct">直接按我的描述修正</option>
+        <option value="researched">先搜索参考再修正</option>
+      </select>
+    </label>
+    <p>写清“哪里错了 → 应该是什么 → 哪些不变”。眼睛颜色可写虹膜的具体颜色；位置请注明“画面左侧”或“角色自身左侧”。你的描述会原文传给图像模型。</p>
+    <div className="toolbar" aria-label={`${label}提示示例`}>
+      {suggestions.map(([name, suggestion]) => <button type="button" className="text-button" key={name}
+        disabled={disabled || value.length + suggestion.length + 1 > 600}
+        onClick={() => onChange(value.trim() ? `${value}\n${suggestion}` : suggestion)}>补充{name}修正描述</button>)}
+    </div>
+  </>;
+}
+
 // What the chat model made of a correction before the image model saw it.
 function RevisionPlanNote({ plan }: { plan: RevisionPlanSummary }) {
   return (
     <div className="revision-plan" aria-label="修正说明的整理结果">
-      <span>对话模型的理解：{plan.summary || '（未给出摘要）'}</span>
+      <span>{plan.mode === 'direct' ? '直接按你的描述修正' : `对话模型的理解：${plan.summary || '（未给出摘要）'}`}</span>
+      {plan.userRequest && <p style={{ whiteSpace: 'pre-wrap' }}>传给图像模型的原文：{plan.userRequest}</p>}
       {plan.conflicts && <small>与原图不一致：{plan.conflicts}</small>}
-      <small>
+      {plan.mode !== 'direct' && <small>
         搜索「{plan.query}」
-        {plan.searched ? `，找到 ${plan.searched} 条相关资料` : '，没有找到相关资料，只依据原图'}
+        {plan.searched ? `，找到 ${plan.searched} 条相关资料` : '，没有找到相关文字资料'}
         {plan.sources.length ? '，引用：' : '。'}
-      </small>
+      </small>}
+      {plan.mode !== 'direct' && plan.visualReferences && (
+        <small>本次修图参考：{plan.visualReferences.length} 张已下载并核对的搜索图片；生成与重试使用同一份图片。</small>
+      )}
+      {plan.visualReferences?.map((source) => (
+        <button type="button" className="text-button" key={source.digest}
+          onClick={() => void bridge.openExternal(source.url)}>
+          图片来源：{source.title}
+        </button>
+      ))}
+      {plan.warnings?.map((warning, index) => <small key={index}>{warning}</small>)}
       {plan.sources.map((source) => (
         <button
           type="button"
@@ -186,6 +222,7 @@ export function PetProductionStudio({
   const [inspectedMasterId, setInspectedMasterId] = useState('');
   const [baseEditSkinId, setBaseEditSkinId] = useState('');
   const [baseEditFeedback, setBaseEditFeedback] = useState('');
+  const [baseEditMode, setBaseEditMode] = useState<RevisionMode>('direct');
   const [originalOutputs, setOriginalOutputs] = useState<Skin[]>([]);
   const [comparisonError, setComparisonError] = useState('');
   const [sourceId, setSourceId] = useState('');
@@ -199,6 +236,7 @@ export function PetProductionStudio({
   const [selectedSkinId, setSelectedSkinId] = useState('');
   const [revisionTarget, setRevisionTarget] = useState<PetMotion | 'base'>('base');
   const [revisionFeedback, setRevisionFeedback] = useState('');
+  const [revisionMode, setRevisionMode] = useState<RevisionMode>('direct');
   // Motions chosen to add to a finished task; until changed, the ones she lacks that suit her.
   const [addChoice, setAddChoice] = useState<string[] | null>(null);
   const [checked, setChecked] = useState<boolean[]>(checks.map(() => false));
@@ -240,7 +278,9 @@ export function PetProductionStudio({
   const requests =
     selectedStyles.length *
     (selectedMotions.reduce((n, id) => n + motionImages(id, quality), 0) + (sourceId ? 0 : candidateCount));
-  const revisionRequests = revisionTarget === 'base' ? 1 + (job?.motions.length || 0) : 1;
+  const revisionRequests = revisionTarget === 'base'
+    ? 1 + (job?.steps.filter((step) => step.kind === 'sheet').length || 0)
+    : job?.steps.filter((step) => step.kind === 'sheet' && step.motion === revisionTarget).length || 1;
   // Motions this finished task does not have yet, and how many images adding them takes.
   const missingMotions = job ? motions.filter((m) => !job.motions.includes(m.id as PetMotion)) : [];
   const addedMotions = missingMotions
@@ -550,6 +590,7 @@ export function PetProductionStudio({
       style: candidate.style,
       ...(revisionTarget !== 'base' ? { motion: revisionTarget } : {}),
       feedback: revisionFeedback.trim(),
+      mode: revisionMode,
     });
     setErrorAt('top');
     updateJob(created);
@@ -639,6 +680,7 @@ export function PetProductionStudio({
       style: editSource.style,
       skinId: sourceSkinId,
       feedback: baseEditFeedback.trim(),
+      mode: baseEditMode,
     });
     await finishBaseEdit(updated, sourceSkinId);
   }
@@ -1292,8 +1334,10 @@ export function PetProductionStudio({
                               。 新图与原候选都会保留，完成后先比较，再决定用哪张做动作。
                             </p>
                           </div>
+                          <CorrectionOptions label="角色候选修正方式" mode={baseEditMode} onMode={setBaseEditMode}
+                            value={baseEditFeedback} onChange={setBaseEditFeedback} disabled={busy} />
                           <label className="production-master-select">
-                            希望怎样改进（必填）
+                            具体修正要求（必填）
                             <textarea
                               aria-label="角色候选修正要求"
                               rows={3}
@@ -1301,15 +1345,17 @@ export function PetProductionStudio({
                               value={baseEditFeedback}
                               disabled={busy}
                               onChange={(event) => setBaseEditFeedback(event.target.value)}
-                              placeholder="例如：保留发型、衣服和发饰，让眼睛更清晰，手指完整，裙摆边缘干净。"
+                              placeholder="例如：虹膜现在偏蓝，应改为紫红色，中央瞳孔仍为深色。画面左侧发饰应是两片叶形，不是花朵。其他部分不变。"
                             />
                           </label>
                           <div className="production-revision-actions">
                             <p>
-                              你的要求先交给对话模型对照图片理解，并搜索相关资料，再由它为图像模型写修正说明：约
-                              2 次对话请求、1 次搜索和 1 次图像编辑请求。完成后暂停等待选择，不自动生成动作。
+                              {baseEditMode === 'direct'
+                                ? '直接使用你的原文修图：1 次图像编辑请求，不调用对话或搜索。'
+                                : '先搜索并核对参考图片，再结合你的原文修图：1 次图像编辑，另有搜索与对话核对用量。'}
+                              完成后暂停等待选择，不自动生成动作。
                             </p>
-                            {!revisionReady && <RevisionSetupNote />}
+                            {baseEditMode === 'researched' && !revisionReady && <RevisionSetupNote />}
                             <div className="toolbar">
                               <button
                                 type="button"
@@ -1330,7 +1376,7 @@ export function PetProductionStudio({
                                 disabled={
                                   busy ||
                                   !imageReady ||
-                                  !revisionReady ||
+                                  (baseEditMode === 'researched' && !revisionReady) ||
                                   !baseEditFeedback.trim() ||
                                   !!baseEditLimit(editSource.style)
                                 }
@@ -1386,7 +1432,7 @@ export function PetProductionStudio({
                                 disabled={
                                   busy ||
                                   (edit.status !== 'unsaved' &&
-                                    (!imageReady || (!edit.plan && !revisionReady)))
+                                    (!imageReady || (!edit.plan && edit.mode !== 'direct' && !revisionReady)))
                                 }
                                 onClick={() =>
                                   void run(async () => {
@@ -1614,8 +1660,11 @@ export function PetProductionStudio({
                               ))}
                             </select>
                           </label>
+                          <p>如果整套外观的发饰或瞳色都不对，请选“修正角色形象并重做动作”，让后续动作一起沿用修正后的细节。</p>
+                          <CorrectionOptions label="桌宠成品修正方式" mode={revisionMode} onMode={setRevisionMode}
+                            value={revisionFeedback} onChange={setRevisionFeedback} disabled={busy} />
                           <label className="production-master-select">
-                            希望怎样改进（必填）
+                            具体修正要求（必填）
                             <textarea
                               aria-label="桌宠修正要求"
                               rows={3}
@@ -1625,24 +1674,24 @@ export function PetProductionStudio({
                               onChange={(e) => setRevisionFeedback(e.target.value)}
                               placeholder={
                                 revisionTarget === 'base'
-                                  ? '例如：保留发型和服装，让脸部更圆润、眼睛更清晰，缩小后仍能看清发饰。'
+                                  ? '例如：虹膜由蓝色改为紫红色；画面左侧的花朵改为原图中的叶形发饰；保留发型和服装。'
                                   : '例如：手掌保持五指，手臂动作更轻柔；各帧脸部和服装保持一致。'
                               }
                             />
                           </label>
                           <div className="production-revision-actions">
                             <p>
-                              预计 {revisionRequests} 次图像请求，另有约 2 次对话请求和 1
-                              次搜索：你的要求先由对话模型理解并搜索资料，再由它为图像模型写修正说明。
+                              预计 {revisionRequests} 次图像请求。
+                              {revisionMode === 'direct' ? '你的描述原文直接交给图像模型，不调用对话或搜索。' : '另有搜索与对话核对用量；你的原文和已核对图片会一起传入。'}
                               {revisionTarget === 'base'
                                 ? '先修正角色图，再重做这套画风的全部动作。'
                                 : '沿用角色图和其他动作，只重新生成所选动作并整理动画。'}
                             </p>
-                            {!revisionReady && <RevisionSetupNote />}
+                            {revisionMode === 'researched' && !revisionReady && <RevisionSetupNote />}
                             <button
                               className="button secondary"
                               aria-label="创建桌宠修正版"
-                              disabled={busy || !imageReady || !revisionReady || !revisionFeedback.trim()}
+                              disabled={busy || !imageReady || (revisionMode === 'researched' && !revisionReady) || !revisionFeedback.trim()}
                               onClick={() => void run(revise, 'revise')}
                             >
                               <WandSparkles size={15} />

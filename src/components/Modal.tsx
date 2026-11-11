@@ -1,5 +1,8 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+// A workbench owns the dialog and focus trap. Its immediate tool renders inline;
+// dialogs opened from that tool (for example image inspection) remain real dialogs.
+export const InlineModalContext = createContext(false);
 export function Modal({
   title,
   subtitle,
@@ -13,10 +16,12 @@ export function Modal({
   onClose: () => void;
   wide?: boolean;
 }) {
+  const inline = useContext(InlineModalContext);
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
   useEffect(() => {
+    if (inline) return;
     const previous = document.activeElement as HTMLElement | null;
     ref.current?.focus();
     const key = (e: KeyboardEvent) => {
@@ -43,7 +48,8 @@ export function Modal({
       document.removeEventListener('keydown', key);
       previous?.focus();
     };
-  }, []);
+  }, [inline]);
+  if (inline) return <InlineModalContext.Provider value={false}>{children}</InlineModalContext.Provider>;
   return (
     <div
       className="modal-backdrop"

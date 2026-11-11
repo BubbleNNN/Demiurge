@@ -6,7 +6,7 @@ const { referencePack, imageDigest, styleReferencePack } = require('./references
 const { validateSkin, validateStyleReference } = require('./store.cjs');
 const { inspectMaster, inspectSheet, packFrames } = require('./pet-frames.cjs');
 const { productionOptions, motionParts } = require('./pet-recipes.cjs');
-const { validatePlan, compactPlan, validateCompactPlan } = require('./revision-plan.cjs');
+const { validatePlan, compactPlan, validateCompactPlan, revisionMode } = require('./revision-plan.cjs');
 const motionNames = Object.fromEntries(require('../shared/pet-motions.json').map((m) => [m.id, m.name]));
 const styles = Object.keys(require('../shared/art-styles.json'));
 // New tasks offer four looks only; earlier looks keep resuming and revising from their saved files.
@@ -189,6 +189,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
           typeof edit.feedback !== 'string' ||
           !edit.feedback.trim() ||
           edit.feedback.length > 600 ||
+          (edit.mode !== undefined && !['direct', 'researched'].includes(edit.mode)) ||
           typeof edit.createdAt !== 'string' ||
           edit.createdAt.length > 40 ||
           !Number.isFinite(Date.parse(edit.createdAt)) ||
@@ -208,6 +209,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         typeof job.revision.feedback !== 'string' ||
         !job.revision.feedback.trim() ||
         job.revision.feedback.length > 600 ||
+        (job.revision.mode !== undefined && !['direct', 'researched'].includes(job.revision.mode)) ||
         (job.revision.plan !== undefined && !validateCompactPlan(job.revision.plan)) ||
         (job.revision.kind === 'motion' && !job.motions.includes(job.revision.motion)))
     )
@@ -438,9 +440,10 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
   // instruction the chat model wrote. A plan is made once and saved, so an image retry reuses it.
   async function savedPlan(file) {
     try {
-      return validatePlan((await readJson(file, 256 * 1024)).plan);
-    } catch {
-      return null;
+      return validatePlan((await readJson(file, 24 * 1024 * 1024)).plan);
+    } catch (error) {
+      if (error.code === 'ENOENT') return null;
+      throw new Error(`已保存的修正说明或参考图片无法读取：${error.message}。请保留原任务并新建修正版。`);
     }
   }
   async function editPlan(job, edit, source, character, settings, credentials, progress) {
@@ -449,7 +452,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
     if (!plan) {
       plan = validatePlan(
         await services.planRevision(
-          { character, style: edit.style, feedback: edit.feedback, images: [source.images.neutral] },
+          { character, style: edit.style, feedback: edit.feedback, mode: edit.mode, images: [source.images.neutral] },
           settings,
           credentials,
           progress,
@@ -497,6 +500,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
             character,
             style,
             feedback: revision.feedback,
+            mode: revision.mode,
             images,
             ...(revision.kind === 'motion'
               ? {
@@ -633,6 +637,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
       style: input.style,
       sourceSkinId: source.id,
       feedback,
+      mode: revisionMode(input.mode),
       createdAt: stamp(),
       status: 'working',
     };
@@ -707,6 +712,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
         kind: input.motion ? 'motion' : 'base',
         ...(input.motion ? { motion: input.motion } : {}),
         feedback,
+        mode: revisionMode(input.mode),
       },
       steps: [
         { kind: 'base', style: input.style, status: input.motion ? 'done' : 'queued' },
@@ -981,7 +987,7 @@ function createPetPipeline({ root, services, codec, installSkin, io = fs }) {
                 continuityReferences,
                 referenceDigest: job.referenceDigest,
                 ...productionOptions(job),
-                ...(plan ? { correction: plan.prompt } : {}),
+                ...(plan ? { correction: plan.prompt, plan } : {}),
                 ...(step.hint ? { feedback: step.hint } : {}),
               },
               settings,

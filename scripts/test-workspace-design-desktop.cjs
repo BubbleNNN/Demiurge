@@ -64,22 +64,19 @@ app.on('browser-window-created', (_, w) => {
         if (view === 'chat') assert.ok(await js(`!!document.querySelector('.history-drawer')`));
 
         if (view === 'wardrobe') {
-          assert.equal(await js(`document.querySelector('.creation-tools').open`), false);
+          assert.equal(await js(`document.querySelectorAll('.creation-tools').length`), 0);
+          assert.equal(await js(`document.querySelectorAll('.production-entry').length`), 1);
           assert.equal(await js(`document.querySelector('.motion-workbench').open`), false);
-          await js(`document.querySelector('.creation-tools summary').click()`);
-          assert.ok(
-            await js(
-              `document.querySelector('[aria-label="使用预制角色包"]').getBoundingClientRect().height > 0`,
-            ),
-          );
-          await js(`document.querySelector('[aria-label="使用预制角色包"]').click()`);
-          await delay(200);
-          assert.ok(await js(`!!document.querySelector('[role="dialog"][aria-label="角色包与本地互动"]')`));
-          await js(`document.querySelector('[aria-label="关闭弹窗"]').click()`);
-          await js(`document.querySelector('.creation-tools summary').click()`);
           await js(`document.querySelector('.production-entry').click()`);
           await delay(300);
-          assert.ok(await js(`!!document.querySelector('[role="dialog"][aria-label="自动制作桌宠"]')`));
+          assert.equal(await js(`document.querySelectorAll('[role="dialog"]').length`), 1);
+          assert.ok(await js(`!!document.querySelector('[aria-label="桌宠工作台导航"]')`));
+          await js(`[...document.querySelectorAll('.creation-navigation button')].find(b=>b.textContent==='导入与工具').click()`);
+          await delay(200);
+          await js(`[...document.querySelectorAll('.creation-tool-navigation button')].find(b=>b.textContent==='角色包与互动').click()`);
+          await delay(200);
+          assert.equal(await js(`document.querySelectorAll('[role="dialog"]').length`), 1);
+          assert.ok(await js(`!!document.querySelector('.pack-tabs')`));
           await js(`document.querySelector('[aria-label="关闭弹窗"]').click()`);
           await js(`document.querySelectorAll('.wardrobe-card')[2].click()`);
           for (let i = 0; i < 80; i++) {

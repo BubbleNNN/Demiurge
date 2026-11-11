@@ -118,6 +118,7 @@ export interface ImageProvenance {
   model: string;
   prompt: string;
   parentSkinId?: string;
+  correctionRequest?: string;
   styleReference?: StyleReferenceInfo;
   candidateDirection?: 'balanced' | 'bold' | 'soft';
 }
@@ -339,12 +340,17 @@ export interface AppState {
 }
 // What the character is doing right now, from the local daily-life routine (never canon).
 /** What the chat model understood from a correction and which sources it used for the image prompt. */
+export type RevisionMode = 'direct' | 'researched';
 export interface RevisionPlanSummary {
+  mode?: RevisionMode;
+  userRequest?: string;
   summary: string;
   conflicts: string;
   query: string;
   sources: { title: string; url: string }[];
   searched: number;
+  visualReferences?: { title: string; url: string; imageUrl: string; digest: string; checkedAt: string }[];
+  warnings?: string[];
 }
 export interface LifeSituation {
   timeOfDay: string;
@@ -455,6 +461,7 @@ export interface PetJob extends PetProductionOptions {
     style: ArtStyle;
     sourceSkinId: string;
     feedback: string;
+    mode?: RevisionMode;
     createdAt: string;
     status: 'working' | 'done' | 'failed' | 'unsaved' | 'uncertain';
     error?: string;
@@ -467,6 +474,7 @@ export interface PetJob extends PetProductionOptions {
     kind: 'base' | 'motion';
     motion?: PetMotion;
     feedback: string;
+    mode?: RevisionMode;
     plan?: RevisionPlanSummary;
   };
   createdAt: string;
@@ -580,13 +588,14 @@ export interface MoriBridge {
   petJobMasters(jobId: string): Promise<Skin[]>;
   petJobStyleReference(jobId: string): Promise<VisualReference | null>;
   selectPetBase(input: { jobId: string; style: ArtStyle; skinId: string }): Promise<PetJob>;
-  refinePetBase(input: { jobId: string; style: ArtStyle; skinId: string; feedback: string }): Promise<PetJob>;
+  refinePetBase(input: { jobId: string; style: ArtStyle; skinId: string; feedback: string; mode?: RevisionMode }): Promise<PetJob>;
   retryPetBaseEdit(input: { jobId: string; editId: string }): Promise<PetJob>;
   revisePetJob(input: {
     jobId: string;
     style: ArtStyle;
     motion?: PetMotion;
     feedback: string;
+    mode?: RevisionMode;
   }): Promise<PetJob>;
   /** Adds motions a finished task does not have, reusing everything it already drew. */
   extendPetJob(

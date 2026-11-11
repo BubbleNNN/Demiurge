@@ -14,21 +14,27 @@ function validateChibiResearch(value) {
   if(!value || !['found','fallback'].includes(value.status) || typeof value.checkedAt!=='string' || !Number.isFinite(Date.parse(value.checkedAt)) || typeof value.reason!=='string' || value.reason.length>600 || !Array.isArray(value.sources) || value.sources.length>6 || !Array.isArray(value.warnings) || value.warnings.length>8)throw Error('Q版参考记录无效。');
   return {status:value.status,checkedAt:value.checkedAt,reason:value.reason,sources:value.sources.map(s=>({title:String(s.title||'图片来源').slice(0,200),url:sourceUrl(s.url),...(s.imageUrl?{imageUrl:sourceUrl(s.imageUrl)}:{})})),warnings:value.warnings.map(w=>String(w).slice(0,300))};
 }
-function pageChibiImages(bytes,url,source={}) {
+function pageChibiImages(bytes,url,source={},chibiOnly=true) {
   const {document}=parseHTML(bytes.toString('utf8'));
   const title=document.querySelector('title')?.textContent || source.title || '';
   const pageIsChibi=CHIBI.test(title+' '+source.title+' '+source.snippet);
   const candidates=[];
   for(const img of [...document.querySelectorAll('img')].slice(0,150)) {
     const name=img.getAttribute('alt')||img.getAttribute('title')||'';
-    const raw=img.getAttribute('data-src')||img.getAttribute('data-original')||img.getAttribute('src');
-    if(!raw || (!pageIsChibi&&!CHIBI.test(name+' '+raw)))continue;
+    const srcset=img.getAttribute('data-srcset')||img.getAttribute('srcset');
+    const largest=srcset?.split(',').map(s=>s.trim().split(/\s+/)).sort((a,b)=>parseFloat(b[1]||'1')-parseFloat(a[1]||'1'))[0]?.[0];
+    const raw=largest||img.getAttribute('data-src')||img.getAttribute('data-original')||img.getAttribute('src');
+    if(!raw || (chibiOnly&&!pageIsChibi&&!CHIBI.test(name+' '+raw)))continue;
     if(NOISE.test(name+' '+raw))continue;
     try {
       const imageUrl=sourceUrl(new URL(raw,url).href);
       if(!imageUrl.startsWith('https:')||NOISE.test(imageUrl))continue;
       candidates.push({imageUrl,url,title:title.slice(0,200),name:name.slice(0,150)});
     }catch{}
+  }
+  if(!chibiOnly||pageIsChibi) {
+    const raw=document.querySelector('meta[property="og:image"], meta[name="twitter:image"]')?.getAttribute('content');
+    try { if(raw) candidates.push({imageUrl:sourceUrl(new URL(raw,url).href),url,title:title.slice(0,200),name:''}); } catch {}
   }
   return [...new Map(candidates.map(c=>[c.imageUrl,c])).values()].slice(0,12);
 }
@@ -112,6 +118,7 @@ function rank(candidate,aliases) {
   else if(aliases.some(alias=>page.includes(alias)))score+=2;
   if(CHIBI.test(candidate.name+' '+decoded))score+=4;
   else if(CHIBI.test(candidate.title+' '+(candidate.snippet||'')))score+=1;
+  else if(candidate.searchImage)score+=1;
   else return -1;
   return score;
 }
@@ -168,6 +175,27 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
     if(post)return postCandidates(await readJson(post.api,'社区帖子接口',post.referer),source.url);
     return null;
   }
+  // Shared by chibi discovery and revision planning. Keep actual search image hits and
+  // read gallery APIs, HTML images or a direct image response without turning them into text.
+  async function collect(sources,aliases,warnings,{images=[],chibiOnly=true}={}) {
+    let readPages=0;
+    const candidates=[...images];
+    for(const source of sources.slice(0,6)) {
+      try {
+        const items=await structured(source,aliases,warnings);
+        if(items) { readPages++; candidates.push(...items); continue; }
+        const response=await publicResource(source.url,{label:'参考图片来源页',limit:8*1024*1024,timeout:20000,accept:'text/html,image/png,image/jpeg,image/webp',httpsOnly:true});
+        if(IMAGE_TYPES.has((response.contentType||'').split(';')[0].trim())) {
+          readPages++;
+          candidates.push({imageUrl:response.url,url:source.url,title:source.title||'',name:source.title||'',searchImage:true,bytes:response.bytes});
+        } else if(/html/i.test(response.contentType||'')) {
+          readPages++;
+          candidates.push(...pageChibiImages(response.bytes,response.url,source,chibiOnly));
+        }
+      } catch(e){warnings.push(`来源页未读取：${String(e.message).slice(0,150)}`);}
+    }
+    return {candidates:[...new Map(candidates.map(c=>[c.imageUrl,c])).values()],readPages};
+  }
   async function discover(character,settings,credentials,onProgress=()=>{}) {
     const pack=referencePack(character);
     onProgress({stage:'Q版参考检索',detail:`先搜索 ${character.name} 在 ${character.work} 中已有的 Q 版／表情包形象…`});
@@ -178,19 +206,9 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
     // Typed name, names the search answered with, then each wiki's interlanguage titles.
     const known=characterAliases({...character,aliases:[...(character.aliases||[]),...(result.aliases||[])]});
     const aliases=characterAliases({...character,aliases:[...(character.aliases||[]),...(result.aliases||[]),...(await wikiAliases(sources,known,warnings))]}).slice(0,8);
-    let readPages=0,downloads=0,downloadErrors=0;
-    const candidates=[];
-    for(const source of sources.slice(0,6)) {
-      try {
-        const items=await structured(source,aliases,warnings);
-        if(items) { readPages++; candidates.push(...items); continue; }
-        const response=await publicResource(source.url,{label:'Q版图片来源页',limit:2*1024*1024,timeout:20000,accept:'text/html',httpsOnly:true});
-        if(!/html/i.test(response.contentType||''))continue;
-        readPages++;
-        candidates.push(...pageChibiImages(response.bytes,response.url,source));
-      } catch(e){warnings.push(`来源页未读取：${String(e.message).slice(0,150)}`);}
-    }
-    if(sources.length && !readPages)throw Error('Q版搜索有结果，但图片来源页都无法读取。请重试或更换搜索服务；尚不能判断没有现成形象。');
+    let downloads=0,downloadErrors=0;
+    const {candidates,readPages}=await collect(sources,aliases,warnings,{images:result.images||[]});
+    if(sources.length && !readPages && !candidates.length)throw Error('Q版搜索有结果，但图片来源页都无法读取。请重试或更换搜索服务；尚不能判断没有现成形象。');
     const unique=[...new Map(candidates.map(c=>[c.imageUrl,c])).values()]
       .map(c=>({...c,score:rank(c,aliases)}))
       .filter(c=>c.score>=0)
@@ -203,7 +221,7 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
       try {
         // Ask image hosts for the stored file: the Fandom CDN otherwise negotiates WebP, which
         // the desktop decoder cannot read, and it refuses downloads without a page referer.
-        const response=await publicResource(originalImageUrl(candidate.imageUrl),{label:'Q版参考图下载',limit:8*1024*1024,timeout:20000,accept:'image/png,image/jpeg;q=0.9,image/webp;q=0.5',httpsOnly:true,headers:{Referer:candidate.url}});
+        const response=candidate.bytes?{bytes:candidate.bytes}:await publicResource(originalImageUrl(candidate.imageUrl),{label:'Q版参考图下载',limit:8*1024*1024,timeout:20000,accept:'image/png,image/jpeg;q=0.9,image/webp;q=0.5',httpsOnly:true,headers:{Referer:candidate.url}});
         const decoded=await inspectImage(response.bytes);
         if(decoded.width<96||decoded.height<96||decoded.width>4096||decoded.height>4096)continue;
         image=`data:${decoded.mime};base64,${response.bytes.toString('base64')}`;
@@ -223,6 +241,6 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
     onProgress({stage:'Q版画风选择',detail:summary.reason});
     return {referenceDigest:pack.digest,summary,image,imageDigest:imageDigest(image)};
   }
-  return {discover};
+  return {discover,collect};
 }
 module.exports={createChibiReferences,pageChibiImages,validateChibiResearch,mediaWikiPage,communityPost,wikiCandidates,postCandidates,wikiLangNames,originalImageUrl,rank};

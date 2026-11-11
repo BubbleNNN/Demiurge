@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   BookOpen,
   Copy,
@@ -19,7 +19,8 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { supportsAction } from '../../artwork';
-import { hitCharacter } from '../../animation/framing';
+import { createTouchGestures } from '../../touchGestures';
+import { hitCharacter, overHead } from '../../animation/framing';
 import type { Character, ChatMessage, CompanionEvent, Skin } from '../../types';
 import { momentOffers, type MomentId } from '../../life';
 
@@ -71,6 +72,7 @@ interface Props {
   presence: string;
   touchCharacter: (kind: 'headpat' | 'poke') => void;
   interact: (event: CompanionEvent) => void;
+  onWatch: () => void;
   copyMessage: (text: string) => void;
   speak: (text: string) => void;
   sendQuick: (text: string) => void;
@@ -126,6 +128,7 @@ export function CompanionScene({
   onOpenStudio,
   onOpenAppearance,
   onOpenDesktop,
+  onWatch,
   onToggleSettings,
   onToggleTracking,
   invitation,
@@ -134,6 +137,11 @@ export function CompanionScene({
   onOpenMoment,
   momentPanel,
 }: Props) {
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const clearHold = () => clearTimeout(holdTimer.current);
+  useEffect(() => { clearHold(); gesture.current.reset(); suppressClick.current = false; return clearHold; }, [character.name, skin?.id, interactionBusy, talking, resting]);
+  const gesture = useRef(createTouchGestures());
+  const suppressClick = useRef(false);
   const [wardrobeOpen, setWardrobeOpen] = useState(false);
   const [momentMenu, setMomentMenu] = useState(false);
   const showBubble =
@@ -179,13 +187,37 @@ export function CompanionScene({
           // A trackpad pinch arrives as a wheel event with ctrlKey.
           onZoom(zoom * Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.001)));
         }}
+        onPointerDown={(event) => {
+          if (event.button === 0 && skin && !interactionBusy && !talking && !resting && hitCharacter(event.currentTarget, event.clientX, event.clientY)) {
+            suppressClick.current = false;
+            gesture.current.down(performance.now());
+            clearHold();
+            holdTimer.current = setTimeout(() => { gesture.current.up(); suppressClick.current = true; touchCharacter('headpat'); }, 650);
+          }
+        }}
+        onPointerLeave={() => { clearHold(); gesture.current.reset(); }}
+        onPointerCancel={() => { clearHold(); gesture.current.reset(); }}
+        onPointerMove={(event) => {
+          if (!skin || interactionBusy || talking || resting || event.pointerType === 'touch') return;
+          const head = overHead(event.currentTarget, event.clientX, event.clientY);
+          const figure = head || !!hitCharacter(event.currentTarget, event.clientX, event.clientY);
+          const result = gesture.current.sample(event.clientX, performance.now(), head, figure);
+          if (result) {
+            suppressClick.current = true;
+            if (result === 'watch') onWatch(); else touchCharacter('headpat');
+          }
+        }}
         onPointerUp={(event) => {
+          clearHold();
+          gesture.current.up();
+          if (suppressClick.current) { suppressClick.current = false; return; }
           if (!skin || interactionBusy || talking || resting || event.button !== 0) return;
           const hit = hitCharacter(event.currentTarget, event.clientX, event.clientY);
           if (hit) touchCharacter(hit);
         }}
       >
         {avatar}
+        {skin && <span className="room-gesture-hint">轻点回应 · 头顶来回轻抚 · 按住陪伴</span>}
         {skin && (
           <div className="character-touch-zones" aria-label="人物互动区域">
             <button

@@ -119,7 +119,9 @@ app.on('browser-window-created', (_event, window) => {
       await click('Demiurge 首页');
       await click('角色工作室');
       await click('外观与动作');
-      await click('使用预制角色包');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('角色包与互动');
       await wait(`!!document.querySelector('.pack-current')`);
       assert.equal(
         await js(`document.querySelectorAll('.pack-outfits button').length`),
@@ -156,7 +158,8 @@ app.on('browser-window-created', (_event, window) => {
       assert.equal(portrait.generated, false);
       assert.deepEqual(Buffer.from(portrait.images.neutral.split(',')[1], 'base64'), png);
       assert.equal(requests, 2);
-      await click('为新角色导入外观与动作');
+      await click('打开桌宠工作台');
+      await click('导入与工具');
       await wait(`!!document.querySelector('.art-workflow')`);
       await click('PNG 动作文件夹');
       await wait(`!!document.querySelector('.candidate-animation canvas[data-clip]')`);

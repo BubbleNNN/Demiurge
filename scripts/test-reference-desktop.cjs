@@ -70,7 +70,12 @@ async function run() {
   await click('Demiurge 首页');
   await click('角色工作室');
   await click('外观与动作');
-  await click('制作立绘与像素动画');
+  await click('打开桌宠工作台');
+      await click('导入与工具');
+      await click('绘图实验');
+      await click('图像服务 · 多画风立绘');
+      await click('清空选择');
+      await click('选择画风：8bit');
   await waitFor(`document.querySelector('.generation-studio')`);
   assert.equal(
     await evaluate(
@@ -109,18 +114,44 @@ async function run() {
   await click('确认基准并使用');
   await waitFor(`document.querySelector('.expression-preview') && !document.querySelector('.progress-card')`);
   assert.equal((await loadedState()).activeSkinId, base.id);
-  await click('生成缺失表情（最多 5 次请求）');
+  await click('生成缺失表情（5 张）');
   await waitFor(
     `document.querySelectorAll('.expression-preview img').length === 6 && !document.querySelector('.progress-card')`,
   );
   assert.equal(requests, 6);
   const state = await loadedState();
   assert.equal(Object.keys(state.skins[0].images).length, 6);
+  assert.equal(await evaluate(`document.querySelectorAll('[role="dialog"]').length`), 1);
+  assert.equal(await evaluate(`document.querySelector('.expression-completion').innerText.includes('5 张表情已齐')`), true);
+  assert.equal(await evaluate(`[...document.querySelectorAll('button')].some(b => b.textContent.includes('生成缺失表情'))`), false);
+  await evaluate(`document.querySelector('.expression-completion').scrollIntoView({block:'center',behavior:'instant'})`);
+  await new Promise(resolve => setTimeout(resolve, 200));
+  await fs.writeFile(path.join(dir, 'expression-completion.png'), (await window.webContents.capturePage()).toPNG());
+  await click('使用这套表情并返回');
+  await waitFor(`!document.querySelector('[role="dialog"]')`);
+  assert.equal(requests, 6, 'Finishing must not generate more images');
+  await click('打开桌宠工作台');
+  await click('已有形象与表情');
+  await waitFor(`!!document.querySelector('.expression-completion')`);
+  assert.equal(await evaluate(`document.querySelectorAll('.generation-methods').length`), 0);
+  await click('使用这套表情并来到桌面');
+  await waitFor(`!document.querySelector('[role="dialog"]')`);
+  const pet = require('electron').BrowserWindow.getAllWindows().find(w => w !== window);
+  assert.ok(pet, 'The finish action opens a desktop window');
+  if (pet.webContents.isLoadingMainFrame()) await new Promise(resolve => pet.webContents.once('did-finish-load', resolve));
+  assert.ok(pet.webContents.getURL().includes('pet'));
+  assert.equal((await loadedState()).activeSkinId, base.id);
+  assert.equal(requests, 6);
+  await click('打开桌宠工作台');
+  await click('导入与工具');
+  await click('绘图实验');
+  await click('图像服务 · 多画风立绘');
+
   await evaluate(
     `(() => { const select = document.querySelector('.generation-source select'); select.value=${JSON.stringify(base.id)}; select.dispatchEvent(new Event('change',{bubbles:true})); })()`,
   );
   await click('清空选择');
-  await click('✧原作画风');
+  await click('选择画风：原作');
   await click('用 1 张原图生成 1 张候选');
   await waitFor(
     `(async () => (await window.mori.load()).state.skins.length === 2 && !document.querySelector('.progress-card'))()`,
@@ -144,7 +175,7 @@ async function run() {
   assert.equal(restored.skins.find((s) => s.id === base.id).review.status, 'pending');
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: native original import, original bytes over HTTP multipart, base-review gate, five expression edits, style branch with original refs, stale-review rejection, reload persistence.',
+    'PASS: native original import, original bytes over HTTP multipart, base-review gate, five expression edits, unified workbench, finish/reopen/desktop without extra calls, style branch with original refs, stale-review rejection, reload persistence.',
   );
   await finish();
 }
@@ -216,6 +247,7 @@ async function run() {
   app.on('browser-window-created', (_event, created) => {
     // Animation state is read from the page; a window behind other apps must keep its frames.
     created.webContents.setBackgroundThrottling(false);
+    if (window) return;
     window = created;
     created.webContents.on('console-message', (event) => {
       if (event.level === 'error' || event.level === 3) errors.push(event.message);

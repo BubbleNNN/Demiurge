@@ -18,17 +18,36 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-0.1.0-8c72d6" />
+  <img alt="version" src="https://img.shields.io/badge/version-0.1.4-8c72d6" />
   <img alt="platforms" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-5a3f8f" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-c0668d" />
   <img alt="local first" src="https://img.shields.io/badge/local--first-no%20account%20needed-3a2d63" />
 </p>
 
 <p align="center">
-  <img src="docs/media/banner.svg" alt="A little cube spirit sitting on top of a code editor window, saying it keeps you company" width="100%" />
+  <img src="docs/media/cyrene-styles.gif" alt="Cyrene waving, blinking and resting in original, 8-bit, low-poly and cartoon looks" width="100%" />
 </p>
 
 > Formerly **Mori**. Your data folder, saved keys and macOS permissions carry over untouched.
+
+## See Cyrene in motion
+
+<table>
+  <tr><th>Original look</th><th>8-bit</th><th>Cartoon look</th></tr>
+  <tr>
+    <td><img src="docs/media/cyrene-original.gif" alt="Cyrene waving, blinking, nodding, talking and resting" width="280" /></td>
+    <td><img src="docs/media/cyrene-8bit.gif" alt="Cyrene's 8-bit sprite animations" width="280" /></td>
+    <td><img src="docs/media/cyrene-cartoon.gif" alt="Cyrene's cartoon sprite animations" width="280" /></td>
+  </tr>
+</table>
+
+These GIFs use the bundled Cyrene motion frames and saved clip timings: wave, blink, nod, mouth states and rest. Touch responses now follow the character's manner, while daily routines keep a task and return to it after a break. [Interaction and routine changes (中文)](docs/INTERACTION_AND_LIFE_2026_11_11.md).
+
+**32-second introduction** — several looks, small gestures, quiet company and the pet creation workflow. Click the poster to view or download the MP4.
+
+[![Watch the Demiurge introduction](docs/media/demiurge-intro-poster.png)](docs/media/demiurge-intro.mp4)
+
+<sub>A silent, offscreen-rendered motion and feature showcase using existing sprite assets. Cyrene examples are AI-generated fan art; character rights remain with their owners, and example media is excluded from the software's MIT grant. [Media details and reproduction](docs/media/README.md).</sub>
 
 ## Why Demiurge
 
@@ -42,7 +61,7 @@ their own routine and moods, and each one behaves like _themselves_.
 | 💗 **Moods that matter**                | Happy when played with, lonely when ignored, cross when woken up or flung off a window. She sulks until you pat her head, and the chat model knows how she feels.                                                                                                            |
 | 🖱️ **Feels physical**                   | Drag her and she swings; drag a window she sits on and she runs to keep her place; yank it away and she falls. Stroke her head with the pointer to pat her. She follows you across Spaces and full-screen apps.                                                              |
 | 💬 **Talk without opening the app**     | A message box under her feet; replies appear above her head. Works with your own chat model, or with written lines and no account at all.                                                                                                                                    |
-| 🎨 **Make your own pet**                | From a few reference images, Demiurge drafts a character image in several styles, then every motion (blink, talk, wave, sit, lie, fly, read, write, play…), checks each sheet and packs a reviewed sprite atlas. Corrections go through a chat model and a web search first. |
+| 🎨 **Make your own pet**                | From a few reference images, Demiurge drafts a character image in several styles, then every motion (blink, talk, wave, sit, lie, fly, read, write, play…), checks each sheet and packs a reviewed sprite atlas. Correct an image directly, or choose search-assisted corrections. |
 | 🌐 **Share and download**               | A community catalogue of pets and data-only plugins, installed with one click, every file checked against its digest.                                                                                                                                                        |
 | 🔒 **Private by design**                | She sees window positions, the front app and seconds since your last key press, never titles, contents or keystrokes. Keys live in the system keychain. Everything runs on your computer.                                                                                    |
 
@@ -118,7 +137,7 @@ The interface is in Chinese for now.
                                                                perching, physics, invitations
 ```
 
-- **Electron + React + TypeScript**, with plain CommonJS in the main process and ~400 unit tests.
+- **Electron + React + TypeScript**, with plain CommonJS in the main process and 460 automated tests.
 - A small Swift helper streams window geometry, the front app, Space order and input timing
   (timestamps only) four times a second.
 - The pet is a reusable module: persona, a sprite pack with clips and a frame review, and a

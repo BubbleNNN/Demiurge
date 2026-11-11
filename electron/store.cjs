@@ -357,6 +357,7 @@ function validateGeneration(value, label) {
     model: string(g.model, label, 300, false),
     prompt: string(g.prompt, label, 12000, false),
     ...(g.mode !== undefined ? { mode: enumValue(g.mode, ['image', 'program'], label) } : {}),
+    ...(g.correctionRequest !== undefined ? { correctionRequest: string(g.correctionRequest, `${label}.correctionRequest`, 600, false) } : {}),
     ...(g.parentSkinId !== undefined ? { parentSkinId: id(g.parentSkinId, label) } : {}),
     ...(g.styleReference !== undefined
       ? { styleReference: validateStyleReference(g.styleReference, `${label}.styleReference`) }
