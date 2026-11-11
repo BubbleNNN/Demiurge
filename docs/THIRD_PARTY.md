@@ -2,6 +2,8 @@
 
 Demiurge's source code is MIT licensed. Third-party runtimes, fonts, models and character artwork are not relicensed by Demiurge's LICENSE.
 
+**Current release (0.1.6):** only the latest large chibi Cyrene pack and its own reference crop are bundled. Older artwork filenames and design references below record historical provenance; those older images are no longer distributed. The generic chibi style fallback now uses `cyrene-chibi-v6-reference.png`, without borrowing that example character's identity. Promotional music *心忆 / Remembrance of the Heart* (HOYO-MiX, 林一凡) retains its original rights and is excluded from MIT; see [media credits](media/README.md).
+
 - Live2D Cubism Core: installed from Live2D's official SDK host by `pnpm setup:live2d`. Its original vendor notice is preserved. The downloaded file is Git-ignored. Consult [Live2D SDK licenses](https://www.live2d.com/en/sdk/license/) and the license URL in the vendor file before redistributing a binary that bundles it. A Vite production build copies locally installed public/vendor assets into dist.
 - pixi-live2d-display and PixiJS retain their upstream licenses in the packages. The adapter uses the Cubism 3/4 model3 route; it does not promise support for every feature in newer Cubism models.
 - Three.js and @pixiv/three-vrm retain their upstream licenses. VRM metadata and avatar permissions remain model-specific.
@@ -54,6 +56,6 @@ SOFTWARE.
 
 方向动作、物理过渡、桌面几何感知和有界探索逻辑改编自 [Anime Codex](https://github.com/Lihhan/anime-codex)，Copyright (c) 2026 Anime Codex contributors，MIT 许可。完整许可见 [anime-codex-MIT.txt](licenses/anime-codex-MIT.txt)。本次未迁移其角色图片。
 
-## Q版回退画风参考（2026-11-07）
+## 历史记录：Q版回退参考（2026-11-07，已在 0.1.6 移除）
 
 `public/art/chibi-fallback-furina.png` 取自本机 Anime Codex 工作树 `public/characters/furina/sticker/atlas.png` 的第一格（待机帧），裁出单个人物并清除 alpha 低于 24 的残留后保存。该图是 Anime Codex 用内置图像工具按原神官方「派蒙的画作」第 28 弹表情包画风生成的二创素材，不是官方素材；芙宁娜及原神的角色权利归 HoYoverse 与相关权利人。Demiurge 仅在没有找到并核对通过的同角色 Q 版参考时，把它作为**画风参考**附在图像请求末尾，提示词明确禁止借用芙宁娜的外形、服饰与配色；它不会出现在用户的角色成品里，也不随角色包导出。该文件同样不在 Demiurge 的 MIT 软件许可范围内。
