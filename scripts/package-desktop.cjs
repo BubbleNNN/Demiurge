@@ -125,20 +125,24 @@ function resolvePackage(name, from) {
   );
 }
 
-function installRuntimeDependencies(sourceRoot, targetRoot, names) {
+function installRuntimeDependencies(sourceRoot, targetRoot, names, { symlinks = true } = {}) {
   const installed = new Map();
-  function install(name, from, parentTarget) {
+  function install(name, from, parentTarget, ancestors = new Set()) {
     const source = resolvePackage(name, from);
     const target = path.join(parentTarget, 'node_modules', name);
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    if (installed.has(source)) {
+    if (symlinks && installed.has(source)) {
       fs.symlinkSync(path.relative(path.dirname(target), installed.get(source).target), target, 'dir');
       return;
     }
+    if (ancestors.has(source))
+      throw new Error('Cyclic dependency cannot be expanded for a portable Windows ZIP: ' + name);
+    const nextAncestors = new Set([...ancestors, source]);
     const info = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
     installed.set(source, { name: info.name, version: info.version, target, source });
     copyDirectory(source, target);
-    for (const dependency of Object.keys(info.dependencies || {}).sort()) install(dependency, source, target);
+    for (const dependency of Object.keys(info.dependencies || {}).sort())
+      install(dependency, source, target, nextAncestors);
     // Optional dependencies must not silently disappear when present on this platform.
     for (const dependency of Object.keys(info.optionalDependencies || {}).sort()) {
       if (fs.existsSync(path.join(target, 'node_modules', dependency))) continue;
@@ -147,7 +151,7 @@ function installRuntimeDependencies(sourceRoot, targetRoot, names) {
       } catch {
         continue;
       }
-      install(dependency, source, target);
+      install(dependency, source, target, nextAncestors);
     }
   }
   for (const name of names) install(name, sourceRoot, targetRoot);
@@ -321,7 +325,8 @@ function writePayload(payload, info, platform, { live2d = true } = {}) {
       path.join(payload, 'dist/vendor/live2dcubismcore.min.js'),
     );
   copyDirectory(path.join(root, 'LICENSE'), path.join(payload, 'LICENSE'));
-  const runtime = installRuntimeDependencies(root, payload, imports);
+  // Windows Explorer does not reliably recreate Unix directory symlinks from ZIPs.
+  const runtime = installRuntimeDependencies(root, payload, imports, { symlinks: platform !== 'win32' });
   collectNotices(root, path.join(payload, 'licenses'), Object.keys(info.dependencies));
   fs.copyFileSync(path.join(root, 'docs/THIRD_PARTY.md'), path.join(payload, 'licenses/THIRD_PARTY.md'));
   const artNotice = path.join(root, 'public/art/README.md');

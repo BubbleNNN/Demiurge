@@ -42,6 +42,7 @@ jobs:
               assert actual==expected
               manifest=json.loads(z.read(prefix+'package-manifest.json'))
               for item in manifest['payload']:
+                  assert 'link' not in item, 'Windows ZIP must not rely on Unix symlinks'
                   blob=z.read(app+item['path'])
                   assert len(blob)==item['bytes']
                   assert hashlib.sha256(blob).hexdigest()==item['sha256']
