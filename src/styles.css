@@ -6903,3 +6903,5 @@ select:focus {
   opacity: 0; transition: opacity 180ms;
 }
 .room-figure:hover .room-gesture-hint, .room-figure:focus-within .room-gesture-hint { opacity: .8; }
+
+.character-dossier {margin:20px 0;display:grid;gap:12px;}.character-dossier details {padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);}.character-dossier summary {cursor:pointer;font-weight:600;font-size:13px;}.dossier-entry {display:grid;gap:9px;padding:14px 0;border-top:1px solid var(--line);margin-top:12px;}.dossier-entry input:not([type=checkbox]),.dossier-entry textarea {width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:white;}.dossier-entry p {line-height:1.8;white-space:pre-wrap;}.dossier-entry small {font-size:11px;color:var(--muted);}.dossier-source {overflow-wrap:anywhere;}

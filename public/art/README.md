@@ -1,9 +1,9 @@
-# Example character artwork
+# Bundled character artwork — 0.1.6
 
-These PNG files are AI-generated fan artwork inspired by Cyrene from Honkai: Star Rail, including historical iterations retained for saved-workspace compatibility and animation tests. They are not official game assets. They are **excluded from Mori's MIT software license**; underlying character and intellectual-property rights remain with their respective owners. This repository does not grant a license to those underlying rights.
+This directory ships only the latest large chibi Cyrene pet: `cyrene-chibi-v6.png`, four additional atlas pages, and a standing-frame crop of the same pet used as a style reference. The pack has 201 frames and 56 named clips (including transition clips and aliases). No other character or older look is bundled.
 
-Generation records and sources are documented in [THIRD_PARTY.md](../../docs/THIRD_PARTY.md), [CYRENE_REDESIGN.md](../../docs/CYRENE_REDESIGN.md), and [CYRENE_STYLES_AND_MOTION.md](../../docs/CYRENE_STYLES_AND_MOTION.md). Downloaded original reference images are not included. Use your own appropriately licensed character assets when creating a separately distributed product.
+These are AI-generated fan artworks inspired by Cyrene from Honkai: Star Rail, not official game assets. They are excluded from the software MIT license; underlying character rights remain with their respective owners. No downloaded original game reference images are shipped.
 
-The sticker style is a generation option in 0.3.6. This directory does not yet contain a finished sticker character pack or read/gaming animation assets; those capabilities must not be presented as bundled artwork.
+The catalog is `shared/cyrene-motion-pack.json`. The pixel-bound review and page hashes are in `docs/CYRENE_CHIBI_V6_REVIEW.json`. Playback preserves source rectangles, offsets and logical cell dimensions. User-owned artwork in an existing workspace is retained when updating; obsolete unmodified bundled placeholders migrate to the current starter.
 
-`chibi-fallback-furina.png` is a single idle frame cut from the local Anime Codex Furina sticker atlas (a generated fan-art study of the official Genshin Impact sticker style, not official artwork), with low-alpha residue cleared. Mori attaches it to a chibi image request only as a style guide when no existing chibi of the requested character was found and verified; it is never part of a produced character pack. Rights to Furina and Genshin Impact remain with HoYoverse; the file is excluded from the MIT software grant. See [THIRD_PARTY.md](../../docs/THIRD_PARTY.md).
+Use appropriately licensed character assets when distributing your own packs. Historical design documents describe earlier iterations, not current bundled content. See [third-party notices](../../docs/THIRD_PARTY.md).

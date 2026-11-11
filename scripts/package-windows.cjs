@@ -72,7 +72,18 @@ async function packageWindows({ skipBuild = false, publicBuild = false } = {}) {
     fs.writeFileSync(
       path.join(folder, 'README.txt'),
       [
-        `Demiurge ${info.version} for Windows (x64), unsigned local build.`,
+        `Demiurge ${info.version} — Windows x64`,
+        '让你喜欢的角色，在桌面活过来。',
+        '',
+        '【第一次使用】',
+        '请完整解压后双击 Demiurge.exe，不要只移动 exe。无需安装 Node.js 或 Python。',
+        '内置最新版大昔涟 Q版。打开后点击「体验桌面陪伴」或「放到桌面」。',
+        '本地台词和日常互动无需 Key；自由聊天请在「连接与设置」配置模型。',
+        '新手教程：https://github.com/BubbleNNN/Demiurge/blob/main/README.zh-CN.md',
+        '更新前完全退出程序，替换程序目录；保留 %APPDATA%\\Mori 中的个人数据。',
+        '此包未签名，尚未在 Windows 真机验证。窗口感知暂时仅 macOS 支持。',
+        '',
+        `Demiurge ${info.version} for Windows (x64), unsigned build.`,
         'Run Demiurge.exe. Windows SmartScreen may warn about an unknown publisher the first time.',
         'On Windows the desktop pet does not yet see other windows (that helper is macOS only).',
         ...(publicBuild

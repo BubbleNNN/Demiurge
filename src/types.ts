@@ -138,7 +138,10 @@ export interface FrameReviewInput {
   identity: true;
   continuity: true;
 }
+export interface DossierEntry { title: string; detail: string; sourceUrls: string[]; status: 'sourced' | 'unverified' | 'user'; spoiler: boolean; }
+export type CharacterDossier = Record<'personal' | 'relationships' | 'events' | 'traits' | 'voice', DossierEntry[]>;
 export interface Character {
+  dossier?: CharacterDossier;
   id: string;
   name: string;
   work: string;
@@ -196,6 +199,7 @@ export interface Skin {
   customMotions?: CustomMotionLabel[];
   drawing?: PixelDrawing;
   builtin?:
+    | 'cyrene-chibi-v6'
     | 'cyrene-original-v1'
     | 'cyrene-powerpuff-v1'
     | 'cyrene-pixel-v6'
@@ -277,6 +281,9 @@ export interface ChatMessage {
   createdAt: string;
 }
 export interface Memory {
+  kind?: 'preference' | 'interaction' | 'promise' | 'boundary';
+  origin?: 'user-confirmed' | 'user-stated' | 'interaction';
+  sourceMessageId?: string;
   id: string;
   characterId: string;
   text: string;
@@ -285,6 +292,10 @@ export interface Memory {
   excluded?: boolean;
 }
 export interface Settings {
+  rememberInteractions?: boolean;
+  llmProvider?: 'custom' | 'qwen' | 'deepseek' | 'doubao' | 'minimax' | 'glm' | 'anthropic' | 'codex';
+  llmOutputMode?: 'json' | 'prompt';
+  llmThinking?: 'auto' | 'off';
   codexHome?: string;
   desktopLifeEnabled?: boolean;
   petSize?: 'small' | 'medium' | 'large';
@@ -293,6 +304,7 @@ export interface Settings {
   /** Character zoom on the in-app stage. */
   stageZoom?: number;
   /** Built-in looks the user deleted, so they are not restored. */
+  welcomeDismissed?: boolean;
   removedBuiltins?: string[];
   chatMode?: 'model' | 'local';
   llmBaseUrl: string;
@@ -525,9 +537,8 @@ export interface MoriBridge {
   }): Promise<Character>;
   testSearchConnection(): Promise<{ ok: boolean; message: string }>;
   chat(input: {
-    character: Character;
-    messages: ChatMessage[];
-    memories: Memory[];
+    characterId: string;
+    latestMessageId: string;
     skinId?: string;
     situation?: LifeSituation;
   }): Promise<ChatReply>;

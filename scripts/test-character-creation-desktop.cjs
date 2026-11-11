@@ -12,7 +12,7 @@ process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
 // Artwork is only a plumbing fixture; it is never presented as new character art.
-const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-reference-v3.png'));
+const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const frames = path.join(dir, 'frame-fixture');
 for (const action of ['idle', 'wave']) {
   fs.mkdirSync(path.join(frames, action), { recursive: true });

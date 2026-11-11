@@ -64,12 +64,25 @@ function selectMemories(memories, characterId, latest) {
     .filter((m) => m.characterId === characterId && !m.excluded)
     .map((m, index) => ({
       text: clean(m.text, 500),
-      priority: (m.pinned ? 1000 : 0) + relevance(query, m.text) * 20 + index / 10000,
+      priority: (m.pinned ? 1000 : 0) + (m.kind === 'boundary' ? 60 : 0) + relevance(query, m.text) * 20 + index / 10000,
     }))
     .filter((m) => m.text)
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 12)
     .map((m) => m.text);
+}
+function memoryContext(memories, characterId, latest) {
+  const selected = new Set(selectMemories(memories, characterId, latest));
+  const groups = {preferences:[], sharedExperiences:[], promises:[], boundaries:[], legacy:[]};
+  const keys={preference:'preferences',interaction:'sharedExperiences',promise:'promises',boundary:'boundaries'};
+  const seen=new Set();
+  for (const memory of [...(Array.isArray(memories)?memories:[])].reverse()) {
+    const content=clean(memory.text,500);
+    if(memory.characterId!==characterId || memory.excluded || !selected.has(content) || seen.has(content)) continue;
+    seen.add(content);
+    groups[keys[memory.kind]||'legacy'].push({text:content,origin:memory.origin||'legacy',createdAt:clean(memory.createdAt,40),...(memory.sourceMessageId?{sourceMessageId:clean(memory.sourceMessageId,128)}:{})});
+  }
+  return groups;
 }
 function boundedHistory(messages, budget = 12000) {
   const limit = [6000, 12000, 24000].includes(budget) ? budget : 12000;
@@ -102,6 +115,7 @@ function personaContext(character, latest) {
     .slice(0, 3)
     .map(({ rank, index, ...source }) => source);
   return {
+    dossier: require('./character-dossier.cjs').dossierContext(character, latest),
     scene: {
       timeline: clean(role.timeline),
       relationship: clean(role.relationship),
@@ -195,6 +209,9 @@ function dialogueContext(character, messages) {
 }
 const PERSONA_RULES = [
   '角色身份由name与work共同限定，不得混入同名角色或另一作品的设定。',
+  'dossier按个人信息、人物关系、经历事件、性格表现、鲜明语气分别提供；sourced只表示附有来源，unverified必须保留不确定性，user是用户私设。不要把原作朋友等同于用户。',
+  '优先体现角色有辨识度的称呼、句式、情绪表达、价值观和待人方式，而不是套通用温柔陪伴模板。voice中的例句用于学习表达节奏，不逐字复读、不每句堆叠口癖。',
+  '用户记忆与共同互动属于当前陪伴空间，不是角色原作生平。记忆有冲突时优先用户当前明确更正，不能把旧偏好说成始终不变。',
   '按timeline与relationship保持当前剧情阶段和关系；禁止擅自把用户设为恋人、家人或原作人物。',
   '按speakingStyle和voiceRules选择自然句式，避免每轮机械重复口头禅、长台词、比喻或姓名。',
   'behavior是表达倾向，不是关系亲密度或原作事实：energy低时更安静、少动作；affection低时表达更克制；curiosity低时减少追问。始终以当前relationship限定称呼和相处方式。',
@@ -216,6 +233,7 @@ module.exports = {
   tokens,
   relevance,
   selectMemories,
+  memoryContext,
   boundedHistory,
   personaContext,
   availableActions,

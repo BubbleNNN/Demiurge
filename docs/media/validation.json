@@ -1,0 +1,40 @@
+[
+  {
+    "audioTracks" : 1,
+    "bytes" : 38584796,
+    "decodedFrames" : 2016,
+    "duration" : 67.200000000000003,
+    "file" : "demiurge-desktop-life-vertical.mp4",
+    "fps" : 30.000001907348633,
+    "height" : 1920,
+    "optimizedForNetwork" : true,
+    "width" : 1080
+  },
+  {
+    "audioTracks" : 1,
+    "bytes" : 35034783,
+    "decodedFrames" : 2016,
+    "duration" : 67.200000000000003,
+    "file" : "demiurge-desktop-life-landscape.mp4",
+    "fps" : 30.000001907348633,
+    "height" : 1080,
+    "optimizedForNetwork" : true,
+    "width" : 1920
+  },
+  {
+    "decodedFrames" : 72,
+    "file" : "cyrene-chibi-work.gif"
+  },
+  {
+    "decodedFrames" : 72,
+    "file" : "cyrene-chibi-life.gif"
+  },
+  {
+    "decodedFrames" : 60,
+    "file" : "cyrene-chibi-desktop.gif"
+  },
+  {
+    "decodedFrames" : 72,
+    "file" : "cyrene-chibi-rest.gif"
+  }
+]

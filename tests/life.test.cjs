@@ -193,3 +193,22 @@ test('what the user is doing shapes her routine: alongside their work, her own f
   assert.ok((kinds.alone.gaming || 0) > (kinds.working.gaming || 0), JSON.stringify(kinds));
   assert.ok((kinds.alone.office || 0) < (kinds.working.office || 0), JSON.stringify(kinds));
 });
+
+test('a focused routine lasts minutes and a short interaction preserves its remaining duration', () => {
+  const start=day(15), s=life.createLife(start);
+  s.until=start; s.hunger=10; s.focus=0;
+  life.advanceLife(s,{now:start,hour:15,available:['read'],random:()=>0.5});
+  assert.equal(s.activity,'read');
+  const end=s.until;
+  assert.ok(end-start>=4*minute,'not a seconds-long pose loop');
+  for(let i=1;i<=3;i++) {
+    life.advanceLife(s,{now:start+i*minute,hour:15,available:['read'],random:()=>0.5});
+    assert.equal(s.activity,'read');
+    assert.equal(s.until,end);
+  }
+  const remaining=s.task.remaining;
+  life.advanceLife(s,{now:start+3*minute+15000,hour:15,available:['read'],blocked:true});
+  assert.equal(s.until,end+15000);
+  assert.equal(s.task.remaining,remaining);
+  assert.equal(s.activity,'read');
+});

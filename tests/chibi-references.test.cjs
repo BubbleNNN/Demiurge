@@ -66,7 +66,7 @@ test('a verified same-character chibi on a source page becomes the design refere
   assert.deepEqual(validateChibiResearch(result.summary), result.summary);
 });
 
-test('candidates the model rejects lead to the Furina sticker style, recorded as not proof of absence', async () => {
+test('candidates the model rejects lead to the bundled style example, recorded as not proof of absence', async () => {
   const { references, log } = harness({
     verify: async () => ({ sameCharacter: false, chibi: true, usable: true, confidence: 0.9 }),
   });
@@ -74,7 +74,7 @@ test('candidates the model rejects lead to the Furina sticker style, recorded as
   assert.equal(result.summary.status, 'fallback');
   assert.equal(result.image, furina);
   assert.equal(result.imageDigest, imageDigest(furina));
-  assert.match(result.summary.reason, /芙宁娜/);
+  assert.match(result.summary.reason, /仅参考画风/);
   assert.match(result.summary.reason, /不表示网上一定不存在/);
   assert.deepEqual(result.summary.sources, [{ title: '画廊', url: 'https://gallery.example/chibi' }]);
   assert.equal(log.reads.length, 2);

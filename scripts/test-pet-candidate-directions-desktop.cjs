@@ -19,7 +19,7 @@ process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
 const timestamp = new Date().toISOString();
-const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi.png'));
+const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 function tinted(number, sheet = false) {
   const image = fixture.decode(fixture.image(sheet));
   for (let i = 0; i < image.bitmap.length; i += 4)
@@ -99,7 +99,7 @@ let expectedMaster = tinted(1),
   expectedDirection = null,
   expectedKind = 'sheet';
 const wikiSearches = [];
-const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const calls = [];
 global.fetch = async (url, init) => {
   const planned = await planner.handle(url, init);

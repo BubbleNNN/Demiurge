@@ -1,151 +1,131 @@
-<p align="center">
-  <img src="public/favicon.svg" width="112" alt="Demiurge" />
-</p>
-
+<p align="center"><img src="public/favicon.svg" width="88" alt="Demiurge" /></p>
 <h1 align="center">Demiurge</h1>
+<p align="center"><b>让你喜欢的角色，在桌面活过来。</b><br/>一起工作，读书，发呆。让熟悉的角色，住进平凡的日常。</p>
+<p align="center"><a href="README.md">English</a> · <a href="https://github.com/BubbleNNN/Demiurge/releases/latest">下载 Windows 版</a> · <a href="#新手教程从第一次打开开始">新手教程</a> · <a href="community/README.md">共享社区</a></p>
+<p align="center"><img alt="version" src="https://img.shields.io/badge/version-0.1.6-b85a8b" /> <img alt="platforms" src="https://img.shields.io/badge/macOS%20%7C%20Windows-desktop-8671ba" /> <img alt="license" src="https://img.shields.io/badge/code-MIT-699c85" /></p>
 
-<p align="center">
-  <b>让你喜欢的角色，在桌面上真正生活。</b><br/>
-  本地优先的角色陪伴应用：检索角色资料、赋予她声音、做成桌宠，<br/>
-  然后让她住在你身边——坐在你正在打字的窗口上，写她的日记，时不时邀请你一起玩。
-</p>
+![大昔涟在桌面走动、坐下与陪伴](docs/media/cyrene-chibi-desktop.gif)
 
-<p align="center">
-  <a href="README.md">English</a> ·
-  <a href="docs/DEMIURGE_USER_GUIDE.md">使用说明</a> ·
-  <a href="community/README.md">社区桌宠与插件</a> ·
-  <a href="docs/PET_MODULE.md">桌宠模块</a> ·
-  <a href="docs/CHANGELOG.zh-CN.md">更新记录</a>
-</p>
+**不止昔涟。** Demiurge 是一个开放的角色陪伴工具，可以创建、导入、制作和分享其他角色。0.1.6 只附带最新版 **大昔涟 · Q版**，让第一次体验直接开始；其他角色需要相应资料和素材，不是输入名字就能保证自动得到完整动画。
 
-<p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-0.1.4-8c72d6" />
-  <img alt="platforms" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-5a3f8f" />
-  <img alt="license" src="https://img.shields.io/badge/license-MIT-c0668d" />
-  <img alt="local first" src="https://img.shields.io/badge/local--first-no%20account%20needed-3a2d63" />
-</p>
+## 67 秒，看看她的一天
 
-<p align="center">
-  <img src="docs/media/cyrene-styles.gif" alt="昔涟的原作、8-bit、低多边形与卡通画风动作展示" width="100%" />
-</p>
+[![点击观看带配音的介绍视频](docs/media/demiurge-landscape-cover.png)](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4)
 
-**当前代码版本：0.1.4。** Demiurge 原名 Mori，数据目录、已保存的密钥和 macOS 权限都原样沿用。
+[横屏视频 · 1920×1080](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4) · [竖屏视频 · 1080×1920](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-vertical.mp4)
 
-## 看看昔涟动起来
+中文 AI 配音，伴奏《心忆 / Remembrance of the Heart》（HOYO-MiX、林一凡）。视频使用实际桌宠动作和真实社区界面，桌面场景为剪辑合成，聊天是示例台词；不是整段实时录屏。[媒体来源与复现](docs/media/README.md)。
 
-<table>
-  <tr><th>原作画风</th><th>8-bit</th><th>卡通画风</th></tr>
-  <tr>
-    <td><img src="docs/media/cyrene-original.gif" alt="昔涟招手、眨眼、点头、说话和休息" width="280" /></td>
-    <td><img src="docs/media/cyrene-8bit.gif" alt="8-bit 昔涟逐帧动作" width="280" /></td>
-    <td><img src="docs/media/cyrene-cartoon.gif" alt="卡通昔涟逐帧动作" width="280" /></td>
-  </tr>
-</table>
+<table><tr><th>各自忙碌，也彼此陪伴</th><th>她也有自己的小日子</th></tr><tr><td><img src="docs/media/cyrene-chibi-work.gif" alt="办公、阅读、写日记" width="460" /></td><td><img src="docs/media/cyrene-chibi-life.gif" alt="听歌、游戏、吃零食" width="460" /></td></tr></table>
 
-GIF 直接使用随附昔涟图集中的动作帧，保留招手、眨眼、点头、口型和休息时序。当前触摸会按角色性格选择短暂回应；生活活动会保留当前目标，休息后续做。[本轮交互与生活改进](docs/INTERACTION_AND_LIFE_2026_11_11.md)。
+## 可以做什么
 
-**32 秒介绍视频**：多画风、细小动作、安静陪伴与桌宠制作流程。点击封面查看／下载 MP4。
+- **桌面陪伴**：走动、坐下、趴着、睡觉，读书、办公、写日记、听歌、吃零食、玩游戏。按素材中真实存在的动作播放，不拿整张图摇晃代替动作。
+- **有连续性的日常**：结合角色偏好、精力、饥饿和当前任务选择活动。阅读等活动持续数分钟，短暂互动后接着做，不再频繁随机换姿势。
+- **触摸与聊天**：点一下、在头顶来回轻抚、拖动位置；回复使用气泡，历史对话可展开。不同角色的回应由资料、性格和可用素材共同约束。
+- **角色资料与相处记忆**：个人信息、人物关系、经历、性格、语气规则；标记来源、待核对与剧透。记忆可查看、编辑、删除，区分原作设定与用户关系。
+- **制作与分享**：从参考图制作形象和动作，审核后启用；导入/导出角色包，社区共享桌宠与纯数据生活插件。
 
-[![Demiurge 介绍视频封面](docs/media/demiurge-intro-poster.png)](docs/media/demiurge-intro.mp4)
+窗口停靠、跟随前台窗口等功能目前依赖 **macOS 助手**。Windows 版支持桌面桌宠与聊天，暂不具备窗口感知。角色的“心情”和生活行为由程序模拟；模型对话不能保证完全不偏离人设。
 
-<sub>视频为无声的动作与功能介绍，使用现有图集离屏渲染。昔涟示例为 AI 同人素材，角色权利归原权利方；示例媒体不属于代码的 MIT 授权。[素材与复现说明](docs/media/README.md)。</sub>
+## 安装 Windows 版
 
-## 为什么是 Demiurge
+适用于 Windows 10 / 11 **x64**。无需安装 Node.js、Python 或 Git。
 
-大多数桌宠只是循环播放动画。Demiurge 的角色是**在生活**：她会留意你在做什么，有自己的作息和心情，而且每个角色都像她自己。
+1. 打开 [v0.1.6 发布页](https://github.com/BubbleNNN/Demiurge/releases/tag/v0.1.6)，下载 **Demiurge-0.1.6-windows-x64.zip**。不要下载页面底部的 Source code，它是给开发者的源码。
+2. 右键 ZIP → **全部解压缩**，放到一个长期保留的文件夹。不要在压缩包内直接启动，也不要只把 exe 单独拖出来。
+3. 在解压后的文件夹中双击 **Demiurge.exe**。首次使用的操作见下一节。
+4. 此版本尚未代码签名。若 SmartScreen 提示未知发布者，先确认来自本仓库发布页、核对校验值，再按系统提示选择是否运行。
+5. 可为 Demiurge.exe 创建桌面快捷方式。更新时先完全退出应用，解压新版，再删除旧版程序目录；**不要删除 `%APPDATA%\Mori`**，那里保存角色、设置和聊天。
 
-|                             |                                                                                                                                                                                         |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🪟 **在你工作的地方陪着你** | 你在编辑器里打字，她就跑过来，坐在或趴在那个窗口上，做自己的事，时不时偷看你的屏幕一眼。你太久没理她，她会主动来找你。                                                                  |
-| 🎭 **每个角色都是她自己**   | 爱好、小习惯、怎么移动（走、跑、跳或飞）、性格表现（害羞、调皮、活泼、沉稳）都来自角色自己的资料。爱写字的会写日记，爱玩的会打游戏，害羞的被摸头会脸红。                                |
-| 💗 **心情是真的**           | 陪她玩会开心，冷落她会寂寞，把她吵醒或从窗口上甩下来会生气。她会闹别扭，直到你摸摸她的头；聊天模型也知道她此刻的心情。                                                                  |
-| 🖱️ **有实感**               | 拖动她会晃；拖动她坐着的窗口，她会跑着跟上；猛地拽开窗口，她会掉下去。用指针在她头上来回蹭就是摸头。切换桌面空间或进入全屏应用时，她会从切换的方向跑进来跟着你。                        |
-| 💬 **不用打开主窗口也能聊** | 她脚下有输入框，回复出现在她头顶。可以接你自己的聊天模型，也可以不登录任何账号，只用写好的台词。                                                                                        |
-| 🎨 **自己做桌宠**           | 给几张参考图，Demiurge 会用几种画风起草角色形象，再逐个生成动作（眨眼、说话、挥手、坐、趴、飞、读书、写字、玩游戏……），逐张核对后打包成经过审核的图集。可直接按描述修正，也可选择搜索辅助修正。 |
-| 🌐 **分享与下载**           | 社区目录里有大家分享的桌宠和纯数据插件，一键安装，每个文件都按记录的校验值核对。                                                                                                        |
-| 🔒 **隐私优先**             | 她只知道窗口的位置、最前面的应用、以及距离你上次按键过了几秒，不读取窗口标题、内容或按键。密钥存在系统钥匙串里，所有处理都在你的电脑上完成。                                            |
+可选校验（PowerShell）：
 
-## 安装
+```powershell
+Get-FileHash .\Demiurge-0.1.6-windows-x64.zip -Algorithm SHA256
+```
 
-### Windows 10 / 11（64 位）
+结果应与发布页同名 `.sha256` 文件一致。Windows 包已检查构建和文件完整性，**尚未在 Windows 真机运行验证**；遇到问题请提供系统版本、报错与复现步骤。[反馈问题](https://github.com/BubbleNNN/Demiurge/issues)。
 
-> Windows 版本刚刚推出，还没有在 Windows 电脑上实际测试过。遇到问题请[提交 Issue](https://github.com/BubbleNNN/Demiurge/issues)。
+公开 Windows 包不包含另行授权的 Live2D Cubism Core，内置 Q版逐帧桌宠不受影响。exe 文件图标仍为 Electron 默认图标，窗口与任务栏使用 Demiurge 图标。
 
-1. 在[最新发布页](https://github.com/BubbleNNN/Demiurge/releases/latest)下载 `Demiurge-<版本>-windows-x64.zip`。
-2. _可选：_ 核对下载文件。在 PowerShell 里运行 `Get-FileHash .\Demiurge-<版本>-windows-x64.zip`，显示的 SHA-256 应与旁边一起发布的 `.sha256` 文件一致。
-3. 右键压缩包，选择「全部解压缩…」，解压到一个会长期保留的文件夹，例如 `%LOCALAPPDATA%\Programs\Demiurge`。不要直接在压缩包里运行。
-4. 打开解压出的文件夹，双击 **Demiurge.exe**。
-5. 应用没有代码签名，第一次打开时 Windows 可能提示「Windows 已保护你的电脑」。点击「更多信息」，再点「仍要运行」。
-6. 想要快捷方式：右键 `Demiurge.exe`，选择「固定到开始屏幕」，或「显示更多选项 → 发送到 → 桌面快捷方式」。
+## 新手教程：从第一次打开开始
 
-**更新：** 退出 Demiurge，解压新版本，再删除旧文件夹，角色、聊天和设置都会保留。**卸载：** 删除这个文件夹即可。数据保存在 `%APPDATA%\Mori`（粘贴到资源管理器地址栏打开），一并删除即可清除全部数据。
+### 1. 先体验陪伴，不需要 Key
 
-目前 Windows 版与 macOS 版的区别：
+打开应用会看到大昔涟与初次使用指南。点 **体验桌面陪伴** 或右上角 **放到桌面**。
 
-- 她住在你的桌面上，但暂时看不到其他窗口，不会坐到你正在打字的窗口上，也不会跟着你切换虚拟桌面（这部分依赖 macOS 助手）。
-- 下载版不包含 Live2D 运行库（它有单独的授权条款），因此无法播放 Live2D 模型；图片和动作桌宠不受影响。
-- `Demiurge.exe` 文件本身显示 Electron 的默认图标，窗口和任务栏显示 Demiurge 的图标。
+- 点击角色有短暂回应；在头顶来回移动鼠标是摸头，拖动可换位置。
+- 在她附近移动鼠标，使用浮现工具栏选择活动、聊天或大小；读书等动作会保持几分钟。
+- 在主窗口的 **连接与设置** 调整桌宠大小、自动生活与声音。不想让她活动时可暂停自动生活，或关闭桌宠窗口。
+- 默认是 **本地台词**：不收费、不联网调用模型，但只能回应预设场景，不能自由回答所有问题。
 
-### macOS（Apple 芯片）
+![首次打开：可收起的上手指南与内置大昔涟](docs/media/first-start.png)
 
-暂时没有 macOS 下载，请按下面的方法在 Mac 上构建。应用未签名，第一次请右键选择「打开」。见 [macOS 打包说明](docs/MACOS_RELEASE.md)。
+### 2. 想自由聊天，再连接模型
 
-### 从源码运行与构建
+1. 打开左侧 **连接与设置**，找到对话服务。
+2. 选择实际使用的服务商。支持 OpenAI 兼容接口、阿里云千问、DeepSeek、豆包、MiniMax、GLM、Anthropic，以及本机 Codex。
+3. 填写该服务商的 **API Key、模型名称 / Endpoint ID、服务地址**。切换供应商后同时核对这三项，旧 Key 不会变成新供应商的 Key。
+4. 如果平台提供的是完整请求地址，选择对应的完整地址方式，确认页面显示的最终请求地址没有重复追加路径。
+5. 保存并测试，在对话区切到 **模型对话**，发送一句问候。
 
-需要 Node.js 22.12+ 和 pnpm。
+自由聊天用文字模型。**重新生成图片和动画还需要支持参考图的图像模型接口**；只有聊天 Key 不代表能出图。已有桌宠的播放和本地互动不需要图像接口。各平台额度、订阅与 API 计费分别以账号实际权限为准。[供应商与排错说明](docs/CHAT_PROVIDERS_AND_MEMORY.md)。
+
+### 3. 让对话更像她
+
+在 **角色工作室 → 角色档案** 检查资料与语气，使用 **补充资料** 重新整理。可选 Wiki、资料链接、已保存资料等方式；Tavily 不是必填。对站点访问失败，可提供官方资料链接或使用已有资料整理。
+
+核对人物关系、事件时间线、说话特点与剧透范围；未验证的资料保持待核对。自己的设定写在手工设定中，不要冒充原作事实。在记忆页检查与当前角色的相处记录，错误记忆可以修改或删除。
+
+### 4. 添加你喜欢的其他角色
+
+- **已有角色包**：在角色入口或社区导入/安装，选中角色及外观，再放到桌面。
+- **自己制作**：点新增角色，填写名字和作品 → 整理资料 → 添加同一形态的参考原图 → 生成并确认形象 → 逐项制作动作 → 核对每帧后启用。
+- **已有素材**：可导入兼容图集/角色包，减少重复生成。制作过程中失败的候选不会自动替换已审核的桌宠。
+
+不同角色、画风与模型的生成质量会不同，尤其需要检查手、脸、服装和动作连续性。[完整制作流程](docs/AUTOMATIC_PET_PRODUCTION.md)。
+
+### 5. 分享与共建
+
+打开 **社区桌宠与插件**，可浏览目录、安装生活插件、准备自己的桌宠分享包。社区仍在起步，欢迎成为第一批创作者！发布到仓库目录通过 Pull Request 审核，**应用里的“分享”不会自动把私人聊天或 Key 发到网上**。[投稿指南](community/README.md)。
+
+喜欢这个方向，请点一颗 **Star**。欢迎贡献角色包、生活插件、动作、Windows 测试和界面改进，一起让更多角色活过来。
+
+## macOS 与开发者
+
+macOS Apple 芯片可从源码运行。需要 **Node.js 22.12+** 和 **pnpm 11.25**：
 
 ```bash
+git clone https://github.com/BubbleNNN/Demiurge.git
+cd Demiurge
 pnpm install
-pnpm setup:live2d        # 可选：Live2D 运行库
-pnpm desktop             # 从源码运行，带热更新
-node scripts/package-desktop.cjs            # 在 release/ 生成 macOS 应用（在 Mac 上运行）
-node scripts/package-windows.cjs --public   # 在 release/ 生成 Windows x64 压缩包（在 Mac 上构建）
+pnpm desktop
 ```
 
-macOS 上也可以双击 **Start Demiurge Dev.command**。
+可选 Live2D：`pnpm setup:live2d`（遵循第三方授权）。构建和检查：
 
-## 第一次使用
-
-1. 打开应用：示例角色不配置任何接口也能聊天。
-2. 点击「放到桌面」，她会跑进来、挥挥手，然后开始过她自己的一天。
-3. 把指针移到她脚下会出现工具栏：聊天、活动、小游戏、大小。
-4. 在「角色工作室」添加你自己的角色，或者在「社区」下载别人分享的桌宠。
-
-## 工作原理
-
-```
- 角色资料 ──► 人设与台词 ──► 聊天（你的模型，或写好的台词）
-    │
-    ├──► 行为档案 ── 爱好 · 习惯 · 移动方式 · 性格表现
-    │
- 参考图 ──► 角色形象 ──► 动作表 ──► 核对并审核过的图集
-                                     │
- 桌面助手（macOS）── 窗口 · 前台应用 · 打字 ──┴──► 桌面生活：作息、心情、
-                                                 坐窗口、物理、邀请
+```bash
+pnpm check
+pnpm build
+node scripts/package-windows.cjs --public  # 在 macOS 上交叉构建 Windows x64
+pnpm setup:live2d
+node scripts/package-desktop.cjs          # 在 macOS 上构建本机应用
 ```
 
-- **Electron + React + TypeScript**，主进程是普通 CommonJS，约 400 个单元测试。
-- 一个小小的 Swift 助手每秒四次报告窗口位置、前台应用、桌面空间顺序和输入时间（只有时间，没有内容）。
-- 桌宠是可复用的模块：人设、带动作片段和逐帧审核的图集，以及行为档案。见 [docs/PET_MODULE.md](docs/PET_MODULE.md)。
+项目原名 Mori，沿用数据目录：macOS 为 `~/Library/Application Support/Mori`，Windows 为 `%APPDATA%\Mori`。应用更新不删除用户自己制作的桌宠。窗口助手只读取窗口几何、前台应用与输入时间，不读取屏幕文字或按键内容；模型/搜索请求会向你配置的服务发送相应资料与对话，**不是所有处理都离线**。
 
-## 社区
+## 作者的话
 
-分享你做好的桌宠，或下载别人的直接使用，不用重新制作。插件可以给某个角色或所有角色添加习惯、偏好和台词；插件只是数据，不运行代码。投稿方式见 [community/README.md](community/README.md)。
+<!-- AUTHOR: 请在这里写下为什么做这个项目、你与角色的故事，以及你想带给用户的陪伴。 -->
+> 留给作者：项目的起点与想说的话。
 
-## 文档
+## 你期待的下一步
 
-- [使用说明](docs/DEMIURGE_USER_GUIDE.md)：应用的全部功能
-- [自动制作桌宠](docs/AUTOMATIC_PET_PRODUCTION.md)：从参考图到图集
-- [开发与使用细节](docs/DEVELOPMENT.zh-CN.md)：从源码运行、服务配置、排查问题
-- [更新记录](docs/CHANGELOG.zh-CN.md)
-- [第三方说明](docs/THIRD_PARTY.md) 与 [素材说明](public/art/README.md)
+<!-- AUTHOR: 请填写你确认的路线图、社区联系方式或招募方向；未确认的功能不要写成承诺。 -->
+> 留给作者：未来方向与共建邀请。
 
-## 参与贡献
+## 更多文档与许可
 
-欢迎提 Issue 和 Pull Request，也欢迎给社区目录投稿桌宠和插件。运行 `npx tsc -b && node --test tests/*.test.cjs` 进行检查，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+[完整使用说明](docs/DEMIURGE_USER_GUIDE.md) · [更新记录](docs/CHANGELOG.zh-CN.md) · [桌宠模块](docs/PET_MODULE.md) · [贡献指南](CONTRIBUTING.md) · [第三方说明](docs/THIRD_PARTY.md)
 
-如果 Demiurge 让你的桌面温暖了一点，点个 ⭐ 能帮更多人找到它。
-
-## 许可
-
-源代码使用 [MIT 许可证](LICENSE)。角色素材、字体及第三方运行库各自保留权利，见 [THIRD_PARTY.md](docs/THIRD_PARTY.md)。内置示例角色的图像是 AI 二次创作，不是官方素材。部分动作与桌面行为逻辑改编自 [Anime Codex](https://github.com/Lihhan/anime-codex)（MIT）。
+**代码采用 [MIT](LICENSE)**。角色、音乐、字体、第三方运行库不因开源代码而获得额外授权。大昔涟示例是 AI 同人素材，不是官方角色产品；相关角色权利归原权利方。宣传视频中的《心忆》保留原音乐权利，不属于 MIT。[素材说明](public/art/README.md)。部分桌面行为实现参考 [Anime Codex](https://github.com/Lihhan/anime-codex)（MIT）。

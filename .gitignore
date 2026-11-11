@@ -23,3 +23,6 @@ secrets*.json
 
 # Downloaded vendor runtime is not part of Mori's MIT-licensed code.
 public/vendor/live2dcubismcore.min.js
+
+# Rendered social movies are uploaded as GitHub Release assets.
+docs/media/demiurge-desktop-life-*.mp4

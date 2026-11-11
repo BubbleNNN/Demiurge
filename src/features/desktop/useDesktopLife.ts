@@ -465,6 +465,7 @@ export function useDesktopLife(options: Options) {
   // or does her own thing, and her habits fill the rest.
   function settlePose(own: boolean) {
     const o = ref.current;
+    if (o.occupied) return;
     if (own && o.onCompany(true)) {
       pose.current = 'own';
       return;
@@ -1077,7 +1078,7 @@ export function useDesktopLife(options: Options) {
           // Now and then she shifts: sits, lies down, or does something of her own. How long she
           // stays down and how often she busies herself instead follow her mood.
           if (Date.now() >= nextPose) {
-            if (nextPose && (!o.occupied || pose.current === 'own'))
+            if (nextPose && !o.occupied)
               settlePose(Math.random() < conduct().ownChance * 0.75);
             nextPose = Date.now() + within(conduct().hold);
           }

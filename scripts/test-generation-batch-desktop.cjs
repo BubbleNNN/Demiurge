@@ -11,7 +11,7 @@ fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
-const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi.png'));
+const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const original = 'data:image/png;base64,' + png.toString('base64');
 const timestamp = new Date().toISOString();
 fs.writeFileSync(
@@ -70,7 +70,7 @@ const tokens = Object.fromEntries(
   Object.entries(require('../shared/art-styles.json')).map(([id, guide]) => [id, guide.prompt]),
 );
 const styleIds = require('../shared/creation-styles.json');
-const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const wikiSearches = [];
 global.fetch = async (url, init) => {
   if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {

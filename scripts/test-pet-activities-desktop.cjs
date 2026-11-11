@@ -8,7 +8,7 @@ const { randomUUID } = require('node:crypto');
 const f = require('../tests/fixtures/pet-images.cjs');
 const motions = require('../shared/pet-motions.json');
 const style = require('../shared/art-styles.json')['chibi-pet'];
-const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const dir = path.resolve(__dirname, '../.local/pet-activities-desktop-' + randomUUID());
 fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
@@ -72,7 +72,7 @@ global.fetch = async (url, init) => {
   const images = await Promise.all(input.map(async (blob) => Buffer.from(await blob.arrayBuffer())));
   // Base: identity original, then the Furina sticker as a style guide only. Sheets: master plus identity.
   assert.deepEqual(images.slice(0, 2), sheet ? [f.image(), f.image()] : [f.image(), furina]);
-  if (!sheet) assert.ok(prompt.includes('FURINA sticker, a STYLE GUIDE ONLY'));
+  if (!sheet) assert.ok(prompt.includes('bundled chibi example, a STYLE GUIDE ONLY'));
   if (sheet && calls.length === 2) assert.deepEqual(images[2], rawSheet);
   calls.push(sheet ? 'sheet' : 'base');
   return new Response(
@@ -198,7 +198,7 @@ app.on('browser-window-created', (_event, created) => {
         'one chibi search, before the first image request',
       );
       assert.equal(skin.generation.chibiResearch.status, 'fallback');
-      assert.match(skin.generation.chibiResearch.reason, /芙宁娜/);
+      assert.match(skin.generation.chibiResearch.reason, /仅参考画风/);
       assert.equal(skin.review.status, 'pending');
       assert.ok(skin.sprite.clips.read && skin.sprite.clips.enter_read && skin.sprite.clips.exit_read);
       assert.ok(skin.sprite.clips.gaming);

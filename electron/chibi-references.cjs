@@ -236,8 +236,8 @@ function createChibiReferences({search,publicResource,inspectImage,verify,fallba
     }
     if(unique.length && !downloads && downloadErrors)throw Error(`发现了候选 Q 版图片，但未能下载并核对（${downloadFailures.slice(0,2).join('；')}）。请重试，不会直接回退成没有参考。`);
     warnings.push(...downloadFailures.slice(0,2).map(failure=>`候选图片未能使用：${failure}`));
-    const image=fallbackImage?await fallbackImage():`data:image/png;base64,${(await fs.readFile(path.join(require('./artwork.cjs').artDirectory(),'chibi-fallback-furina.png'))).toString('base64')}`;
-    const summary=validateChibiResearch({status:'fallback',checkedAt:new Date().toISOString(),reason:`本次检索${unique.length?`核对了 ${Math.min(downloads,unique.length)} 张候选但没有通过`:'未取得候选图片'}，采用 Anime Codex 芙宁娜贴纸画风；这不表示网上一定不存在。`,sources:sources.slice(0,6).map(s=>({title:s.title,url:s.url})),warnings:warnings.slice(0,8)});
+    const image=fallbackImage?await fallbackImage():`data:image/png;base64,${(await fs.readFile(path.join(require('./artwork.cjs').artDirectory(),'cyrene-chibi-v6-reference.png'))).toString('base64')}`;
+    const summary=validateChibiResearch({status:'fallback',checkedAt:new Date().toISOString(),reason:`本次检索${unique.length?`核对了 ${Math.min(downloads,unique.length)} 张候选但没有通过`:'未取得候选图片'}，采用内置 Q 版轮廓示例，仅参考画风，不借用示例角色身份；这不表示网上一定不存在。`,sources:sources.slice(0,6).map(s=>({title:s.title,url:s.url})),warnings:warnings.slice(0,8)});
     onProgress({stage:'Q版画风选择',detail:summary.reason});
     return {referenceDigest:pack.digest,summary,image,imageDigest:imageDigest(image)};
   }

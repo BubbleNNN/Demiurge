@@ -59,6 +59,7 @@ test('retired styles disappear from selection while their saved assets and other
     ...fresh.skins[0],
     id: 'saved-watercolor',
     builtin: 'cyrene-watercolor-v4',
+    images: {neutral:'data:image/png;base64,owned-art'},
     style: 'watercolor',
   };
   const existing = {
@@ -69,7 +70,7 @@ test('retired styles disappear from selection while their saved assets and other
     memories: [{ id: 'saved-memory', text: '保留记忆' }],
   };
   const migrated = migrateState(existing);
-  assert.equal(migrated.activeSkinId, 'cyrene-original-v1');
+  assert.equal(migrated.activeSkinId, 'cyrene-chibi-v6');
   assert.equal(
     migrated.skins.find((skin) => skin.id === legacy.id),
     legacy,

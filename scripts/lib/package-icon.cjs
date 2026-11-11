@@ -6,6 +6,7 @@ const path = require('node:path');
 const os = require('node:os');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'demiurge-package-icon-'));
 app.setPath('userData', temporary);
+app.dock?.hide();
 app.commandLine.appendSwitch('disable-http-cache');
 const timeout = setTimeout(() => app.exit(1), 20000);
 app

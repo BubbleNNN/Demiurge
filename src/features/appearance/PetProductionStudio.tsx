@@ -861,7 +861,7 @@ export function PetProductionStudio({
             {selectedStyles.includes('chibi-pet') && (
               <p className="notice">
                 Q版先搜索并核对这个角色已有的 Q 版／表情包形象；找到后参考其设计制作。 未找到可用参考时，使用
-                Anime Codex 芙宁娜贴纸画风。网络或搜索失败会提示重试。
+                内置 Q版画风示例。网络或搜索失败会提示重试。
                 搜索和图片核对可能产生模型用量，完成后会显示采用的来源。
               </p>
             )}
@@ -1237,7 +1237,7 @@ export function PetProductionStudio({
                                     <span>
                                       {base.generation.chibiResearch.status === 'found'
                                         ? '已参考现成 Q 版形象'
-                                        : '未找到可用参考 · 芙宁娜贴纸画风'}
+                                        : '未找到可用参考 · 内置 Q版画风示例'}
                                     </span>
                                     <small>{base.generation.chibiResearch.reason}</small>
                                     {base.generation.chibiResearch.sources.map((source) => (

@@ -9,7 +9,7 @@ const dir = path.resolve(__dirname, '../.local/visual-pipeline-smoke-' + randomU
 fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
-const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-reference-v3.png'));
+const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 let modelPosts = 0,
   rigPosts = 0,
   downloads = 0,

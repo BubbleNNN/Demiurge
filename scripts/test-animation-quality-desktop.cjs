@@ -47,7 +47,7 @@ app.on('browser-window-created', (_, win) => {
     try {
       await wait('window.mori.load().then(r=>!!r.state)');
       const base = await js('window.mori.load().then(r=>r.state)');
-      const bytes = fs.readFileSync(path.join(root, 'public/art/cyrene-original-v1.png'));
+      const bytes = fs.readFileSync(path.join(root, 'public/art/cyrene-chibi-v6-reference.png'));
       const image = fixture.url(bytes),
         digest = createHash('sha256').update(bytes).digest('hex');
       const character = {

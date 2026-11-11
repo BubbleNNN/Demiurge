@@ -12,7 +12,7 @@ fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
-const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi.png'));
+const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const original = fixture.url(originalBytes);
 const master = fixture.image(),
   sheet = fixture.image(true);
@@ -59,7 +59,7 @@ fs.writeFileSync(
   }),
 );
 const wikiSearches = [];
-const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const calls = [],
   styles = require('../shared/art-styles.json');
 let holdNext = true,

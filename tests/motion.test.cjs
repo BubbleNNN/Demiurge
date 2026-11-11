@@ -30,9 +30,9 @@ const input = {
 };
 test('catalog includes newly drawn original style and retains existing active artwork without overwriting custom work', () => {
   const fresh = initialState();
-  assert.equal(fresh.skins.length, 7);
-  assert.equal(new Set(fresh.skins.map((s) => s.style)).size, 7);
-  assert.equal(validateState(fresh).activeSkinId, 'cyrene-original-v1');
+  assert.equal(fresh.skins.length, 1);
+  assert.equal(new Set(fresh.skins.map((s) => s.style)).size, 1);
+  assert.equal(validateState(fresh).activeSkinId, 'cyrene-chibi-v6');
   for (const skin of fresh.skins) {
     const png = fs.readFileSync(`public/art/${skin.builtin}.png`);
     assert.equal(png[25], 6, 'RGBA ' + skin.id);
@@ -43,7 +43,7 @@ test('catalog includes newly drawn original style and retains existing active ar
     activeSkinId: 'cyrene-anime-v4',
   };
   const migrated = migrateState(old);
-  assert.equal(migrated.activeSkinId, 'cyrene-anime-v5');
+  assert.equal(migrated.activeSkinId, 'cyrene-chibi-v6');
   assert.equal(migrateState(migrated), migrated);
   assert.equal(migrateState({ ...old, activeSkinId: 'my-custom-art' }).activeSkinId, 'my-custom-art');
 });
@@ -88,14 +88,14 @@ test('speech silence, gesture priority and reduced motion select complete frames
 });
 test('only available expressions and actions are advertised', () => {
   const fresh = initialState();
-  const pixel = fresh.skins.find((s) => s.style === '8bit');
+  const pixel = fresh.skins.find((s) => s.style === 'chibi-pet');
   assert.equal(supportsAction(pixel, 'wave'), true);
   assert.equal(supportsAction(pixel, 'nod'), true);
   assert.equal(supportsEmotion(pixel, 'happy'), true);
-  assert.equal(supportsEmotion(pixel, 'sad'), false);
+  assert.equal(supportsEmotion(pixel, 'sad'), true);
   assert.equal(supportsAction(fresh.skins[0], 'wave'), true);
-  assert.equal(supportsAction(pixel, 'shake'), false);
-  assert.equal(supportsAction(pixel, 'bounce'), false);
+  assert.equal(supportsAction(pixel, 'shake'), true);
+  assert.equal(supportsAction(pixel, 'bounce'), true);
   assert.equal(
     supportsAction(
       { kind: 'live2d', model: { motions: { Greeting: 2 }, motionMap: { wave: 'Greeting' } } },
@@ -114,13 +114,13 @@ test('each retained artwork plays breathing during neutral idle, recovers from g
     assert.ok(animation, skin.style);
     const bytes = fs.readFileSync('public/art/' + entry.file);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
-    assert.deepEqual(availableActions(skin), ['idle', 'nod', 'sleep', 'wave']);
+    assert.ok(['read','office','diary','walk_left','walk_right','wave','sleep'].every(action=>availableActions(skin).includes(action)));
     assert.equal(
       selectSpriteFrame(animation, { ...input, time: 2000 }).frame,
-      3,
-      skin.style + ' neutral breathing',
+      animation.clips.idle.frames[0],
+      skin.style + ' authored resting pose',
     );
-    assert.equal(selectSpriteFrame(animation, { ...input, time: 2000, paused: true }).frame, 0);
+    assert.equal(selectSpriteFrame(animation, { ...input, time: 2000, paused: true }).frame, animation.clips.idle.frames[0]);
     assert.equal(selectSpriteFrame(animation, { ...input, time: 3200 }).clip, 'blink');
     for (const action of ['wave', 'nod']) {
       assert.equal(selectSpriteFrame(animation, { ...input, action, age: 250 }).clip, action);
@@ -149,7 +149,7 @@ test('authored sleep sequences retain their frame timing and hold still with mot
   };
   assert.equal(selectSpriteFrame(animation, { ...input, action: 'sleep', age: 250 }).frame, 1);
   assert.equal(selectSpriteFrame(animation, { ...input, action: 'sleep', age: 500 }).frame, 0);
-  assert.equal(selectSpriteFrame(animation, { ...input, action: 'sleep', age: 250, paused: true }).frame, 0);
+  assert.equal(selectSpriteFrame(animation, { ...input, action: 'sleep', age: 250, paused: true }).frame, animation.clips.idle.frames[0]);
 });
 
 test('explicit authored mouth poses follow audio opening, close on silence and keep gesture priority', () => {
@@ -253,4 +253,17 @@ test('packs that rested on the separately drawn still play on the blink sheet po
     skin,
   );
   assert.deepEqual(pack.clips.idle.frames, [0]);
+});
+
+test('latest-only migration preserves user-owned media and explicitly deleted starter preferences', () => {
+  const fresh=initialState();
+  const owned={...fresh.skins[0],id:'my-art',builtin:'cyrene-anime-v4',images:{neutral:'user-owned-pixels'}};
+  const obsolete={...fresh.skins[0],id:'old-default',builtin:'cyrene-original-v1'};
+  const state={...fresh,skins:[owned,obsolete],activeSkinId:owned.id,settings:{...fresh.settings,removedBuiltins:['cyrene-chibi-v6']}};
+  const migrated=migrateState(state);
+  assert.deepEqual(migrated.skins,[owned]);
+  assert.equal(migrated.activeSkinId,owned.id);
+  assert.equal(migrated.messages,state.messages);
+  assert.equal(migrated.memories,state.memories);
+  assert.equal(migrateState(migrated),migrated);
 });

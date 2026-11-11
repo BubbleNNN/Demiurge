@@ -14,6 +14,7 @@ function personaSignature(character) {
     'quotes',
     'unknowns',
     'roleplay',
+    'dossier',
     'sources',
     'knowledge',
     'companion',

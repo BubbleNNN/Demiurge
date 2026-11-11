@@ -206,11 +206,15 @@ test('alpha crops retain whole figures straddling nominal cells and reject joine
   assert.throws(() => poseRegions(cut, 100, 100, 1, 1), /裁切/);
 });
 test('all bundled animations have pixel-bound release review and portable source-resolution metadata', () => {
-  const pack = require('../shared/cyrene-motion-pack.json'),
-    review = require('../' + pack.reviewFile);
+  const pack = require('../shared/cyrene-motion-pack.json');
+  assert.equal(pack.entries.length, 1);
   for (const entry of pack.entries) {
-    assert.doesNotThrow(() => assertPoseRelease(entry.poses, review.entries[entry.builtin]));
-    assert.equal(review.animations[entry.builtin], animationDigest(entry.animation));
+    const review = require('../' + pack.reviewFile);
+    assert.doesNotThrow(() => validateFrameReview(entry.animation, entry.sha256, review));
+    assert.equal(review.animationDigest, animationDigest(entry.animation));
+    for (const page of [{file:entry.file,sha256:entry.sha256}, ...review.pages]) {
+      assert.equal(require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join('public/art',page.file))).digest('hex'),page.sha256);
+    }
   }
 });
 

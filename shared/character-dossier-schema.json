@@ -1,0 +1,132 @@
+{
+  "type": "object",
+  "properties": {
+    "personal": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "sourceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spoiler": {
+            "type": "boolean"
+          }
+        },
+        "required": ["title", "detail", "sourceUrls", "spoiler"],
+        "additionalProperties": false
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "sourceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spoiler": {
+            "type": "boolean"
+          }
+        },
+        "required": ["title", "detail", "sourceUrls", "spoiler"],
+        "additionalProperties": false
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "sourceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spoiler": {
+            "type": "boolean"
+          }
+        },
+        "required": ["title", "detail", "sourceUrls", "spoiler"],
+        "additionalProperties": false
+      }
+    },
+    "traits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "sourceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spoiler": {
+            "type": "boolean"
+          }
+        },
+        "required": ["title", "detail", "sourceUrls", "spoiler"],
+        "additionalProperties": false
+      }
+    },
+    "voice": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "sourceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spoiler": {
+            "type": "boolean"
+          }
+        },
+        "required": ["title", "detail", "sourceUrls", "spoiler"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["personal", "relationships", "events", "traits", "voice"],
+  "additionalProperties": false
+}

@@ -61,12 +61,9 @@ test('memory retrieval prioritizes pins and relevant older facts while excluding
   );
 });
 test('actions obey actual assets and emotional context, including quiet companions', () => {
-  assert.deepEqual(availableActions({ builtin: 'cyrene-8bit-v5', images: {} }), [
-    'idle',
-    'nod',
-    'sleep',
-    'wave',
-  ]);
+  const actions=availableActions({builtin:'cyrene-chibi-v6',images:{}});
+  assert.ok(['read','office','diary','walk_left','wave','sleep'].every(a=>actions.includes(a)));
+  assert.ok(!actions.includes('fly'));
   assert.deepEqual(availableActions({ kind: 'image', images: {} }), ['idle']);
   assert.deepEqual(
     availableActions({ kind: 'live2d', model: { motions: { Hello: 1 }, motionMap: { wave: 'Hello' } } }),

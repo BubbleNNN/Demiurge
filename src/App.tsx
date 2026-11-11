@@ -1,8 +1,10 @@
+import { DossierEditor } from './components/DossierEditor';
 import { createTouchGestures } from './touchGestures';
 import { useDesktopLife } from './features/desktop/useDesktopLife';
 import { CommunityPanel } from './features/community/CommunityPanel';
 import { desktopProfile, pickLine, touchMark } from './characterBehavior';
 import type { UserContext } from './userContext';
+import { WelcomeGuide } from './components/WelcomeGuide';
 import { isActivity, activityDuration, activities } from './animation/activities';
 import { activityIcons } from './features/companion/activityIcons';
 import { Moment, type MomentAct, type MomentResult } from './features/companion/Moments';
@@ -11,6 +13,7 @@ import {
   createLife,
   lifeSituation,
   recordMoment,
+  momentOffers,
   restoreLife,
   settleInvite,
   type LifeState,
@@ -136,6 +139,7 @@ import { appendCompletedReply, type CompletedReply } from './conversation';
 import type {
   AppState,
   Character,
+  CharacterDossier,
   CommunityPlugin,
   CompanionEvent,
   ChatStatus,
@@ -342,6 +346,7 @@ export default function App() {
   const [editedModel, setEditedModel] = useState<Skin | null>(null);
   const [memoryDraft, setMemoryDraft] = useState('');
   const [memoryQuery, setMemoryQuery] = useState('');
+  const [sharedMoment, setSharedMoment] = useState<{characterId:string;text:string} | null>(null);
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const memoryBase = useRef<AppState | null>(null);
   const [draftSaving, setDraftSaving] = useState(false);
@@ -402,6 +407,8 @@ export default function App() {
       action === 'listen'
     )
       return;
+    // The routine owns sustained activities; a gesture timer must not stop a chapter midway.
+    if (isActivity(action) && lifeRef.current.activity === action) return;
     const animation = spriteAnimation(skin),
       clip = animation?.clips[action];
     const duration = isActivity(action)
@@ -801,7 +808,7 @@ export default function App() {
     onEnter: () => {
       // Arrived: a wave, and soon on to something of her own rather than standing there.
       if (motionEnabled && supportsAction(skin, 'wave')) move('wave', 'happy', true);
-      lifeRef.current.until = Math.min(lifeRef.current.until, Date.now() + 9000);
+      if (!isActivity(lifeRef.current.activity)) lifeRef.current.until = Math.min(lifeRef.current.until, Date.now() + 9000);
     },
     onFall: (cause) => {
       // A fall ends whatever she was showing above her head (a hum's ♪): how she feels shows now.
@@ -875,7 +882,7 @@ export default function App() {
     const asking = life.pending;
     const feeling = moodName(moodOf());
     const step = advanceLife(life, {
-      available: activities.map((item) => item.id),
+      available: activities.filter((item) => supportsAction(skin, item.id)).map((item) => item.id),
       temperament: character.behavior,
       proactive: state.settings.proactiveEnabled !== false,
       canInvite: !context?.quiet && mayInvite(attention, now, userIdleRef.current, character.behavior),
@@ -910,7 +917,8 @@ export default function App() {
         ownPose(action) ||
         action === 'sit' ||
         action === 'lie' ||
-        (behavior.current.priority >= 100 && behavior.current.until > performance.now()),
+        (behavior.current.priority >= 100 && behavior.current.until > performance.now() &&
+          !(isActivity(action) && life.activity === action)),
     });
     // She asked and nobody answered.
     if (asking && !life.pending) feelNow('ignored');
@@ -925,7 +933,8 @@ export default function App() {
       ['read', 'diary', 'office'].includes(step.activity)
     )
       void desktop.explore('read', true);
-    if (step.changed) {
+    const resumeRoutine = isActivity(step.activity) && action === 'idle' && !interactionBusy && !talking;
+    if (step.changed || resumeRoutine) {
       if (isActivity(step.activity) && supportsAction(skin, step.activity) && motionEnabled) {
         activityEnd.current = life.until;
         move(step.activity, 'neutral', true);
@@ -1014,6 +1023,14 @@ export default function App() {
     if (!moment) return;
     feelNow('play');
     recordMoment(lifeRef.current, moment, result.outcome);
+    const sharedText = `我们${momentOffers[moment].title}：${result.outcome}`.slice(0,500);
+    setSharedMoment({characterId: character.id, text: sharedText});
+    if (state.settings.rememberInteractions !== false && state.memories.length < 5000) {
+      const target=character.id;
+      void save(s=>({...s,memories:s.memories.some(m=>m.characterId===target&&m.text===sharedText)||s.memories.length>=5000?s.memories:[...s.memories,{id:id(),characterId:target,text:sharedText,createdAt:now(),kind:'interaction',origin:'interaction'}]}))
+        .then(()=>setSharedMoment(current=>current?.text===sharedText?null:current))
+        .catch(()=>setToast('这次共同经历尚未保存，可到相处记忆中重试。'));
+    }
     setMoment(null);
     setInteractionLine(result.line);
     setBubbleHidden(false);
@@ -1587,12 +1604,11 @@ export default function App() {
       }
       if (chatCancelled.current) throw new Error('已停止等待这次回复。');
       const request =
-        retry && failedChat.current?.character.id === character.id
+        retry && failedChat.current?.characterId === character.id
           ? failedChat.current
           : {
-              character: { ...currentCharacter, visualReferences: undefined },
-              messages: history.slice(-24),
-              memories: stateRef.current.memories.filter((m) => m.characterId === currentCharacter.id),
+              characterId: currentCharacter.id,
+              latestMessageId: history.at(-1)!.id,
               skinId: skin?.id,
               situation: lifeSituation(
                 lifeRef.current,
@@ -1609,7 +1625,7 @@ export default function App() {
         reply,
         messageId: id(),
         memoryId: id(),
-        replyTo: request.messages.at(-1)?.id,
+        replyTo: request.latestMessageId,
         createdAt: now(),
       };
       completedReplies.current.set(currentCharacter.id, completed);
@@ -1907,6 +1923,7 @@ export default function App() {
                 theme: c.theme,
                 accent: c.accent,
                 visualReferences: c.visualReferences,
+                dossier: Object.fromEntries(['personal','relationships','events','traits','voice'].map(k=>[k,[...(c.dossier?.[k as keyof CharacterDossier] || []).filter(e=>e.status==='user'),...(result.dossier?.[k as keyof CharacterDossier] || [])].slice(0,32)])) as CharacterDossier,
                 roleplay: c.roleplay,
                 behavior: c.behavior,
               }
@@ -2593,7 +2610,14 @@ export default function App() {
             }}
             thumbnail={assetThumb}
             composer={conversationPanel('room')}
-            setup={
+            setup={state.settings.welcomeDismissed === false && skin ? (
+              <WelcomeGuide
+                onClose={() => commit(s => ({...s, settings: {...s.settings, welcomeDismissed: true}}))}
+                onDesktop={() => {commit(s => ({...s, settings: {...s.settings, welcomeDismissed: true}})); notifyError(bridge.openPet());}}
+                onChat={() => {commit(s => ({...s, settings: {...s.settings, welcomeDismissed: true}})); setView('settings');}}
+                onCreate={() => {commit(s => ({...s, settings: {...s.settings, welcomeDismissed: true}})); openCreate();}}
+              />
+            ) : (
               <CharacterReadiness
                 character={character}
                 skins={allSkins}
@@ -2602,7 +2626,7 @@ export default function App() {
                 onInteraction={() => setPacksOpen(true)}
                 onAnimation={() => setPetProductionOpen(true)}
               />
-            }
+            )}
             drawer={historyDrawer}
             quickReplies={localChat || messages.length < 2 ? quickReplies : []}
             interactionBusy={interactionBusy}
@@ -2932,6 +2956,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
+                  <DossierEditor character={character} />
                   <section className="persona-summary">
                     <span>
                       <ShieldCheck size={16} /> 角色一致性
@@ -3061,7 +3086,7 @@ export default function App() {
                         ...s,
                         memories: [
                           ...s.memories,
-                          { id: id(), characterId: character.id, text: draft.trim(), createdAt: now() },
+                          { id: id(), characterId: character.id, text: draft.trim(), createdAt: now(), kind: 'interaction' as const, origin: 'user-confirmed' as const },
                         ],
                       }),
                       () => setMemoryDraft((value) => (value === draft ? '' : value)),
@@ -3080,6 +3105,11 @@ export default function App() {
                     存下这段记忆
                   </button>
                 </form>
+                {sharedMoment?.characterId===character.id && <div className="notice"><span>{sharedMoment.text}</span><button type="button" className="text-button" onClick={()=>{
+                  const captured=sharedMoment;
+                  void saveDraft(s=>({...s,memories:s.memories.some(m=>m.characterId===captured.characterId&&m.text===captured.text)||s.memories.length>=5000?s.memories:[...s.memories,{id:id(),characterId:captured.characterId,text:captured.text,createdAt:now(),kind:'interaction',origin:'interaction'}]}),()=>setSharedMoment(null));
+                }}>记住这次一起做的事</button></div>}
+                <label className="checkbox-label"><input type="checkbox" checked={state.settings.rememberInteractions !== false} onChange={e=>{const enabled=e.target.checked;void commit(s=>({...s,settings:{...s.settings,rememberInteractions:enabled}}));}}/>记住一起完成的小游戏与共同活动（不记录每次戳碰）</label>
                 <div className="memory-toolbar">
                   <label>
                     <Search size={16} />
@@ -3101,6 +3131,7 @@ export default function App() {
                       <Heart size={18} />
                       <div>
                         <p>{m.text}</p>
+                        <span className="memory-tag">{{preference:'偏好',interaction:'共同经历',promise:'约定',boundary:'相处边界'}[m.kind || 'preference']} · {m.origin==='user-confirmed'?'你确认的记忆':m.origin==='interaction'?'共同互动':m.origin==='user-stated'?'来自你的原话':'历史记忆'}</span>
                         <time>{new Date(m.createdAt).toLocaleDateString('zh-CN')}</time>
                         {m.pinned && <span className="memory-tag">优先记住</span>}
                         {m.excluded && <span className="memory-tag">暂不用于对话</span>}
@@ -3933,8 +3964,11 @@ export default function App() {
               maxLength={8000}
               rows={5}
               value={editingMemory.text}
-              onChange={(e) => setEditingMemory({ ...editingMemory, text: e.target.value })}
+              onChange={(e) => setEditingMemory({ ...editingMemory, text: e.target.value, origin: 'user-confirmed' })}
             />
+            <label>记忆类别<select aria-label="记忆类别" value={editingMemory.kind || 'preference'} onChange={e=>setEditingMemory({...editingMemory,kind:e.target.value as Memory['kind'],origin:'user-confirmed'})}>
+              <option value="preference">偏好与习惯</option><option value="interaction">共同经历</option><option value="promise">约定</option><option value="boundary">相处边界</option>
+            </select></label>
             {memoryChanged && (
               <div className="notice">
                 {latestEditingMemory ? (

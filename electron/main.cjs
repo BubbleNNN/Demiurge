@@ -647,13 +647,11 @@ app.whenReady().then(async () => {
       event,
       async (progress, signal) => {
         bound(input);
-        validateCharacter(input.character);
-        if (!Array.isArray(input.messages) || !Array.isArray(input.memories))
-          throw new Error('聊天资料格式无效。');
+        const request = require('./chat-request.cjs').chatRequest(input);
         const state = await store.loadState();
         if (!state) throw new Error('角色工坊尚未初始化，请先打开主窗口。');
         const settings = state.settings;
-        const character = state?.characters.find((c) => c.id === input.character.id);
+        const character = state?.characters.find((c) => c.id === request.characterId);
         if (!character) throw new Error('请先保存角色档案。');
         const skin = state.skins.find(
           (s) =>
@@ -665,7 +663,7 @@ app.whenReady().then(async () => {
             character,
             messages: require('./conversations.cjs').requestHistory(
               state.messages[character.id] || [],
-              input.messages.at(-1)?.id,
+              request.latestMessageId,
             ),
             availableActions: require('./persona.cjs').availableActions(skin),
             availableEmotions: require('./persona.cjs').availableEmotions(skin),
@@ -673,11 +671,11 @@ app.whenReady().then(async () => {
         const credentials = await store.getCredentials();
         return await services.chatWithCharacter(
           {
-            ...input,
+            situation: request.situation,
             character,
             messages: require('./conversations.cjs').requestHistory(
               state.messages[character.id] || [],
-              input.messages.at(-1)?.id,
+              request.latestMessageId,
             ),
             memories: state.memories,
             availableActions: require('./persona.cjs').availableActions(skin),
@@ -691,7 +689,7 @@ app.whenReady().then(async () => {
         );
       },
       'chat',
-      input?.character?.id,
+      input?.characterId || input?.character?.id,
     ),
   );
   handle('preview-persona', (event, input) =>

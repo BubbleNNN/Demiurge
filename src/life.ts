@@ -279,7 +279,10 @@ export function advanceLife(
   if (s.pending && blocked) s.pending.expires += elapsed;
   if (s.pending && now >= s.pending.expires) settleInvite(s, 'ignored', now);
   // While the user is talking or touching her, the fictional clock pauses; no catch-up bursts.
-  if (blocked) return null;
+  if (blocked) {
+    s.until += elapsed;
+    return null;
+  }
   const minutes = Math.min(60, elapsed / 1000) / 60;
   if (s.task && s.activity === s.task.activity)
     s.task.remaining = Math.max(0, s.task.remaining - minutes * 60000);
@@ -289,9 +292,7 @@ export function advanceLife(
   );
   // Affectionate characters want company sooner.
   s.social = clamp(s.social + (1.5 + temperament.affection / 40) * minutes);
-  s.focus = clamp(
-    s.focus + (['read', 'diary', 'office', 'gaming'].includes(s.activity) ? 12 : -15) * minutes,
-  );
+  s.focus = clamp(s.focus + (['read', 'diary', 'office', 'gaming'].includes(s.activity) ? 4 : -15) * minutes);
 
   // A new foreground app can guide the next task, after the current project or break ends.
   const working = context && (context.mode === 'typing' || context.mode === 'active');
@@ -355,21 +356,25 @@ export function advanceLife(
     ) {
       s.task = {
         activity: s.activity as Activity,
-        remaining: (5 + (100 - temperament.energy) / 25 + random() * 3) * 60000,
+        remaining: (8 + (100 - temperament.energy) / 20 + random() * 4) * 60000,
       };
     }
     s.reason = reasonFor(key, random);
     s.chapter++;
     // Calmer characters linger longer on each thing.
     const pace = 1.4 - temperament.energy / 200;
-    const duration =
-      s.activity === 'sleep'
-        ? 300000
-        : s.activity === 'idle'
-          ? 25000
-          : s.activity === 'snack'
-            ? 80000
-            : (110000 + random() * 90000) * pace;
+    const ranges: Record<LifeActivity, [number, number]> = {
+      read: [300000, 480000],
+      office: [300000, 480000],
+      diary: [240000, 360000],
+      gaming: [240000, 360000],
+      music: [180000, 300000],
+      snack: [100000, 150000],
+      idle: [45000, 75000],
+      sleep: [480000, 720000],
+    };
+    const [minimum, maximum] = ranges[s.activity];
+    const duration = (minimum + random() * (maximum - minimum)) * pace;
     s.until = now + duration;
     changed = previous !== s.activity;
     announce = changed && proactive && s.activity !== 'sleep' ? random() < 0.4 : false;

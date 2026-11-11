@@ -17,8 +17,18 @@ async function portableBundle(character, skins, artDirectory) {
       const authored = !skin.sprite && motionPack.entries.find((entry) => entry.builtin === skin.builtin);
       const bytes = await fs.readFile(path.join(artDirectory, authored?.file || skin.builtin + '.png'));
       skin.images = { ...skin.images, neutral: 'data:image/png;base64,' + bytes.toString('base64') };
-      if (authored) skin.sprite = structuredClone(authored.animation);
-      else if (skin.builtin === 'cyrene-8bit-v5') skin.sprite = structuredClone(cyreneSprite);
+      if (authored) {
+        skin.sprite = structuredClone(authored.animation);
+        if (skin.sprite.pages)
+          skin.sprite.pages = await Promise.all(
+            skin.sprite.pages.map(async (page, index) => {
+              // Paths come from the bundled catalogue, never from imported user data.
+              const file = authored.pageFiles[index];
+              const bytes = await fs.readFile(path.join(artDirectory, file));
+              return { ...page, src: 'data:image/png;base64,' + bytes.toString('base64') };
+            }),
+          );
+      } else if (skin.builtin === 'cyrene-8bit-v5') skin.sprite = structuredClone(cyreneSprite);
       else if (skin.builtin.endsWith('-v4')) {
         // Legacy cards show the top-left pose of a 2x2 atlas. Preserve that
         // exact display as one static frame, without inventing animation.

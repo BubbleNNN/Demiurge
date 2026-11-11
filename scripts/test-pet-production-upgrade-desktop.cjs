@@ -12,7 +12,7 @@ fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
-const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi.png'));
+const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const original = fixture.url(originalBytes);
 const master = fixture.image(),
   sheet = fixture.image(true);
@@ -74,7 +74,7 @@ ipcMain.handle = (channel, handler) =>
     return handler(...args);
   });
 const wikiSearches = [];
-const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 global.fetch = async (url, init) => {
   if (String(url).startsWith('https://zh.wikipedia.org/w/api.php')) {
     // The chibi look first looks for an existing design; this isolated wiki has none.

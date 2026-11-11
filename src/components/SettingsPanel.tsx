@@ -1,3 +1,4 @@
+import chatProviders from '../../shared/chat-providers.json';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   KeyRound,
@@ -238,6 +239,18 @@ export function SettingsPanel({
                 </select>
                 <small>本地台词按场景和关键词选择，不回答开放问题，也不会自动调用语音服务。</small>
               </label>
+              <label>对话供应商
+                <select aria-label="对话供应商" value={draft.llmProvider || 'custom'} onChange={e=>{
+                  const p=chatProviders.find(p=>p.id===e.target.value)!;
+                  setDraft({...draft,llmProvider:p.id as Settings['llmProvider'],llmProtocol:p.protocol as Settings['llmProtocol'],
+                    llmBaseUrl:p.id==='custom'?draft.llmBaseUrl:p.base,llmEndpointMode:p.id==='custom'?draft.llmEndpointMode:'base',
+                    llmOutputMode:p.output as Settings['llmOutputMode'],llmThinking:p.id==='qwen'?'off':'auto'});
+                  setTestResult(null);
+                }}>
+                  {chatProviders.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
+                </select>
+                <small>{chatProviders.find(p=>p.id===draft.llmProvider)?.note || '已有配置保持原样。选择预设会填入基础地址，Key 和模型仍需匹配该服务。'}</small>
+              </label>
               <label>
                 接口协议
                 <select
@@ -354,6 +367,16 @@ export function SettingsPanel({
                   </p>
                 </>
               )}
+              {!codex && (draft.llmProtocol || 'openai') === 'openai' && <div className="form-row">
+                <label>结构化回复<select aria-label="结构化回复方式" value={draft.llmOutputMode || 'json'} onChange={e=>setDraft({...draft,llmOutputMode:e.target.value as 'json'|'prompt'})}>
+                  <option value="json">JSON 模式（服务需支持）</option><option value="prompt">提示词约束（兼容服务）</option>
+                </select><small>两种方式都会检查回复结构；不会自动重发请求。</small></label>
+                <label>思考模式<select aria-label="思考模式" value={draft.llmThinking || 'auto'} onChange={e=>setDraft({...draft,llmThinking:e.target.value as 'auto'|'off'})}>
+                  <option value="auto">服务默认</option><option value="off">关闭千问深度思考</option>
+                </select><small>千问非流式对话可关闭深度思考；其他服务不发送这一专用参数。</small></label>
+              </div>}
+              {!codex && <p className="fine-print">实际请求地址：{(() => {try {const u=new URL(draft.llmBaseUrl);const suffix=draft.llmProtocol==='anthropic'?(/\/v1\/?$/.test(u.pathname)?'messages':'v1/messages'):'chat/completions';return draft.llmEndpointMode==='exact'?u.href:u.href.replace(/\/+$/,'')+'/'+suffix;}catch{return '请填写有效地址';}})()}</p>}
+              {!codex && draft.llmEndpointMode==='exact' && /\/(?:compatible-mode\/v1|api\/v3|api\/paas\/v4|v1)\/?$/.test(draft.llmBaseUrl) && <p className="inline-error">这里看起来是基础地址。请选择“服务基础地址”，或填写完整的接口路径；系统不会擅自改写完整 URL。</p>}
               <label>
                 近期对话回顾
                 <select

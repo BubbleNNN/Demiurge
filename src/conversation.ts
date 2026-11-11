@@ -36,7 +36,7 @@ export function appendCompletedReply(state: AppState, completed: CompletedReply)
     },
     memories:
       reply.memory && !hasMemory && state.memories.length < 5000
-        ? [...state.memories, { id: memoryId, characterId, text: reply.memory, createdAt }]
+        ? [...state.memories, { id: memoryId, characterId, text: reply.memory, createdAt, kind: (/我们约好|我们说好|下次一起|we agreed|next time/i.test(reply.memory) ? 'promise' : /不要叫我|别叫我|不喜欢被/i.test(reply.memory) ? 'boundary' : 'preference') as 'preference' | 'promise' | 'boundary', origin: 'user-stated' as const, ...(completed.replyTo ? {sourceMessageId:completed.replyTo} : {}) }]
         : state.memories,
   };
 }

@@ -90,7 +90,7 @@
     "prompt": "A soft, cute 3D chibi FIGURE of this SAME character, about 2.5 heads tall: rounded head, large glossy eyes, short limbs, smooth sculpted volumes like a premium resin or vinyl collectible. Gentle studio lighting from the front-left, soft matte materials with restrained specular highlights, clean saturated colors, subtle ambient occlusion; no outlines, no realistic skin texture, no plush fibers. Preserve the character's hairstyle and bangs, hair colors and gradients, hair ornaments, costume construction, color divisions and accessories as sculpted shapes. No base, stand, background, floor shadow, glow or text. One complete full-body figure standing calmly with separated hands and feet and generous transparent margins."
   },
   "chibi-pet": {
-    "shape": "先查找同一角色已有的 Q 版形象，沿用其头身比、五官与服装简化设计；未找到时使用芙宁娜贴纸画风。",
+    "shape": "先查找同一角色已有的 Q 版形象，沿用其头身比、五官与服装简化设计；未找到时使用内置 Q版画风示例。",
     "surface": "有可靠现成参考时跟随参考；无参考时采用清晰深色轮廓、约两头身、干净平涂与少量硬阴影。",
     "canvas": "单个全身透明 PNG，头发、手脚与饰物留足空隙；无白色贴纸底板、背景光晕或棋盘格。",
     "motion": "先确认同一张贴纸基准，再制作真实动作帧；所有帧沿用相同轮廓粗细、头身比、配色与饰物。",

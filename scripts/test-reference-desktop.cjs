@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const dir = path.join(root, '.local', `reference-smoke-${randomUUID()}`);
-const fixture = path.join(root, 'public/art/cyrene-chibi.png');
+const fixture = path.join(root, 'public/art/cyrene-chibi-v6-reference.png');
 let requests = 0;
 let server;
 let window;

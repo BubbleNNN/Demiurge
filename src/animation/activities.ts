@@ -10,7 +10,7 @@ export const activities = activityData.activities as {
 }[];
 export const isActivity = (action: PetAction | string): action is Activity =>
   activities.some((activity) => activity.id === action);
-export const activityDuration = 60000;
+export const activityDuration = 300000;
 type Transition = `enter_${PetAction}` | `exit_${PetAction}`;
 export interface ActivityPlayback {
   current: PetAction;

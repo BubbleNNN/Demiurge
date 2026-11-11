@@ -15,7 +15,7 @@ fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
-const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi.png'));
+const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const timestamp = new Date().toISOString();
 const character = {
   id: 'base-edit-test',
@@ -105,7 +105,7 @@ storeModule.createStore = (options) => {
   return store;
 };
 const wikiSearches = [];
-const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 global.fetch = async (url, init) => {
   const planned = await planner.handle(url, init);
   if (planned) return planned;

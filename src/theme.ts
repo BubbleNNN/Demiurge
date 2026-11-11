@@ -5,7 +5,7 @@ export const styles: { id: ArtStyle; name: string; detail: string; color: string
   { id: 'original', name: '原作', detail: '原作线条、上色与比例', color: '#f0dce9' },
   { id: '8bit', name: '8bit', detail: '粗像素 · 16 色 · 逐帧姿势', color: '#d7dbf0' },
   { id: '3d', name: '3D', detail: '立体造型与光照', color: '#d6e4ef' },
-  { id: 'chibi-pet', name: 'Q版', detail: '先搜索现成形象 · 无参考时用芙宁娜贴纸画风', color: '#d7eceb' },
+  { id: 'chibi-pet', name: 'Q版', detail: '先搜索现成形象 · 无参考时用内置 Q版画风示例', color: '#d7eceb' },
 ];
 export const availableStyle = (style: ArtStyle) => styles.some((entry) => entry.id === style) || ['anime','chibi','sticker','pastel','powerpuff','pixel','figure'].includes(style);
 export const themes: {

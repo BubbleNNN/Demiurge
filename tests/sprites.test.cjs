@@ -54,7 +54,7 @@ test('sprite import embeds local bytes and rejects traversals and escaped symlin
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const root = path.join(dir, 'pack');
   await fs.mkdir(root);
-  const png = await fs.readFile('public/art/cyrene-8bit-v5.png');
+  const png = await fs.readFile('public/art/cyrene-chibi-v6-reference.png');
   await fs.writeFile(path.join(root, 'pet.png'), png);
   const file = path.join(root, 'pet.json');
   const write = (image) => fs.writeFile(file, JSON.stringify({ version: 1, image, animation }));

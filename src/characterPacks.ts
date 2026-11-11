@@ -54,7 +54,7 @@ export function matchingCharacterPacks(state: AppState, name: string, work: stri
 }
 
 export function activateCharacterPack(state: AppState, pack: CharacterPack): AppState {
-  if (pack.origin === 'builtin') return installStarterPack(state, '8bit');
+  if (pack.origin === 'builtin') return installStarterPack(state, 'chibi-pet');
   const current = state.characters.find((character) => character.id === pack.character.id);
   if (
     !current ||
@@ -69,8 +69,8 @@ export function activateCharacterPack(state: AppState, pack: CharacterPack): App
 }
 
 export const starterPack = {
-  id: 'cyrene-companion-v1',
-  title: '昔涟 · 此刻的陪伴',
+  id: 'cyrene-companion-v2',
+  title: '大昔涟 · Q版桌面陪伴',
   description: '复用项目中已制作的外观，配好本地互动台词。使用和播放不调用图像服务。',
   character: cyrene,
   skins: builtinSkins,

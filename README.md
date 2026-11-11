@@ -1,171 +1,132 @@
-<p align="center">
-  <img src="public/favicon.svg" width="112" alt="Demiurge" />
-</p>
-
+<p align="center"><img src="public/favicon.svg" width="88" alt="Demiurge" /></p>
 <h1 align="center">Demiurge</h1>
+<p align="center"><b>Bring your favorite characters to life on your desktop.</b><br/>Work, read, play, and do nothing together. A little company for an ordinary day.</p>
+<p align="center"><a href="README.zh-CN.md">简体中文 · 新手教程</a> · <a href="https://github.com/BubbleNNN/Demiurge/releases/latest">Download for Windows</a> · <a href="community/README.md">Community</a></p>
+<p align="center"><img alt="version" src="https://img.shields.io/badge/version-0.1.6-b85a8b" /> <img alt="platforms" src="https://img.shields.io/badge/macOS%20%7C%20Windows-desktop-8671ba" /> <img alt="license" src="https://img.shields.io/badge/code-MIT-699c85" /></p>
 
-<p align="center">
-  <b>Give your characters a life on your desktop.</b><br/>
-  A local-first character companion: research a character, give them a voice, make them a desktop pet,<br/>
-  and let them live beside you: sitting on the window you type in, writing their diary, asking you to play.
-</p>
+![Cyrene walking, sitting and keeping you company](docs/media/cyrene-chibi-desktop.gif)
 
-<p align="center">
-  <a href="README.zh-CN.md">简体中文</a> ·
-  <a href="docs/DEMIURGE_USER_GUIDE.md">User guide (中文)</a> ·
-  <a href="community/README.md">Community pets &amp; plugins</a> ·
-  <a href="docs/PET_MODULE.md">The pet module</a>
-</p>
+**Not just Cyrene.** Demiurge lets you create, import, animate, and share other characters. Version **0.1.6** includes only the latest **large chibi Cyrene** starter pet. Other characters need their own profiles and artwork; entering a name alone does not guarantee a complete animated pet.
 
-<p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-0.1.4-8c72d6" />
-  <img alt="platforms" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-5a3f8f" />
-  <img alt="license" src="https://img.shields.io/badge/license-MIT-c0668d" />
-  <img alt="local first" src="https://img.shields.io/badge/local--first-no%20account%20needed-3a2d63" />
-</p>
+## A day together in 67 seconds
 
-<p align="center">
-  <img src="docs/media/cyrene-styles.gif" alt="Cyrene waving, blinking and resting in original, 8-bit, low-poly and cartoon looks" width="100%" />
-</p>
+[![Watch the narrated feature video](docs/media/demiurge-landscape-cover.png)](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4)
 
-> Formerly **Mori**. Your data folder, saved keys and macOS permissions carry over untouched.
+[Landscape · 1920×1080](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-landscape.mp4) · [Portrait · 1080×1920](https://github.com/BubbleNNN/Demiurge/releases/download/v0.1.6/demiurge-desktop-life-vertical.mp4)
 
-## See Cyrene in motion
+Chinese AI narration; music: *Remembrance of the Heart / 心忆* by HOYO-MiX and 林一凡. Actual animation assets and community UI are used in an editorial desktop composition. Dialogue is illustrative; this is not an uninterrupted live recording. [Media credits and reproduction](docs/media/README.md).
 
-<table>
-  <tr><th>Original look</th><th>8-bit</th><th>Cartoon look</th></tr>
-  <tr>
-    <td><img src="docs/media/cyrene-original.gif" alt="Cyrene waving, blinking, nodding, talking and resting" width="280" /></td>
-    <td><img src="docs/media/cyrene-8bit.gif" alt="Cyrene's 8-bit sprite animations" width="280" /></td>
-    <td><img src="docs/media/cyrene-cartoon.gif" alt="Cyrene's cartoon sprite animations" width="280" /></td>
-  </tr>
-</table>
+<table><tr><th>Busy together</th><th>Her own little routine</th></tr><tr><td><img src="docs/media/cyrene-chibi-work.gif" alt="Working, reading and journaling" width="460" /></td><td><img src="docs/media/cyrene-chibi-life.gif" alt="Music, games and snacks" width="460" /></td></tr></table>
 
-These GIFs use the bundled Cyrene motion frames and saved clip timings: wave, blink, nod, mouth states and rest. Touch responses now follow the character's manner, while daily routines keep a task and return to it after a break. [Interaction and routine changes (中文)](docs/INTERACTION_AND_LIFE_2026_11_11.md).
+## What it does
 
-**32-second introduction** — several looks, small gestures, quiet company and the pet creation workflow. Click the poster to view or download the MP4.
+- **Desktop company:** walking, sitting, lying down, sleeping, reading, office work, journaling, music, snacks, and games, played from actual authored poses.
+- **Continuous routines:** character preferences, needs and a current task guide behavior. Focused activities last minutes; brief interactions pause the activity clock instead of constantly switching poses.
+- **Touch and conversation:** click, stroke her head, or drag her somewhere comfortable. Replies appear in bubbles; expand conversation history when needed.
+- **Character-grounded dialogue:** personal facts, relationships, events, traits and voice rules with source, uncertainty and spoiler labels. Inspect, edit, or delete memories of your interactions.
+- **A workshop and sharing directory:** create looks and actions from references, review frames, import/export character packs, and share pets or data-only life plugins.
 
-[![Watch the Demiurge introduction](docs/media/demiurge-intro-poster.png)](docs/media/demiurge-intro.mp4)
+Window perching and foreground-window awareness currently require the **macOS helper**. Windows supports desktop pets and chat without window awareness. Mood and daily life are simulated behavior; model replies are not guaranteed to remain perfectly in character.
 
-<sub>A silent, offscreen-rendered motion and feature showcase using existing sprite assets. Cyrene examples are AI-generated fan art; character rights remain with their owners, and example media is excluded from the software's MIT grant. [Media details and reproduction](docs/media/README.md).</sub>
+## Install on Windows — no programming required
 
-## Why Demiurge
+For **Windows 10 / 11 x64**. You do not need Node.js, Python, or Git.
 
-Most desktop pets play a loop. Demiurge's characters **live**: they notice what you are doing, have
-their own routine and moods, and each one behaves like _themselves_.
+1. Open [release v0.1.6](https://github.com/BubbleNNN/Demiurge/releases/tag/v0.1.6) and download **Demiurge-0.1.6-windows-x64.zip**. The separate “Source code” links are for developers.
+2. Right-click the ZIP → **Extract All** into a permanent folder. Keep the entire extracted folder; do not run inside the ZIP or move only the exe.
+3. Double-click **Demiurge.exe** and follow the first-use steps below.
+4. This build is unsigned. If SmartScreen reports an unknown publisher, verify the download came from this release and check its checksum before deciding whether to proceed.
+5. Create a shortcut if desired. To update, fully quit the app, extract the new version, then remove the old application folder. Keep **`%APPDATA%\Mori`**, which contains your characters, settings, and chats.
 
-|                                         |                                                                                                                                                                                                                                                                              |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🪟 **Keeps you company where you work** | Start typing in an editor and she runs over, sits or lies on top of that window, does her own thing and steals glances at your screen. Stay away too long and she comes to ask for attention.                                                                                |
-| 🎭 **Each character is themselves**     | Hobbies, small habits, how they get around (walk, run, hop or fly) and their manner (shy, teasing, playful, calm) come from the character's own profile. A diarist writes, a gamer plays, a shy one blushes when patted.                                                     |
-| 💗 **Moods that matter**                | Happy when played with, lonely when ignored, cross when woken up or flung off a window. She sulks until you pat her head, and the chat model knows how she feels.                                                                                                            |
-| 🖱️ **Feels physical**                   | Drag her and she swings; drag a window she sits on and she runs to keep her place; yank it away and she falls. Stroke her head with the pointer to pat her. She follows you across Spaces and full-screen apps.                                                              |
-| 💬 **Talk without opening the app**     | A message box under her feet; replies appear above her head. Works with your own chat model, or with written lines and no account at all.                                                                                                                                    |
-| 🎨 **Make your own pet**                | From a few reference images, Demiurge drafts a character image in several styles, then every motion (blink, talk, wave, sit, lie, fly, read, write, play…), checks each sheet and packs a reviewed sprite atlas. Correct an image directly, or choose search-assisted corrections. |
-| 🌐 **Share and download**               | A community catalogue of pets and data-only plugins, installed with one click, every file checked against its digest.                                                                                                                                                        |
-| 🔒 **Private by design**                | She sees window positions, the front app and seconds since your last key press, never titles, contents or keystrokes. Keys live in the system keychain. Everything runs on your computer.                                                                                    |
+Optional checksum verification in PowerShell:
 
-## Install
+```powershell
+Get-FileHash .\Demiurge-0.1.6-windows-x64.zip -Algorithm SHA256
+```
 
-### Windows 10 / 11 (64-bit)
+Compare with the accompanying `.sha256` file. The cross-built package and file integrity have been checked; **it has not been run on a physical Windows machine**. [Report Windows issues](https://github.com/BubbleNNN/Demiurge/issues) with your OS version and reproduction steps.
 
-> The Windows version is new and has not been tested on a Windows PC yet. If anything goes wrong,
-> please [open an issue](https://github.com/BubbleNNN/Demiurge/issues).
+The public package excludes the separately licensed Live2D Cubism Core. The bundled chibi sprite pet works without it. The exe file still has Electron's default icon; the window and taskbar use Demiurge's icon.
 
-1. Download `Demiurge-<version>-windows-x64.zip` from the
-   [latest release](https://github.com/BubbleNNN/Demiurge/releases/latest).
-2. _Optional:_ check the download. In PowerShell, `Get-FileHash .\Demiurge-<version>-windows-x64.zip`
-   should print the same SHA-256 as the `.sha256` file published next to it.
-3. Right-click the zip and choose **Extract All…**. Pick a folder you will keep, for example
-   `%LOCALAPPDATA%\Programs\Demiurge`. Don't run it from inside the zip.
-4. Open the extracted folder and double-click **Demiurge.exe**.
-5. The app is not code-signed, so the first time Windows may say _"Windows protected your PC"_.
-   Click **More info**, then **Run anyway**.
-6. For a shortcut, right-click `Demiurge.exe` and choose **Pin to Start**, or
-   **Show more options → Send to → Desktop (create shortcut)**.
+## First-use tutorial
 
-**Update:** quit Demiurge, extract the new zip, then delete the old folder. Your characters, chats
-and settings are kept. **Uninstall:** delete the folder. Your data lives in `%APPDATA%\Mori`
-(paste that into the Explorer address bar); delete it too to remove everything.
+The current interface is primarily Chinese; the labels below match the app.
 
-What is different on Windows for now:
+### 1. Try companionship without an API key
 
-- She lives on your desktop but does not see other windows yet, so she won't sit on the window you
-  are typing in or follow you between virtual desktops (that part uses a macOS helper).
-- Live2D models don't load in the download, because the Live2D runtime has its own licence.
-  Picture and animated pets work as usual.
-- `Demiurge.exe` itself shows the generic Electron icon; the window and taskbar show Demiurge's.
+Open the app, then choose **体验桌面陪伴** in the welcome guide or **放到桌面** at the top right. The latest chibi Cyrene is ready to use.
 
-### macOS (Apple silicon)
+Click her for a response, move the pointer back and forth over her head to stroke it, or drag her to move. Hover nearby for the pet toolbar, activities, chat and size controls. Reading and other focused activities last several minutes. **连接与设置** controls size, automatic life and sound; pause automatic life or close the pet when you want quiet.
 
-There is no macOS download yet; build the app on your Mac as below. It is unsigned, so open it the
-first time with right-click → **Open**. See [macOS packaging](docs/MACOS_RELEASE.md).
+The default **本地台词** mode uses authored local lines. It needs no service or paid API calls, but it is not unrestricted AI conversation.
 
-### From source
+![First launch: dismissible guide and the bundled chibi Cyrene](docs/media/first-start.png)
 
-Requires Node.js 22.12+ and pnpm.
+### 2. Connect a model for free-form conversation
+
+1. Open **连接与设置** and find the conversation provider.
+2. Select your provider: OpenAI-compatible, Alibaba Qwen, DeepSeek, Doubao, MiniMax, GLM, Anthropic, or local Codex.
+3. Enter that provider's **API key, model / endpoint ID, and service URL**. Changing providers does not replace your existing key or model automatically.
+4. If your provider gives a full request URL, use the full-address option and check the displayed final URL for duplicate path suffixes.
+5. Save and test, select **模型对话** in the conversation panel, and send a greeting.
+
+Chat uses a text model. **Generating new artwork and animation requires a compatible reference-image generation service as well**; a chat-only key does not imply image support. Playing existing pets needs no image service. Subscription and API billing depend on your actual provider account. [Provider details and troubleshooting](docs/CHAT_PROVIDERS_AND_MEMORY.md).
+
+### 3. Shape a character's voice and memory
+
+Go to **角色工作室 → 角色档案**, then **补充资料** to collect or reorganize information. Wiki, source links and saved-source text are available; Tavily is optional. If a site fails, supply official source links or reorganize previously saved material.
+
+Review relationships, event timelines, traits, voice rules and spoiler settings. Keep unverified claims marked as such. Separate your creative additions from canon. Inspect the memory page and correct or delete inaccurate interaction memories.
+
+### 4. Add another character
+
+- **Import an existing pack:** use the character or community entry, select the character and appearance, then place it on your desktop.
+- **Make a new pet:** add a character name and work → collect its profile → add consistent reference images → generate and approve a base → create actions → inspect the frames before activation.
+- **Bring your own artwork:** import compatible sprite sheets or character packs to avoid regenerating available assets.
+
+Quality varies by character, style and model. Check anatomy, identity and continuity; unsuccessful candidates do not replace an approved pet automatically. [Production guide](docs/AUTOMATIC_PET_PRODUCTION.md).
+
+### 5. Share and build together
+
+Open **社区桌宠与插件** to browse the directory, install life plugins, or prepare a pet sharing pack. The directory is young: contributions are welcome. Submission to the public catalog goes through a pull request; preparing a sharing pack does not automatically publish your private chats or API keys. [Contribution instructions](community/README.md).
+
+Give the project a **Star** if you like the idea. Help with character packs, routines, animation, Windows testing, or interface design — let's bring more characters to life together.
+
+## macOS and development
+
+Run from source on Apple silicon macOS with **Node.js 22.12+** and **pnpm 11.25**:
 
 ```bash
+git clone https://github.com/BubbleNNN/Demiurge.git
+cd Demiurge
 pnpm install
-pnpm setup:live2d        # optional: Live2D runtime
-pnpm desktop             # run from source with hot reload
-node scripts/package-desktop.cjs            # macOS app in release/ (run on a Mac)
-node scripts/package-windows.cjs --public   # Windows x64 zip in release/ (built on a Mac)
+pnpm desktop
 ```
 
-On macOS you can also double-click **Start Demiurge Dev.command**.
+Optional Live2D setup: `pnpm setup:live2d`, subject to its third-party license.
 
-## First steps
-
-The interface is in Chinese for now.
-
-1. Open the app: the example character is ready to talk to without any API.
-2. Click **放到桌面** (put on desktop). She runs in, waves and gets on with her day.
-3. Hover below her feet for the toolbar: chat, activities, games, size.
-4. Add your own character in **角色工作室** (character studio), or download one from **社区** (community) in the sidebar.
-
-## How it works
-
-```
- character profile ──► persona & lines ──► chat (your model, or written lines)
-        │
-        ├──► behaviour profile ── hobbies · habits · travel · manner
-        │
- reference images ──► character image ──► motion sheets ──► checked, reviewed sprite pack
-                                                          │
- desktop helper (macOS) ── windows · front app · typing ──┴──► desktop life: routine, moods,
-                                                               perching, physics, invitations
+```bash
+pnpm check
+pnpm build
+node scripts/package-windows.cjs --public  # cross-build Windows x64 on macOS
+pnpm setup:live2d
+node scripts/package-desktop.cjs          # build a native macOS package
 ```
 
-- **Electron + React + TypeScript**, with plain CommonJS in the main process and 460 automated tests.
-- A small Swift helper streams window geometry, the front app, Space order and input timing
-  (timestamps only) four times a second.
-- The pet is a reusable module: persona, a sprite pack with clips and a frame review, and a
-  behaviour profile. See [docs/PET_MODULE.md](docs/PET_MODULE.md).
+Formerly Mori; the existing data directory remains `~/Library/Application Support/Mori` on macOS and `%APPDATA%\Mori` on Windows. Updates preserve user-created pets. The macOS helper reads window geometry, foreground application and input timing, not screen text or keystroke content. Model/search requests send relevant material to the configured providers; not all processing happens offline.
 
-## Community
+## A note from the creator
 
-Share a pet you made, or download one and use it right away. Plugins add habits, preferences and
-lines to one character or to all of them; they are data, never code.
-Read [community/README.md](community/README.md) to contribute.
+<!-- AUTHOR: Add your motivation, personal story, and the kind of companionship you hope to create. -->
+> Reserved for the creator: why this project exists.
 
-## Documentation
+## What comes next
 
-- [User guide (中文)](docs/DEMIURGE_USER_GUIDE.md): everything the app does
-- [Automatic pet production](docs/AUTOMATIC_PET_PRODUCTION.md): from reference images to a pack
-- [Development notes (中文)](docs/DEVELOPMENT.zh-CN.md): running from source, services, debugging
-- [Changelog (中文)](docs/CHANGELOG.zh-CN.md)
-- [Third-party notices](docs/THIRD_PARTY.md) and [artwork notes](public/art/README.md)
+<!-- AUTHOR: Add your confirmed roadmap, community links, or contribution priorities. -->
+> Reserved for the creator: future direction and community invitation.
 
-## Contributing
+## Documentation and licensing
 
-Issues and pull requests are welcome, and so are pets and plugins for the catalogue.
-`npx tsc -b && node --test tests/*.test.cjs` runs the checks. See [CONTRIBUTING.md](CONTRIBUTING.md).
+[Full user guide (中文)](docs/DEMIURGE_USER_GUIDE.md) · [Changelog](docs/CHANGELOG.zh-CN.md) · [Pet module](docs/PET_MODULE.md) · [Contributing](CONTRIBUTING.md) · [Third-party notices](docs/THIRD_PARTY.md)
 
-If Demiurge made your desktop a little warmer, a ⭐ helps others find it.
-
-## License
-
-Source code: [MIT](LICENSE). Character artwork, fonts and third-party runtimes keep their own
-rights; see [THIRD_PARTY.md](docs/THIRD_PARTY.md). Parts of the motion and desktop behaviour are adapted
-from [Anime Codex](https://github.com/Lihhan/anime-codex) (MIT).
+**Code: [MIT](LICENSE)**. Character assets, music, fonts and third-party runtimes retain their separate rights. The bundled Cyrene is AI-generated fan artwork, not an official product. Video music *Remembrance of the Heart* is not included in the software's MIT grant. [Artwork notice](public/art/README.md). Parts of the desktop behavior are adapted from [Anime Codex](https://github.com/Lihhan/anime-codex) (MIT).

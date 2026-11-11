@@ -20,8 +20,15 @@ test('artwork is found in the source tree and in a packaged layout', async () =>
     const pack = require('../shared/cyrene-motion-pack.json');
     for (const entry of pack.entries)
       assert.ok(fs.existsSync(path.join(artDirectory(packaged), entry.file)), entry.file);
-    assert.ok(fs.existsSync(path.join(artDirectory(packaged), 'chibi-fallback-furina.png')));
+    assert.ok(fs.existsSync(path.join(artDirectory(packaged), 'cyrene-chibi-v6-reference.png')));
   } finally {
     fs.rmSync(packaged, { recursive: true, force: true });
   }
+});
+
+test('distributed art contains only the current starter and its own reference crop', () => {
+  const pack=require('../shared/cyrene-motion-pack.json');
+  assert.equal(pack.entries.length,1);
+  const entry=pack.entries[0];
+  assert.deepEqual(fs.readdirSync('public/art').filter(f=>f.endsWith('.png')).sort(),[entry.file,...entry.pageFiles,'cyrene-chibi-v6-reference.png'].sort());
 });

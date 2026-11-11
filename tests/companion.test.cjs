@@ -124,7 +124,7 @@ test('starter pack installation is idempotent and preserves saved personality, m
   assert.deepEqual(installed.settings, state.settings);
   assert.deepEqual(installed.messages, state.messages);
   assert.deepEqual(installed.memories, state.memories);
-  assert.equal(installed.activeSkinId, 'cyrene-8bit-v5');
+  assert.equal(installed.activeSkinId, 'cyrene-chibi-v6');
   assert.ok(installed.characters[0].companion);
   assert.deepEqual(installStarterPack(installed, '8bit'), installed);
   assert.ok(validateState(installed));
@@ -260,23 +260,31 @@ test('exported starter art contains original PNG bytes, shared animation timings
     const entry = pack.entries.find((entry) => entry.builtin === skins[i].builtin);
     assert.deepEqual(bytes, fs.readFileSync(path.join('public/art', entry.file)));
     assert.equal(checked.skins[i].builtin, undefined);
-    assert.deepEqual(checked.skins[i].sprite, entry.animation);
+    assert.deepEqual(checked.skins[i].sprite.frames, entry.animation.frames);
+    assert.deepEqual(checked.skins[i].sprite.clips, entry.animation.clips);
+    for (let j=0; j<entry.pageFiles.length; j++) {
+      assert.ok(Buffer.from(checked.skins[i].sprite.pages[j].src.split(',')[1], 'base64').equals(fs.readFileSync(path.join('public/art',entry.pageFiles[j]))));
+    }
   }
-  assert.equal(checked.skins.length, 7);
+  assert.equal(checked.skins.length, 1);
   assert.deepEqual(checked.character.companion, cyrene.companion);
 });
-test('legacy 2x2 atlas exports preserve the displayed first pose, without assigning extra motions', async () => {
+test('legacy 2x2 atlas exports preserve the displayed first pose, without assigning extra motions', async (t) => {
   const state = initialState();
+  const dir=fs.mkdtempSync(require('node:path').join(require('node:os').tmpdir(),'legacy-atlas-'));
+  t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAEklEQVR4nGP4z8DwHxkzkC4AADxAH+HggXe0AAAAAElFTkSuQmCC', 'base64');
+  fs.writeFileSync(require('node:path').join(dir,'cyrene-pixel-v4.png'),png);
   const bundle = await portableBundle(
     cyrene,
     [
       {
-        ...state.skins.find((skin) => skin.style === 'pixel'),
+        ...state.skins[0], style: 'pixel',
         id: 'legacy-pixel',
         builtin: 'cyrene-pixel-v4',
       },
     ],
-    path.resolve('public/art'),
+    dir,
   );
   assert.ok(bundle.skins.length);
   for (const skin of bundle.skins) {

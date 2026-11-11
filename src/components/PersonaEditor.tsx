@@ -1,3 +1,4 @@
+import { DossierEditor } from './DossierEditor';
 import { BookOpen, ShieldCheck, Heart, Sparkles } from 'lucide-react';
 import type { Character } from '../types';
 export function PersonaEditor({
@@ -95,6 +96,7 @@ export function PersonaEditor({
         />
         <BookOpen size={15} /> 日常对话不主动剧透
       </label>
+      <DossierEditor character={character} onChange={onChange} />
       <div className="persona-tempo">
         <h3>相处的节奏</h3>
         <p>作为对话与动作的表达倾向，关系仍以你填写的设定为准。</p>

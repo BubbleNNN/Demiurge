@@ -68,33 +68,23 @@ export const cyrene: Character = {
   },
   createdAt,
 };
-export const builtinSkins: Skin[] = (
-  [
-    ['original', '最初的模样 · 原作画风'],
-    ['anime', '与你再会 · 精绘'],
-    ['chibi', '口袋里的昔涟 · Q 版'],
-    ['powerpuff', '飞天的记忆 · 飞天小女警'],
-    ['pixel', '像素里的回声 · 复古像素'],
-    ['8bit', '记忆存档 · 8-bit'],
-    ['3d', '折光世界 · 低多边形 3D'],
-  ] as const
-).map(([style, name]) => ({
-  id: `cyrene-${style}-${style === 'pixel' ? 'v6' : ['original', 'powerpuff'].includes(style) ? 'v1' : ['anime', '8bit', '3d'].includes(style) ? 'v5' : 'v4'}`,
-  characterId: cyrene.id,
-  name,
-  style,
-  builtin:
-    `cyrene-${style}-${style === 'pixel' ? 'v6' : ['original', 'powerpuff'].includes(style) ? 'v1' : ['anime', '8bit', '3d'].includes(style) ? 'v5' : 'v4'}` as Skin['builtin'],
-  kind: 'image',
-  images: {},
-  generated: true,
-  createdAt: ['original', 'powerpuff', 'pixel'].includes(style)
-    ? '2026-10-04T00:00:00.000Z'
-    : '2026-09-30T12:00:00.000Z',
-}));
+export const builtinSkins: Skin[] = [
+  {
+    id: 'cyrene-chibi-v6',
+    characterId: cyrene.id,
+    name: '大昔涟 · Q版 · 完整互动动画',
+    style: 'chibi-pet',
+    builtin: 'cyrene-chibi-v6',
+    kind: 'image',
+    images: {},
+    generated: true,
+    createdAt: '2026-11-10T17:18:05.916Z',
+  },
+];
 export function initialState(): AppState {
   return {
     settings: {
+      welcomeDismissed: false,
       chatMode: 'local',
       llmBaseUrl: 'https://api.openai.com/v1',
       llmModel: '',
@@ -120,6 +110,27 @@ export function initialState(): AppState {
 }
 export function migrateState(value: AppState | null): AppState {
   if (!value || !value.characters.length) return initialState();
+  const retiredBuiltins = value.skins.filter(
+    (s) => s.builtin && s.builtin !== 'cyrene-chibi-v6' && !Object.values(s.images).some(Boolean),
+  );
+  if (retiredBuiltins.length) {
+    const ids = new Set(retiredBuiltins.map((s) => s.id));
+    const kept = value.skins.filter((s) => !ids.has(s.id));
+    const hasStarter = value.characters.some((c) => c.id === cyrene.id);
+    if (
+      hasStarter &&
+      !value.settings.removedBuiltins?.includes(builtinSkins[0].id) &&
+      !kept.some((s) => s.id === builtinSkins[0].id)
+    )
+      kept.push(structuredClone(builtinSkins[0]));
+    value = {
+      ...value,
+      skins: kept,
+      activeSkinId: ids.has(value.activeSkinId)
+        ? kept.find((s) => s.characterId === value!.activeCharacterId)?.id || ''
+        : value.activeSkinId,
+    };
+  }
   if (value.settings.demoMode) {
     const hasCyrene = value.characters.some((c) => c.id === cyrene.id);
     return {
@@ -164,18 +175,6 @@ export function migrateState(value: AppState | null): AppState {
   const replacesRetired = selected && retired.includes(selected.style);
   if (!missing.length && !replacesRetired && characters.every((c, i) => c === value.characters[i]))
     return value;
-  const replacesEarlyCyrene =
-    value.activeCharacterId === cyrene.id &&
-    [
-      'cyrene-reference-v3',
-      'cyrene-anime',
-      'cyrene-chibi',
-      'cyrene-pixel',
-      'cyrene-plush',
-      'cyrene-anime-v4',
-      'cyrene-pixel-v4',
-    ].includes(value.activeSkinId) &&
-    missing.some((s) => s.id === 'cyrene-anime-v5');
   return {
     ...value,
     characters,
@@ -184,8 +183,6 @@ export function migrateState(value: AppState | null): AppState {
       ? [...missing, ...value.skins].find(
           (skin) => skin.characterId === value.activeCharacterId && !retired.includes(skin.style),
         )?.id || ''
-      : replacesEarlyCyrene
-        ? 'cyrene-anime-v5'
-        : value.activeSkinId,
+      : value.activeSkinId,
   };
 }

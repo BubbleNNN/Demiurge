@@ -170,6 +170,7 @@ function validateCharacter(value, label = 'character', budget = { bytes: 0 }) {
           },
         }
       : {}),
+    ...(c.dossier !== undefined ? {dossier: require('./character-dossier.cjs').validateDossier(c.dossier)} : {}),
     ...(c.roleplay !== undefined ? { roleplay: validateRoleplay(c.roleplay, `${label}.roleplay`) } : {}),
     ...(c.companion !== undefined ? { companion: validateCompanion(c.companion, `${label}.companion`) } : {}),
     ...(c.desktopProfile !== undefined
@@ -496,6 +497,7 @@ function validateSkin(value, label = 'skin', budget = { bytes: 0 }) {
           builtin: enumValue(
             s.builtin,
             [
+              'cyrene-chibi-v6',
               'cyrene-original-v1',
               'cyrene-powerpuff-v1',
               'cyrene-pixel-v6',
@@ -578,6 +580,7 @@ function validateSettings(value) {
   if (s.codexHome !== undefined && (typeof s.codexHome !== 'string' || s.codexHome.length > 1024 || s.codexHome.includes('\0') || (s.codexHome && !path.isAbsolute(s.codexHome))))
     throw new Error('Codex 账号目录必须是绝对路径，留空使用默认登录。');
   return {
+    ...(s.rememberInteractions !== undefined ? {rememberInteractions:boolean(s.rememberInteractions,'settings.rememberInteractions')} : {}),
     ...(s.codexHome !== undefined ? { codexHome: s.codexHome } : {}),
     ...(s.desktopLifeEnabled !== undefined ? {desktopLifeEnabled:boolean(s.desktopLifeEnabled,'settings.desktopLifeEnabled')} : {}),
     ...(s.petSize !== undefined
@@ -594,9 +597,13 @@ function validateSettings(value) {
           ),
         }
       : {}),
+    ...(s.welcomeDismissed !== undefined ? { welcomeDismissed: boolean(s.welcomeDismissed, 'settings.welcomeDismissed') } : {}),
     ...(s.chatMode !== undefined
       ? { chatMode: enumValue(s.chatMode, ['model', 'local'], 'settings.chatMode') }
       : {}),
+    ...(s.llmProvider !== undefined ? {llmProvider:enumValue(s.llmProvider,require('../shared/chat-providers.json').map(p=>p.id),'settings.llmProvider')} : {}),
+    ...(s.llmOutputMode !== undefined ? {llmOutputMode:enumValue(s.llmOutputMode,['json','prompt'],'settings.llmOutputMode')} : {}),
+    ...(s.llmThinking !== undefined ? {llmThinking:enumValue(s.llmThinking,['auto','off'],'settings.llmThinking')} : {}),
     llmBaseUrl: webUrl(s.llmBaseUrl, 'settings.llmBaseUrl', true),
     ...(s.llmProtocol !== undefined
       ? { llmProtocol: enumValue(s.llmProtocol, ['openai', 'anthropic', 'codex'], 'settings.llmProtocol') }
@@ -778,6 +785,9 @@ function validateState(value) {
       id: id(m.id, `${l}.id`),
       characterId,
       text: string(m.text, `${l}.text`, 8000),
+      ...(m.kind !== undefined ? {kind:enumValue(m.kind,['preference','interaction','promise','boundary'],l)} : {}),
+      ...(m.origin !== undefined ? {origin:enumValue(m.origin,['user-confirmed','user-stated','interaction'],l)} : {}),
+      ...(m.sourceMessageId !== undefined ? {sourceMessageId:id(m.sourceMessageId,l)} : {}),
       createdAt: date(m.createdAt, `${l}.createdAt`),
       ...(m.pinned !== undefined ? { pinned: boolean(m.pinned, l) } : {}),
       ...(m.excluded !== undefined ? { excluded: boolean(m.excluded, l) } : {}),

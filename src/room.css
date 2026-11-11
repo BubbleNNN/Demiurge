@@ -1490,3 +1490,77 @@
 .pet-scale-control input {
   grid-column: 1 / -1;
 }
+
+.welcome-guide {
+  position: relative;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+.welcome-guide .welcome-close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+.welcome-guide h2 {
+  font-size: 22px;
+  margin: 10px 0;
+}
+.welcome-guide p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.welcome-guide > button:not(.welcome-close) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  width: 100%;
+  padding: 11px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.welcome-guide button small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.welcome-guide > .welcome-dismiss {
+  justify-content: center;
+  font-size: 12px;
+  color: var(--accent-ink);
+}
+@media (max-width: 900px) {
+  .room-setup:has(.welcome-guide) {
+    width: 280px;
+    left: 20px;
+    top: 120px;
+  }
+  .welcome-guide {
+    padding: 18px;
+  }
+}
+@media (max-height: 760px) {
+  .room-setup:has(.welcome-guide) {
+    top: 105px;
+  }
+  .welcome-guide p {
+    margin-bottom: 4px;
+  }
+  .welcome-guide > button:not(.welcome-close) {
+    padding: 8px 0;
+  }
+}
+/* The first-use card occupies the left side; give the character her own space. */
+.room-scene:has(.welcome-guide) .room-tools,
+.room-scene:has(.welcome-guide) .room-quick { display: none; }
+@media (max-width: 1200px) {
+  .room-scene:has(.welcome-guide) { --figure-x: 62%; }
+}

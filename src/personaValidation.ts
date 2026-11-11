@@ -1,5 +1,9 @@
 import type { Character } from './types';
 export function personaDraftError(character: Character): string {
+  for (const entries of Object.values(character.dossier || {})) {
+    if (entries.length>32) return '每类人物资料最多32条。';
+    if (entries.some(entry=>!entry.title.trim() || !entry.detail.trim())) return '请补全人物资料的标题和内容，或删除空条目。';
+  }
   if (!character.roleplay) return '';
   for (const [field, label, count, length] of [
     ['voiceRules', '语气习惯', 12, 400],

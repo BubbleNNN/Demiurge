@@ -67,8 +67,8 @@ test('per-character selection skips rejected, stale or foreign skins and prefers
   state.skins.unshift({ ...state.skins[0], id: 'unreviewed', review: { status: 'pending' } });
   state.preferredSkins = { [character.id]: 'unreviewed' };
   assert.notEqual(selectedCharacterSkin(state, character).id, 'unreviewed');
-  state.preferredSkins[character.id] = 'cyrene-powerpuff-v1';
-  assert.equal(selectedCharacterSkin(state, character).id, 'cyrene-powerpuff-v1');
+  state.preferredSkins[character.id] = 'cyrene-chibi-v6';
+  assert.equal(selectedCharacterSkin(state, character).id, 'cyrene-chibi-v6');
   const stale = {
     ...state.skins[1],
     id: 'stale',
@@ -85,10 +85,10 @@ test('old workspaces stay unchanged; size and owned preferences survive validati
   const saved = validateState({
     ...state,
     settings: { ...state.settings, petSize: 'large' },
-    preferredSkins: { [cyrene.id]: 'cyrene-powerpuff-v1', deleted: 'cyrene-original-v1' },
+    preferredSkins: { [cyrene.id]: 'cyrene-chibi-v6', deleted: 'cyrene-original-v1' },
   });
   assert.equal(saved.settings.petSize, 'large');
-  assert.deepEqual(saved.preferredSkins, { [cyrene.id]: 'cyrene-powerpuff-v1' });
+  assert.deepEqual(saved.preferredSkins, { [cyrene.id]: 'cyrene-chibi-v6' });
   assert.throws(() => validateSettings({ ...state.settings, petSize: 'huge' }));
   const before = JSON.stringify(state.characters);
   characterReadiness(state.characters[0], state.skins);
@@ -199,7 +199,7 @@ test('native appearance eligibility rejects unreviewed and stale generation rega
 test('an authored closed-eye expression is not interrupted by the neutral blinking track', () => {
   const { selectSpriteFrame } = load('src/animation/timeline.ts');
   const { spriteAnimation } = load('src/artwork.ts');
-  const animation = spriteAnimation(initialState().skins.find((s) => s.style === 'powerpuff'));
+  const animation = spriteAnimation(initialState().skins.find((s) => s.style === 'chibi-pet'));
   const input = {
     time: 3200,
     age: 3200,

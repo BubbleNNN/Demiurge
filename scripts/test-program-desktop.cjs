@@ -11,7 +11,7 @@ fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
-const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi.png'));
+const png = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const original = 'data:image/png;base64,' + png.toString('base64'),
   timestamp = new Date().toISOString();
 fs.writeFileSync(

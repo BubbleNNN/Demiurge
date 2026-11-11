@@ -829,8 +829,8 @@ test('the chibi look adapts a verified existing design, otherwise borrows only t
     credentials,
   );
   assert.equal(fallback.generation.chibiResearch.status, 'fallback');
-  assert.match(requests[1].prompt, /FURINA sticker, a STYLE GUIDE ONLY/);
-  assert.match(requests[1].prompt, /NEVER borrow Furina identity/);
+  assert.match(requests[1].prompt, /bundled chibi example, a STYLE GUIDE ONLY/);
+  assert.match(requests[1].prompt, /NEVER borrow the example character identity/);
   assert.equal(requests[1].images.length, 2);
 
   // A context prepared for different originals, or a swapped image, never reaches generation.

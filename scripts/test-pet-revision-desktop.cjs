@@ -14,7 +14,7 @@ fs.mkdirSync(dir, { recursive: true });
 process.env.MORI_DATA_DIR = dir;
 delete process.env.MORI_DEV_URL;
 safeStorage.isEncryptionAvailable = () => false;
-const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi.png'));
+const originalBytes = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 const stamp = new Date().toISOString();
 const character = {
   id: 'revision-desktop',
@@ -71,7 +71,7 @@ const wikiSearches = [];
 const webReference = tinted(false, 9);
 // The only public resource in this fixture is supplied below, including DNS; no network.
 require('node:dns/promises').lookup = async () => [{ address: '93.184.216.34', family: 4 }];
-const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/chibi-fallback-furina.png'));
+const furina = fs.readFileSync(path.resolve(__dirname, '../public/art/cyrene-chibi-v6-reference.png'));
 // A motion described in words: the chat model's design, as this stand-in returns it.
 const designs = [];
 const design = {

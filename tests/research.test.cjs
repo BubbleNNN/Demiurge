@@ -384,8 +384,8 @@ test('Wiki imports plaintext extracts from the configured public MediaWiki API w
   assert.equal(query.pathname, '/w/api.php');
   assert.equal(query.searchParams.get('generator'), 'search');
   assert.equal(query.searchParams.get('explaintext'), '1');
-  assert.equal(query.searchParams.get('exintro'), '1');
-  assert.equal(query.searchParams.get('exchars'), '1200');
+  assert.equal(query.searchParams.get('exintro'), null, 'Include relationship and event sections, not only the introduction');
+  assert.equal(query.searchParams.get('exchars'), '8000');
   assert.equal(query.searchParams.get('inprop'), 'url');
   assert.equal(result.knowledge.method, 'wiki');
   assert.deepEqual(result.quotes, [{ text: profile.quotes[0].text, sourceUrl: address }]);

@@ -2,10 +2,25 @@ import type { Skin, SpriteAnimation, PetAction, Emotion } from './types';
 import * as authoredCyrene from '../shared/cyrene-sprite.json';
 import * as motionPack from '../shared/cyrene-motion-pack.json';
 
-type BuiltinMotion = { builtin: string; file: string; style: string; animation: SpriteAnimation };
+type BuiltinMotion = {
+  builtin: string;
+  file: string;
+  style: string;
+  animation: SpriteAnimation;
+  pageFiles?: string[];
+};
+const renderedBuiltins = (motionPack.entries as unknown as BuiltinMotion[]).map((entry) => ({
+  ...entry,
+  animation: {
+    ...entry.animation,
+    ...(entry.animation.pages
+      ? { pages: entry.animation.pages.map((page, i) => ({ ...page, src: `./art/${entry.pageFiles![i]}` })) }
+      : {}),
+  },
+}));
 export function builtinMotion(skin?: Skin): BuiltinMotion | undefined {
   if (!skin?.builtin || skin.images.neutral || skin.sprite) return undefined;
-  return (motionPack.entries as unknown as BuiltinMotion[]).find((entry) => entry.builtin === skin.builtin);
+  return renderedBuiltins.find((entry) => entry.builtin === skin.builtin);
 }
 
 export const pixelPalette = [
@@ -50,7 +65,7 @@ export function supportsAction(skin: Skin | undefined, action: PetAction) {
       skin.model?.motionMap?.[action] ||
         ((action === 'nod' || action === 'shake') && skin.model?.boneMap?.head),
     );
-  return skin?.kind === 'vrm' && ['idle','wave','nod','shake','sleep','bounce'].includes(action);
+  return skin?.kind === 'vrm' && ['idle', 'wave', 'nod', 'shake', 'sleep', 'bounce'].includes(action);
 }
 export function supportsEmotion(skin: Skin | undefined, emotion: Emotion) {
   if (emotion === 'neutral') return true;
